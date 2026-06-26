@@ -4,12 +4,6 @@ import {
 } from "../lib/store.js";
 
 export default async function handler(req, res) {
-  // Auth with SUPPRESS_API_SECRET
-  const secret = process.env.SUPPRESS_API_SECRET;
-  const token = req.headers["x-api-key"] || req.query.key;
-  if (secret && token !== secret) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
   if (!storeReady) return res.status(500).json({ error: "no KV store configured" });
 
   const limit = Math.min(parseInt(req.query.limit || "200"), 1000);
@@ -24,7 +18,6 @@ export default async function handler(req, res) {
       listSuppressed(),
     ]);
 
-    // Merge reply status into email log
     const repliedSet = new Set(replies.map(r => r.email?.toLowerCase()));
     const enrichedEmails = emails.map(e => ({
       ...e,
