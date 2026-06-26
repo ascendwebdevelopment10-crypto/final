@@ -1,12 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 import twilio from 'twilio';
-import { logEmail, logSms, addToSuppression, isSuppressed } from '../lib/store.js';
+import { logEmail, logSms, isSuppressed } from '../lib/store.js';
 
-export const config = { runtime: 'edge' };
-export const maxDuration = 300;
+// Node.js runtime (required for twilio, resend, anthropic)
+export const config = { maxDuration: 300 };
 
-const CRON_SECRET = process.env.CRON_SECRET;
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
 const DAILY_CAP = parseInt(process.env.DAILY_CAP || '500');
@@ -16,6 +15,7 @@ const PITCH = process.env.OUTREACH_PITCH || 'we offer seo optimized websites, ma
 const TARGET_TITLES = process.env.TARGET_TITLES || 'CEO,Owner,Founder,President';
 const TARGET_KEYWORDS = process.env.TARGET_KEYWORDS || 'service based businesses';
 const TARGET_LOCATIONS = process.env.TARGET_LOCATIONS || 'United States';
+const CRON_SECRET = process.env.CRON_SECRET;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -77,11 +77,11 @@ async function generateSms(contact) {
   return smsText;
 }
 
-export default async function handler(req) {
-  if (req.method !== 'GET') return new Response('Method not allowed', { status: 405 });
-  const auth = req.headers.get('authorization');
+export default async function handler(req, res) {
+  if (req.method !== 'GET') { res.status(405).end('Method not allowed'); return; }
+  const auth = req.headers['authorization'];
   if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
+    res.status(401).end('Unauthorized'); return;
   }
 
   let emailsSent = 0, smsSent = 0, errors = [];
@@ -95,56 +95,34 @@ export default async function handler(req) {
 
       for (const contact of contacts) {
         if (emailsSent >= DAILY_CAP && smsSent >= SMS_DAILY_CAP) break;
-
         const email = contact.email;
         const phone = contact.phone_numbers?.[0]?.sanitized_number || contact.mobile_phone;
 
-        // Send email
         if (email && emailsSent < DAILY_CAP) {
           try {
             const suppressed = await isSuppressed(email);
             if (!suppressed) {
               const { subject, body } = await generateEmail(contact);
               const emailBody = body + `\n\n--\n${PHYSICAL_ADDRESS}\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a>`;
-              await resend.emails.send({
-                from: FROM_EMAIL,
-                to: email,
-                subject,
-                html: emailBody.replace(/\n/g, '<br>')
-              });
+              await resend.emails.send({ from: FROM_EMAIL, to: email, subject, html: emailBody.replace(/\n/g, '<br>') });
               await logEmail({ to: email, subject, contactId: contact.id, timestamp: Date.now() });
               emailsSent++;
             }
-          } catch (e) {
-            errors.push({ type: 'email', to: email, error: e.message });
-          }
+          } catch (e) { errors.push({ type: 'email', to: email, error: e.message }); }
         }
 
-        // Send SMS
         if (phone && smsSent < SMS_DAILY_CAP) {
           try {
             const smsBody = await generateSms(contact);
-            await twilioClient.messages.create({
-              body: smsBody,
-              from: TWILIO_FROM,
-              to: phone
-            });
+            await twilioClient.messages.create({ body: smsBody, from: TWILIO_FROM, to: phone });
             await logSms({ to: phone, body: smsBody, contactId: contact.id, timestamp: Date.now() });
             smsSent++;
-          } catch (e) {
-            errors.push({ type: 'sms', to: phone, error: e.message });
-          }
+          } catch (e) { errors.push({ type: 'sms', to: phone, error: e.message }); }
         }
       }
-
-      if (page > 20) break; // safety limit
+      if (page > 20) break;
     }
-  } catch (e) {
-    errors.push({ type: 'fatal', error: e.message });
-  }
+  } catch (e) { errors.push({ type: 'fatal', error: e.message }); }
 
-  return new Response(JSON.stringify({ emailsSent, smsSent, errors, timestamp: new Date().toISOString() }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  res.status(200).json({ emailsSent, smsSent, errors, timestamp: new Date().toISOString() });
 }
