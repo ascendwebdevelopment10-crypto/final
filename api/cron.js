@@ -7,17 +7,27 @@ export const config = { maxDuration: 300 };
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
-const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com'; // BCC for first 10 only
-const BCC_PREVIEW_LIMIT = 10;
-const DAILY_CAP = parseInt(process.env.DAILY_CAP || '500');
-const SMS_DAILY_CAP = parseInt(process.env.SMS_DAILY_CAP || '500');
 const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
 const CRON_SECRET = process.env.CRON_SECRET;
+const BASE_CAP = 500;
+const DAILY_INCREASE = 15;
+const START_DATE = '2026-06-25';
+
+function getDailyCap() {
+  const start = new Date(START_DATE);
+  const today = new Date();
+  today.setUTCHours(0,0,0,0);
+  start.setUTCHours(0,0,0,0);
+  const daysElapsed = Math.max(0, Math.floor((today - start) / (1000 * 60 * 60 * 24)));
+  return BASE_CAP + (daysElapsed * DAILY_INCREASE);
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
+const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
+const BCC_PREVIEW_LIMIT = 10;
 
 const APP_INDUSTRIES = [
   'restaurant','food','cafe','bar','gym','fitness','yoga','personal training',
@@ -69,14 +79,12 @@ async function generateEmail(contact, segment) {
   const company = contact.organization_name || 'your business';
   const title = contact.title || 'business owner';
   const industry = contact.organization?.industry || contact.industry || 'your industry';
-
   let prompt;
   if (segment === 'no_website') {
     prompt = `Write a short personalized cold email (under 150 words) to ${firstName}, ${title} at ${company}. They currently have no website. We are Ascend Web Development. We build SEO-optimized websites that help local businesses get found on Google, plus we manage Google Business Profiles and run Google/Meta ads. Emphasize the credibility and new customer flow a website brings. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". No placeholders.`;
   } else {
     prompt = `Write a short personalized cold email (under 150 words) to ${firstName}, ${title} at ${company} in the ${industry} industry. We are Ascend Web Development and we build custom mobile apps for businesses like theirs. For ${industry} businesses specifically, a custom app can enable: online booking/scheduling, loyalty rewards, push notifications for deals, and direct customer communication. Pick 2-3 most relevant benefits for this industry and mention them specifically. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". No placeholders.`;
   }
-
   const msg = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
     max_tokens: 400,
@@ -94,14 +102,12 @@ async function generateSms(contact, segment) {
   const firstName = contact.first_name || 'there';
   const company = contact.organization_name || 'your business';
   const industry = contact.organization?.industry || contact.industry || 'your industry';
-
   let prompt;
   if (segment === 'no_website') {
     prompt = `SMS (under 160 chars) to ${firstName} at ${company} who has no website. We are Ascend Web Development. Getting a website = more Google traffic + credibility. CTA to reply. No emojis. Max 160 chars.`;
   } else {
     prompt = `SMS (under 160 chars) to ${firstName} at ${company} in ${industry}. We build custom mobile apps — booking, loyalty, push notifications. We are Ascend Web Development. CTA to reply. No emojis. Max 160 chars.`;
   }
-
   const msg = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
     max_tokens: 160,
@@ -117,6 +123,8 @@ export default async function handler(req, res) {
   const auth = req.headers['authorization'];
   if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) { res.status(401).end('Unauthorized'); return; }
 
+  const DAILY_CAP = getDailyCap();
+  const SMS_DAILY_CAP = getDailyCap();
   let emailsSent = 0, smsSent = 0, errors = [];
 
   async function processContacts(contacts, segment) {
@@ -131,19 +139,8 @@ export default async function handler(req, res) {
           if (!suppressed) {
             const { subject, body } = await generateEmail(contact, segment);
             const footer = `\n\n--\nAscend Web Development\n${PHYSICAL_ADDRESS}\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a>`;
-            
-            // BCC yourself on the first 10 emails so you can verify they look right
-            const sendOptions = {
-              from: FROM_EMAIL,
-              to: email,
-              subject,
-              html: (body + footer).replace(/\n/g, '<br>'),
-              reply_to: FROM_EMAIL
-            };
-            if (emailsSent < BCC_PREVIEW_LIMIT) {
-              sendOptions.bcc = BCC_PREVIEW_EMAIL;
-            }
-
+            const sendOptions = { from: FROM_EMAIL, to: email, subject, html: (body + footer).replace(/\n/g, '<br>'), reply_to: FROM_EMAIL };
+            if (emailsSent < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
             await resend.emails.send(sendOptions);
             await logEmail({ to: email, subject, contactId: contact.id, timestamp: Date.now(), segment });
             emailsSent++;
@@ -164,8 +161,6 @@ export default async function handler(req, res) {
 
   try {
     const halfCap = Math.floor(DAILY_CAP / 2);
-
-    // Segment 1: No website
     const noWebContacts = [];
     for (let page = 1; page <= 12 && noWebContacts.length < halfCap + 50; page++) {
       const data = await fetchContacts('local service business small company', page);
@@ -175,7 +170,6 @@ export default async function handler(req, res) {
     }
     await processContacts(noWebContacts.slice(0, halfCap + 50), 'no_website');
 
-    // Segment 2: App-ready industries
     const remaining = DAILY_CAP - emailsSent;
     const appContacts = [];
     for (let page = 1; page <= 12 && appContacts.length < remaining + 50; page++) {
@@ -185,8 +179,7 @@ export default async function handler(req, res) {
       appContacts.push(...contacts.filter(c => needsApp(c)));
     }
     await processContacts(appContacts, 'needs_app');
-
   } catch (e) { errors.push({ type: 'fatal', error: e.message }); }
 
-  res.status(200).json({ emailsSent, smsSent, errors, bccSentFor: Math.min(emailsSent, BCC_PREVIEW_LIMIT), timestamp: new Date().toISOString() });
+  res.status(200).json({ emailsSent, smsSent, dailyCap: DAILY_CAP, errors, timestamp: new Date().toISOString() });
 }
