@@ -7,7 +7,7 @@
     },
     {
       "source": "/dashboard",
-      "destination": "/public/dashboard.html"
+      "destination": "/api/dashboard"
     }
   ],
   "crons": [
