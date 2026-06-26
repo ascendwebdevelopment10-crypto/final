@@ -11,6 +11,7 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const BASE_CAP = 500;
 const DAILY_INCREASE = 15;
+const MAX_CAP = 4000;
 const START_DATE = '2026-06-25';
 
 function getDailyCap() {
@@ -19,7 +20,7 @@ function getDailyCap() {
   today.setUTCHours(0,0,0,0);
   start.setUTCHours(0,0,0,0);
   const daysElapsed = Math.max(0, Math.floor((today - start) / (1000 * 60 * 60 * 24)));
-  return BASE_CAP + (daysElapsed * DAILY_INCREASE);
+  return Math.min(BASE_CAP + (daysElapsed * DAILY_INCREASE), MAX_CAP);
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -132,7 +133,6 @@ export default async function handler(req, res) {
       if (emailsSent >= DAILY_CAP && smsSent >= SMS_DAILY_CAP) break;
       const email = contact.email;
       const phone = contact.phone_numbers?.[0]?.sanitized_number || contact.mobile_phone;
-
       if (email && emailsSent < DAILY_CAP) {
         try {
           const suppressed = await isSuppressed(email);
@@ -147,7 +147,6 @@ export default async function handler(req, res) {
           }
         } catch (e) { errors.push({ type: 'email', segment, to: email, error: e.message }); }
       }
-
       if (phone && smsSent < SMS_DAILY_CAP) {
         try {
           const smsBody = await generateSms(contact, segment);
