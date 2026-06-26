@@ -1,239 +1,243 @@
 export default function handler(req, res) {
-  const lines = [];
-  lines.push('<!DOCTYPE html>');
-  lines.push('<html lang="en"><head>');
-  lines.push('<meta charset="UTF-8">');
-  lines.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
-  lines.push('<title>Ascend Outreach Dashboard</title>');
-  lines.push('<style>');
-  lines.push('*{margin:0;padding:0;box-sizing:border-box}');
-  lines.push('body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}');
-  lines.push('.header{background:#1e293b;border-bottom:1px solid #334155;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}');
-  lines.push('.header h1{font-size:20px;font-weight:700;color:#f8fafc}');
-  lines.push('.badge-live{background:#22c55e;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}');
-  lines.push('.nav{background:#1e293b;border-bottom:1px solid #334155;padding:0 32px;display:flex;gap:4px}');
-  lines.push('.nav-btn{padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}');
-  lines.push('.nav-btn:hover{color:#e2e8f0}.nav-btn.active{color:#6366f1;border-bottom-color:#6366f1}');
-  lines.push('.nav-btn.replies-btn.active{color:#f59e0b;border-bottom-color:#f59e0b}');
-  lines.push('.rbadge{display:none;background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}');
-  lines.push('.container{max-width:1200px;margin:0 auto;padding:32px}');
-  lines.push('.page{display:none}.page.active{display:block}');
-  lines.push('.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}');
-  lines.push('.stat-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px}');
-  lines.push('.stat-card .label{font-size:12px;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}');
-  lines.push('.stat-card .value{font-size:32px;font-weight:700;color:#f8fafc}');
-  lines.push('.stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}');
-  lines.push('.stat-card.ec{border-top:3px solid #6366f1}.stat-card.sc{border-top:3px solid #f59e0b}');
-  lines.push('.stat-card.rc{border-top:3px solid #22c55e}.stat-card.uc{border-top:3px solid #ef4444}');
-  lines.push('.section{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;margin-bottom:24px}');
-  lines.push('.section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#f8fafc}');
-  lines.push('.chart{display:flex;align-items:flex-end;gap:4px;height:120px}');
-  lines.push('.bg{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}');
-  lines.push('.bar{flex:1;border-radius:2px 2px 0 0;min-height:2px}.eb{background:#6366f1}.sb{background:#f59e0b}');
-  lines.push('.chart-labels{display:flex;gap:4px;margin-top:4px}');
-  lines.push('.cl{flex:1;text-align:center;font-size:9px;color:#475569;overflow:hidden}');
-  lines.push('.legend{display:flex;gap:16px;margin-top:12px}');
-  lines.push('.li{display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8}');
-  lines.push('.ld{width:10px;height:10px;border-radius:2px}');
-  lines.push('table{width:100%;border-collapse:collapse;font-size:13px}');
-  lines.push('th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #334155;font-size:11px;text-transform:uppercase}');
-  lines.push('td{padding:12px;border-bottom:1px solid #1e293b;color:#cbd5e1;vertical-align:top}');
-  lines.push('tr:last-child td{border-bottom:none}');
-  lines.push('.bs{background:#1d4ed8;color:#bfdbfe;padding:2px 8px;border-radius:99px;font-size:11px}');
-  lines.push('.br{background:#166534;color:#bbf7d0;padding:2px 8px;border-radius:99px;font-size:11px}');
-  lines.push('.bsm{background:#92400e;color:#fde68a;padding:2px 8px;border-radius:99px;font-size:11px}');
-  lines.push('.empty{text-align:center;color:#475569;padding:40px}');
-  // Subtabs for replies
-  lines.push('.subtabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid #334155;padding-bottom:0}');
-  lines.push('.stab{padding:10px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:-1px}');
-  lines.push('.stab.active{color:#f8fafc;border-bottom-color:#f8fafc}');
-  lines.push('.stab.email-stab.active{color:#6366f1;border-bottom-color:#6366f1}');
-  lines.push('.stab.sms-stab.active{color:#f59e0b;border-bottom-color:#f59e0b}');
-  lines.push('.sbadge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}');
-  lines.push('.email-stab .sbadge{background:#1d4ed8;color:#bfdbfe}');
-  lines.push('.sms-stab .sbadge{background:#92400e;color:#fde68a}');
-  lines.push('.subpage{display:none}.subpage.active{display:block}');
-  // Reply cards
-  lines.push('.reply-list{display:flex;flex-direction:column;gap:12px}');
-  lines.push('.rc2{background:#0f172a;border:1px solid #334155;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s}');
-  lines.push('.rc2:hover{border-color:#475569}.rc2.open{border-color:#f59e0b}');
-  lines.push('.rc2.email-reply.open{border-color:#6366f1}');
-  lines.push('.rh{padding:16px 20px;display:flex;align-items:center;gap:12px}');
-  lines.push('.ra{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}');
-  lines.push('.ra.email-av{background:linear-gradient(135deg,#6366f1,#818cf8)}');
-  lines.push('.ra.sms-av{background:linear-gradient(135deg,#f59e0b,#fbbf24)}');
-  lines.push('.rm{flex:1;min-width:0}.rf{font-weight:600;color:#f8fafc;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
-  lines.push('.rs{color:#94a3b8;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
-  lines.push('.rt{font-size:11px;color:#64748b;flex-shrink:0}.rv{color:#64748b;font-size:18px;flex-shrink:0;transition:transform .2s}');
-  lines.push('.rc2.open .rv{transform:rotate(90deg)}');
-  lines.push('.rb2{display:none;padding:0 20px 20px;border-top:1px solid #1e293b}.rc2.open .rb2{display:block}');
-  lines.push('.rbi{background:#1e293b;border-radius:8px;padding:16px;margin-top:16px;font-size:13px;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}');
-  lines.push('.ract{display:flex;gap:8px;margin-top:12px}');
-  lines.push('.btn-r{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;background:#6366f1;color:#fff}');
-  lines.push('.btn-r:hover{background:#4f46e5}.btn-sms-r{background:#f59e0b;color:#0f172a}');
-  lines.push('.btn-sms-r:hover{background:#d97706}');
-  lines.push('.no-rep{text-align:center;padding:60px 20px}.no-rep .icon{font-size:48px;margin-bottom:16px}.no-rep p{color:#64748b;font-size:15px}');
-  lines.push('.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}');
-  lines.push('.rph h2{font-size:20px;font-weight:700;color:#f8fafc}');
-  lines.push('.rfbtn{padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;font-size:12px}');
-  lines.push('.rfbtn:hover{color:#e2e8f0;border-color:#6366f1}');
-  lines.push('</style></head><body>');
-  lines.push('<div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>');
-  lines.push('<nav class="nav">');
-  lines.push('<button class="nav-btn active" id="nb-overview" onclick="showPage(event,\'overview\')">Overview</button>');
-  lines.push('<button class="nav-btn" id="nb-emails" onclick="showPage(event,\'emails\')">Emails</button>');
-  lines.push('<button class="nav-btn" id="nb-sms" onclick="showPage(event,\'sms\')">SMS</button>');
-  lines.push('<button class="nav-btn replies-btn" id="nb-replies" onclick="showPage(event,\'replies\')">Replies<span class="rbadge" id="rbadge">0</span></button>');
-  lines.push('</nav>');
-  lines.push('<div class="container">');
-  // Overview page
-  lines.push('<div class="page active" id="page-overview">');
-  lines.push('<div class="stats-grid">');
-  lines.push('<div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">—</div><div class="sub" id="tde">Today: —</div></div>');
-  lines.push('<div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">—</div><div class="sub" id="tds">Today: —</div></div>');
-  lines.push('<div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">—</div><div class="sub">responses received</div></div>');
-  lines.push('<div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">—</div><div class="sub">responses received</div></div>');
-  lines.push('<div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">—</div><div class="sub">removed</div></div>');
-  lines.push('</div>');
-  lines.push('<div class="section"><h2>30-Day Activity</h2>');
-  lines.push('<div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>');
-  lines.push('<div class="legend"><div class="li"><div class="ld" style="background:#6366f1"></div>Emails</div><div class="li"><div class="ld" style="background:#f59e0b"></div>SMS</div></div>');
-  lines.push('</div></div>');
-  // Emails page
-  lines.push('<div class="page" id="page-emails">');
-  lines.push('<div class="section"><h2>Email Log</h2>');
-  lines.push('<table><thead><tr><th>To</th><th>Subject</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>');
-  lines.push('<tbody id="email-tbody"></tbody></table></div></div>');
-  // SMS page
-  lines.push('<div class="page" id="page-sms">');
-  lines.push('<div class="section"><h2>SMS Log</h2>');
-  lines.push('<table><thead><tr><th>To</th><th>Message</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>');
-  lines.push('<tbody id="sms-tbody"></tbody></table></div></div>');
-  // Replies page with subtabs
-  lines.push('<div class="page" id="page-replies">');
-  lines.push('<div class="rph"><h2>Replies <span id="rtc" style="color:#64748b;font-size:16px;font-weight:400"></span></h2>');
-  lines.push('<button class="rfbtn" onclick="loadReplies()">&#8635; Refresh</button></div>');
-  // Subtabs
-  lines.push('<div class="subtabs">');
-  lines.push('<button class="stab email-stab active" id="stab-email" onclick="showSubtab(\'email\')">&#9993; Email Replies<span class="sbadge" id="email-reply-badge">0</span></button>');
-  lines.push('<button class="stab sms-stab" id="stab-sms" onclick="showSubtab(\'sms\')">&#128241; SMS Replies<span class="sbadge" id="sms-reply-badge">0</span></button>');
-  lines.push('</div>');
-  // Email replies subpage
-  lines.push('<div class="subpage active" id="subpage-email">');
-  lines.push('<div class="reply-list" id="email-reply-list"></div>');
-  lines.push('</div>');
-  // SMS replies subpage
-  lines.push('<div class="subpage" id="subpage-sms">');
-  lines.push('<div class="reply-list" id="sms-reply-list"></div>');
-  lines.push('</div>');
-  lines.push('</div>'); // end replies page
-  lines.push('</div>'); // end container
-  lines.push('<script>');
-  lines.push('var curPage="overview";var curSubtab="email";');
-  lines.push('function showPage(e,p){');
-  lines.push('  document.querySelectorAll(".page").forEach(function(x){x.classList.remove("active")});');
-  lines.push('  document.querySelectorAll(".nav-btn").forEach(function(x){x.classList.remove("active")});');
-  lines.push('  document.getElementById("page-"+p).classList.add("active");');
-  lines.push('  e.currentTarget.classList.add("active");curPage=p;');
-  lines.push('  if(p==="replies")loadReplies();');
-  lines.push('  if(p==="emails")loadEmailLog();');
-  lines.push('  if(p==="sms")loadSmsLog();');
-  lines.push('}');
-  lines.push('function showSubtab(t){');
-  lines.push('  curSubtab=t;');
-  lines.push('  document.querySelectorAll(".subpage").forEach(function(x){x.classList.remove("active")});');
-  lines.push('  document.querySelectorAll(".stab").forEach(function(x){x.classList.remove("active")});');
-  lines.push('  document.getElementById("subpage-"+t).classList.add("active");');
-  lines.push('  document.getElementById("stab-"+t).classList.add("active");');
-  lines.push('}');
-  lines.push('function fmt(ts){return ts?new Date(ts).toLocaleString():"—"}');
-  lines.push('function ini(s){return s?s[0].toUpperCase():"?"}');
-  lines.push('function toggleCard(id){var c=document.getElementById("rc-"+id);c.classList.toggle("open")}');
-  lines.push('function renderReplyCards(replies, listId, isEmail) {');
-  lines.push('  var list=document.getElementById(listId);');
-  lines.push('  if(!replies||!replies.length){');
-  lines.push('    list.innerHTML=\'<div class="no-rep"><div class="icon">\'+( isEmail ? \'&#128235;\' : \'&#128241;\')+\'</div><p>No \'+( isEmail ? \'email\' : \'SMS\')+\" replies yet.</p></div>\';');
-  lines.push('    return;');
-  lines.push('  }');
-  lines.push('  list.innerHTML=replies.map(function(r,i){');
-  lines.push('    var uid=listId+i;');
-  lines.push('    var from=r.from||"—";');
-  lines.push('    var subj=isEmail?(r.subject||"(no subject)"):(r.body||"").substring(0,60);');
-  lines.push('    var body=(r.body||"").replace(/<[^>]*>/g,"").trim()||"(no content)";');
-  lines.push('    var avClass=isEmail?"email-av":"sms-av";');
-  lines.push('    var cardClass=isEmail?"email-reply":"sms-reply";');
-  lines.push('    var actionBtn=isEmail');
-  lines.push('      ?\'<a href="mailto:\'+encodeURIComponent(from)+\'?subject=\'+encodeURIComponent("Re: "+(r.subject||""))+\'" class="btn-r" target="_blank">&#9993; Reply in Email</a>\'');
-  lines.push('      :\'<a href="sms:\'+from+\'&body=Re: " class="btn-r btn-sms-r">&#128241; Reply via SMS</a>\';');
-  lines.push('    return \'<div class="rc2 \'+cardClass+\'" id="rc-\'+uid+\'">\'+');
-  lines.push('      \'<div class="rh" onclick="toggleCard(\'\'+uid+\')">\'+');
-  lines.push('      \'<div class="ra \'+avClass+\'">\'+ini(from)+\'</div>\'+');
-  lines.push('      \'<div class="rm"><div class="rf">\'+from+\'</div><div class="rs">\'+subj+\'</div></div>\'+');
-  lines.push('      \'<span class="rt">\'+fmt(r.timestamp)+\'</span>\'+');
-  lines.push('      \'<span class="rv">&#8250;</span></div>\'+');
-  lines.push('      \'<div class="rb2"><div class="rbi">\'+body+\'</div>\'+');
-  lines.push('      \'<div class="ract">\'+actionBtn+\'</div></div></div>\';');
-  lines.push('  }).join("");');
-  lines.push('}');
-  lines.push('function loadReplies(){');
-  lines.push('  var badge=document.getElementById("rbadge");');
-  lines.push('  var tc=document.getElementById("rtc");');
-  lines.push('  Promise.all([');
-  lines.push('    fetch("/api/logs?type=replies&subtype=email&limit=100").then(function(r){return r.json()}),');
-  lines.push('    fetch("/api/logs?type=replies&subtype=sms&limit=100").then(function(r){return r.json()})');
-  lines.push('  ]).then(function(results){');
-  lines.push('    var emailReplies=results[0];var smsReplies=results[1];');
-  lines.push('    var total=(emailReplies.length||0)+(smsReplies.length||0);');
-  lines.push('    tc.textContent=total?"("+total+")":"";');
-  lines.push('    badge.textContent=total;badge.style.display=total?"inline-block":"none";');
-  lines.push('    document.getElementById("email-reply-badge").textContent=emailReplies.length||0;');
-  lines.push('    document.getElementById("sms-reply-badge").textContent=smsReplies.length||0;');
-  lines.push('    renderReplyCards(emailReplies,"email-reply-list",true);');
-  lines.push('    renderReplyCards(smsReplies,"sms-reply-list",false);');
-  lines.push('  }).catch(function(e){console.error(e)});');
-  lines.push('}');
-  lines.push('function loadStats(){');
-  lines.push('  fetch("/api/logs?type=stats").then(function(r){return r.json()}).then(function(s){');
-  lines.push('    document.getElementById("te").textContent=(s.totalEmailSent||0).toLocaleString();');
-  lines.push('    document.getElementById("ts").textContent=(s.totalSmsSent||0).toLocaleString();');
-  lines.push('    document.getElementById("tde").textContent="Today: "+(s.todayEmailSent||0);');
-  lines.push('    document.getElementById("tds").textContent="Today: "+(s.todaySmsSent||0);');
-  lines.push('    document.getElementById("er").textContent=(s.emailReplies||0).toLocaleString();');
-  lines.push('    document.getElementById("sr").textContent=(s.smsReplies||0).toLocaleString();');
-  lines.push('    document.getElementById("un").textContent=(s.unsubscribed||0).toLocaleString();');
-  lines.push('    var days=s.dailyChart||[];');
-  lines.push('    var maxV=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0)}));maxV=maxV||1;');
-  lines.push('    var chart=document.getElementById("chart");var cl=document.getElementById("clabels");');
-  lines.push('    chart.innerHTML="";cl.innerHTML="";');
-  lines.push('    days.forEach(function(d){');
-  lines.push('      var eH=Math.round(((d.emails||0)/maxV)*100);var sH=Math.round(((d.sms||0)/maxV)*100);');
-  lines.push('      var g=document.createElement("div");g.className="bg";g.title=d.date+": "+d.emails+" emails, "+d.sms+" SMS";');
-  lines.push('      g.innerHTML=\'<div class="bar eb" style="height:\'+eH+\'%"></div><div class="bar sb" style="height:\'+sH+\'%"></div>\';');
-  lines.push('      chart.appendChild(g);');
-  lines.push('      var l=document.createElement("div");l.className="cl";l.textContent=d.date.slice(5);cl.appendChild(l);');
-  lines.push('    });');
-  lines.push('  }).catch(function(e){console.error(e)});');
-  lines.push('}');
-  lines.push('function loadEmailLog(){');
-  lines.push('  fetch("/api/logs?type=emails&limit=100").then(function(r){return r.json()}).then(function(emails){');
-  lines.push('    var sl={no_website:"No Website",needs_app:"App",general:"General"};');
-  lines.push('    document.getElementById("email-tbody").innerHTML=emails.length');
-  lines.push('      ?emails.map(function(e){return "<tr><td>"+(e.to||"—")+"</td><td>"+(e.subject||"—")+"</td><td>"+(sl[e.segment]||e.segment||"—")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\'"+(e.replied?"br":"bs")+"\'>"+(e.replied?"Replied":"Sent")+"</span></td></tr>"}).join("")');
-  lines.push('      :\'<tr><td colspan="5" class="empty">No emails sent yet.</td></tr>\';');
-  lines.push('  }).catch(function(e){console.error(e)});');
-  lines.push('}');
-  lines.push('function loadSmsLog(){');
-  lines.push('  fetch("/api/logs?type=sms&limit=100").then(function(r){return r.json()}).then(function(sms){');
-  lines.push('    var sl={no_website:"No Website",needs_app:"App",general:"General"};');
-  lines.push('    document.getElementById("sms-tbody").innerHTML=sms.length');
-  lines.push('      ?sms.map(function(e){return "<tr><td>"+(e.to||"—")+"</td><td>"+((e.body||"—").substring(0,100))+"</td><td>"+(sl[e.segment]||e.segment||"—")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\'"+(e.replied?"br":"bsm")+"\'>"+(e.replied?"Replied":"Sent")+"</span></td></tr>"}).join("")');
-  lines.push('      :\'<tr><td colspan="5" class="empty">No SMS sent yet.</td></tr>\';');
-  lines.push('  }).catch(function(e){console.error(e)});');
-  lines.push('}');
-  lines.push('loadStats();loadEmailLog();loadSmsLog();loadReplies();');
-  lines.push('setInterval(function(){loadStats();if(curPage==="replies")loadReplies();},30000);');
-  lines.push('<\/script></body></html>');
-  const html = lines.join('\n');
+  const html = [
+    '<!DOCTYPE html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="UTF-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    '<title>Ascend Outreach Dashboard</title>',
+    '<style>',
+    '*{margin:0;padding:0;box-sizing:border-box}',
+    'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}',
+    '.header{background:#1e293b;border-bottom:1px solid #334155;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}',
+    '.header h1{font-size:20px;font-weight:700;color:#f8fafc}',
+    '.badge-live{background:#22c55e;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}',
+    '.nav{background:#1e293b;border-bottom:1px solid #334155;padding:0 32px;display:flex;gap:4px}',
+    '.nav-btn{padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}',
+    '.nav-btn:hover{color:#e2e8f0}.nav-btn.active{color:#6366f1;border-bottom-color:#6366f1}',
+    '.nav-btn.replies-btn.active{color:#f59e0b;border-bottom-color:#f59e0b}',
+    '.rbadge{display:none;background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}',
+    '.container{max-width:1200px;margin:0 auto;padding:32px}',
+    '.page{display:none}.page.active{display:block}',
+    '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}',
+    '.stat-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px}',
+    '.stat-card .label{font-size:12px;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}',
+    '.stat-card .value{font-size:32px;font-weight:700;color:#f8fafc}',
+    '.stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}',
+    '.stat-card.ec{border-top:3px solid #6366f1}.stat-card.sc{border-top:3px solid #f59e0b}',
+    '.stat-card.rc{border-top:3px solid #22c55e}.stat-card.uc{border-top:3px solid #ef4444}',
+    '.section{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;margin-bottom:24px}',
+    '.section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#f8fafc}',
+    '.chart{display:flex;align-items:flex-end;gap:4px;height:120px}',
+    '.bg{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}',
+    '.bar{flex:1;border-radius:2px 2px 0 0;min-height:2px}.eb{background:#6366f1}.sb{background:#f59e0b}',
+    '.chart-labels{display:flex;gap:4px;margin-top:4px}',
+    '.cl{flex:1;text-align:center;font-size:9px;color:#475569;overflow:hidden}',
+    '.legend{display:flex;gap:16px;margin-top:12px}',
+    '.li{display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8}',
+    '.ld{width:10px;height:10px;border-radius:2px}',
+    'table{width:100%;border-collapse:collapse;font-size:13px}',
+    'th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #334155;font-size:11px;text-transform:uppercase}',
+    'td{padding:12px;border-bottom:1px solid #1e293b;color:#cbd5e1;vertical-align:top}',
+    'tr:last-child td{border-bottom:none}',
+    '.bs{background:#1d4ed8;color:#bfdbfe;padding:2px 8px;border-radius:99px;font-size:11px}',
+    '.br{background:#166534;color:#bbf7d0;padding:2px 8px;border-radius:99px;font-size:11px}',
+    '.bsm{background:#92400e;color:#fde68a;padding:2px 8px;border-radius:99px;font-size:11px}',
+    '.empty{text-align:center;color:#475569;padding:40px}',
+    '.subtabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid #334155;padding-bottom:0}',
+    '.stab{padding:10px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:-1px}',
+    '.stab.email-stab.active{color:#6366f1;border-bottom-color:#6366f1}',
+    '.stab.sms-stab.active{color:#f59e0b;border-bottom-color:#f59e0b}',
+    '.sbadge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}',
+    '.email-stab .sbadge{background:#1d4ed8;color:#bfdbfe}',
+    '.sms-stab .sbadge{background:#92400e;color:#fde68a}',
+    '.subpage{display:none}.subpage.active{display:block}',
+    '.reply-list{display:flex;flex-direction:column;gap:12px}',
+    '.rc2{background:#0f172a;border:1px solid #334155;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s}',
+    '.rc2:hover{border-color:#475569}.rc2.open{border-color:#f59e0b}.rc2.email-reply.open{border-color:#6366f1}',
+    '.rh{padding:16px 20px;display:flex;align-items:center;gap:12px}',
+    '.ra{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}',
+    '.ra.email-av{background:linear-gradient(135deg,#6366f1,#818cf8)}',
+    '.ra.sms-av{background:linear-gradient(135deg,#f59e0b,#fbbf24)}',
+    '.rm{flex:1;min-width:0}.rf{font-weight:600;color:#f8fafc;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.rs{color:#94a3b8;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.rt{font-size:11px;color:#64748b;flex-shrink:0}.rv{color:#64748b;font-size:18px;flex-shrink:0;transition:transform .2s}',
+    '.rc2.open .rv{transform:rotate(90deg)}',
+    '.rb2{display:none;padding:0 20px 20px;border-top:1px solid #1e293b}.rc2.open .rb2{display:block}',
+    '.rbi{background:#1e293b;border-radius:8px;padding:16px;margin-top:16px;font-size:13px;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}',
+    '.ract{display:flex;gap:8px;margin-top:12px}',
+    '.btn-r{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;background:#6366f1;color:#fff;border:none;cursor:pointer}',
+    '.btn-r:hover{background:#4f46e5}.btn-sms-r{background:#f59e0b;color:#0f172a}.btn-sms-r:hover{background:#d97706}',
+    '.no-rep{text-align:center;padding:60px 20px}.no-rep .icon{font-size:48px;margin-bottom:16px}.no-rep p{color:#64748b;font-size:15px}',
+    '.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}',
+    '.rph h2{font-size:20px;font-weight:700;color:#f8fafc}',
+    '.rfbtn{padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;font-size:12px}',
+    '.rfbtn:hover{color:#e2e8f0;border-color:#6366f1}',
+    '</style></head><body>',
+    '<div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>',
+    '<nav class="nav">',
+    '<button class="nav-btn active" id="nb-overview" data-page="overview">Overview</button>',
+    '<button class="nav-btn" id="nb-emails" data-page="emails">Emails</button>',
+    '<button class="nav-btn" id="nb-sms" data-page="sms">SMS</button>',
+    '<button class="nav-btn replies-btn" id="nb-replies" data-page="replies">Replies<span class="rbadge" id="rbadge">0</span></button>',
+    '</nav>',
+    '<div class="container">',
+    '<div class="page active" id="page-overview">',
+    '<div class="stats-grid">',
+    '<div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">&#8212;</div><div class="sub" id="tde">Today: &#8212;</div></div>',
+    '<div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">&#8212;</div><div class="sub" id="tds">Today: &#8212;</div></div>',
+    '<div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">&#8212;</div><div class="sub">responses received</div></div>',
+    '<div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">&#8212;</div><div class="sub">responses received</div></div>',
+    '<div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">&#8212;</div><div class="sub">removed</div></div>',
+    '</div>',
+    '<div class="section"><h2>30-Day Activity</h2>',
+    '<div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>',
+    '<div class="legend"><div class="li"><div class="ld" style="background:#6366f1"></div>Emails</div><div class="li"><div class="ld" style="background:#f59e0b"></div>SMS</div></div>',
+    '</div></div>',
+    '<div class="page" id="page-emails">',
+    '<div class="section"><h2>Email Log</h2>',
+    '<table><thead><tr><th>To</th><th>Subject</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>',
+    '<tbody id="email-tbody"></tbody></table></div></div>',
+    '<div class="page" id="page-sms">',
+    '<div class="section"><h2>SMS Log</h2>',
+    '<table><thead><tr><th>To</th><th>Message</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>',
+    '<tbody id="sms-tbody"></tbody></table></div></div>',
+    '<div class="page" id="page-replies">',
+    '<div class="rph">',
+    '<h2>Replies <span id="rtc" style="color:#64748b;font-size:16px;font-weight:400"></span></h2>',
+    '<button class="rfbtn" id="refresh-replies-btn">&#8635; Refresh</button>',
+    '</div>',
+    '<div class="subtabs">',
+    '<button class="stab email-stab active" id="stab-email" data-subtab="email">&#9993; Email Replies<span class="sbadge" id="email-reply-badge">0</span></button>',
+    '<button class="stab sms-stab" id="stab-sms" data-subtab="sms">&#128241; SMS Replies<span class="sbadge" id="sms-reply-badge">0</span></button>',
+    '</div>',
+    '<div class="subpage active" id="subpage-email"><div class="reply-list" id="email-reply-list"></div></div>',
+    '<div class="subpage" id="subpage-sms"><div class="reply-list" id="sms-reply-list"></div></div>',
+    '</div>',
+    '</div>',
+    '<script>',
+    '(function(){',
+    'var curPage="overview",curSubtab="email";',
+    'function fmt(ts){return ts?new Date(ts).toLocaleString():"\u2014";}',
+    'function ini(s){return s?s[0].toUpperCase():"?";}',
+    'window.toggleCard=function(uid){var c=document.getElementById("rc-"+uid);if(c)c.classList.toggle("open");};',
+    'document.querySelectorAll(".nav-btn").forEach(function(btn){',
+    '  btn.addEventListener("click",function(){',
+    '    var p=btn.getAttribute("data-page");',
+    '    document.querySelectorAll(".page").forEach(function(x){x.classList.remove("active");});',
+    '    document.querySelectorAll(".nav-btn").forEach(function(x){x.classList.remove("active");});',
+    '    document.getElementById("page-"+p).classList.add("active");',
+    '    btn.classList.add("active");',
+    '    curPage=p;',
+    '    if(p==="replies")loadReplies();',
+    '    if(p==="emails")loadEmailLog();',
+    '    if(p==="sms")loadSmsLog();',
+    '  });',
+    '});',
+    'document.querySelectorAll(".stab").forEach(function(btn){',
+    '  btn.addEventListener("click",function(){',
+    '    var t=btn.getAttribute("data-subtab");',
+    '    curSubtab=t;',
+    '    document.querySelectorAll(".subpage").forEach(function(x){x.classList.remove("active");});',
+    '    document.querySelectorAll(".stab").forEach(function(x){x.classList.remove("active");});',
+    '    document.getElementById("subpage-"+t).classList.add("active");',
+    '    btn.classList.add("active");',
+    '  });',
+    '});',
+    'document.getElementById("refresh-replies-btn").addEventListener("click",function(){loadReplies();});',
+    'function renderReplyCards(replies,listId,isEmail){',
+    '  var list=document.getElementById(listId);',
+    '  if(!replies||!replies.length){',
+    '    list.innerHTML="<div class=\"no-rep\"><div class=\"icon\">"+(isEmail?"&#128235;":"&#128241;")+"</div><p>No "+(isEmail?"email":"SMS")+" replies yet.</p></div>";',
+    '    return;',
+    '  }',
+    '  list.innerHTML=replies.map(function(r,i){',
+    '    var uid=listId+i;',
+    '    var from=r.from||"\u2014";',
+    '    var subj=isEmail?(r.subject||"(no subject)"):(r.body||"").substring(0,60);',
+    '    var body=(r.body||"").replace(/<[^>]*>/g,"").trim()||"(no content)";',
+    '    var avClass=isEmail?"email-av":"sms-av";',
+    '    var cardClass=isEmail?"email-reply":"sms-reply";',
+    '    var href=isEmail?"mailto:"+encodeURIComponent(from)+"?subject="+encodeURIComponent("Re: "+(r.subject||"")):"sms:"+from+"&body=Re: ";',
+    '    var lbl=isEmail?"&#9993; Reply in Email":"&#128241; Reply via SMS";',
+    '    var cls=isEmail?"btn-r":"btn-r btn-sms-r";',
+    '    return "<div class=\"rc2 "+cardClass+"\" id=\"rc-"+uid+"\">"',
+    '      +"<div class=\"rh\" onclick=\"toggleCard('"+uid+"')\">"',
+    '      +"<div class=\"ra "+avClass+"\">"+ini(from)+"</div>"',
+    '      +"<div class=\"rm\"><div class=\"rf\">"+from+"</div><div class=\"rs\">"+subj+"</div></div>"',
+    '      +"<span class=\"rt\">"+fmt(r.timestamp)+"</span>"',
+    '      +"<span class=\"rv\">&#8250;</span>"',
+    '      +"</div>"',
+    '      +"<div class=\"rb2\"><div class=\"rbi\">"+body+"</div>"',
+    '      +"<div class=\"ract\"><a href=\""+href+"\" class=\""+cls+"\" target=\"_blank\">"+lbl+"</a></div>"',
+    '      +"</div></div>";',
+    '  }).join("");',
+    '}',
+    'function loadReplies(){',
+    '  var badge=document.getElementById("rbadge");',
+    '  var tc=document.getElementById("rtc");',
+    '  Promise.all([',
+    '    fetch("/api/logs?type=replies&subtype=email&limit=100").then(function(r){return r.json();}),',
+    '    fetch("/api/logs?type=replies&subtype=sms&limit=100").then(function(r){return r.json();})',
+    '  ]).then(function(results){',
+    '    var er=results[0],sr=results[1];',
+    '    var total=(er.length||0)+(sr.length||0);',
+    '    tc.textContent=total?"("+total+")":"";',
+    '    badge.textContent=total;badge.style.display=total?"inline-block":"none";',
+    '    document.getElementById("email-reply-badge").textContent=er.length||0;',
+    '    document.getElementById("sms-reply-badge").textContent=sr.length||0;',
+    '    renderReplyCards(er,"email-reply-list",true);',
+    '    renderReplyCards(sr,"sms-reply-list",false);',
+    '  }).catch(function(e){console.error(e);});',
+    '}',
+    'function loadStats(){',
+    '  fetch("/api/logs?type=stats").then(function(r){return r.json();}).then(function(s){',
+    '    document.getElementById("te").textContent=(s.totalEmailSent||0).toLocaleString();',
+    '    document.getElementById("ts").textContent=(s.totalSmsSent||0).toLocaleString();',
+    '    document.getElementById("tde").textContent="Today: "+(s.todayEmailSent||0);',
+    '    document.getElementById("tds").textContent="Today: "+(s.todaySmsSent||0);',
+    '    document.getElementById("er").textContent=(s.emailReplies||0).toLocaleString();',
+    '    document.getElementById("sr").textContent=(s.smsReplies||0).toLocaleString();',
+    '    document.getElementById("un").textContent=(s.unsubscribed||0).toLocaleString();',
+    '    var days=s.dailyChart||[];',
+    '    var maxV=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0);}));',
+    '    maxV=maxV||1;',
+    '    var chart=document.getElementById("chart"),cl=document.getElementById("clabels");',
+    '    chart.innerHTML="";cl.innerHTML="";',
+    '    days.forEach(function(d){',
+    '      var eH=Math.round(((d.emails||0)/maxV)*100);',
+    '      var sH=Math.round(((d.sms||0)/maxV)*100);',
+    '      var g=document.createElement("div");g.className="bg";',
+    '      g.title=d.date+": "+d.emails+" emails, "+d.sms+" SMS";',
+    '      g.innerHTML="<div class=\"bar eb\" style=\"height:"+eH+"%\"></div><div class=\"bar sb\" style=\"height:"+sH+"%\"></div>";',
+    '      chart.appendChild(g);',
+    '      var l=document.createElement("div");l.className="cl";l.textContent=d.date.slice(5);',
+    '      cl.appendChild(l);',
+    '    });',
+    '  }).catch(function(e){console.error(e);});',
+    '}',
+    'function loadEmailLog(){',
+    '  fetch("/api/logs?type=emails&limit=100").then(function(r){return r.json();}).then(function(emails){',
+    '    var sl={no_website:"No Website",needs_app:"App",general:"General"};',
+    '    document.getElementById("email-tbody").innerHTML=emails.length',
+    '      ?emails.map(function(e){return "<tr><td>"+(e.to||"\u2014")+"</td><td>"+(e.subject||"\u2014")+"</td><td>"+(sl[e.segment]||e.segment||"\u2014")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\""+(e.replied?"br":"bs")+"\">"+( e.replied?"Replied":"Sent")+"</span></td></tr>";}).join("")',
+    '      :"<tr><td colspan=\"5\" class=\"empty\">No emails sent yet.</td></tr>";',
+    '  }).catch(function(e){console.error(e);});',
+    '}',
+    'function loadSmsLog(){',
+    '  fetch("/api/logs?type=sms&limit=100").then(function(r){return r.json();}).then(function(sms){',
+    '    var sl={no_website:"No Website",needs_app:"App",general:"General"};',
+    '    document.getElementById("sms-tbody").innerHTML=sms.length',
+    '      ?sms.map(function(e){return "<tr><td>"+(e.to||"\u2014")+"</td><td>"+((e.body||"\u2014").substring(0,100))+"</td><td>"+(sl[e.segment]||e.segment||"\u2014")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\""+(e.replied?"br":"bsm")+"\">"+( e.replied?"Replied":"Sent")+"</span></td></tr>";}).join("")',
+    '      :"<tr><td colspan=\"5\" class=\"empty\">No SMS sent yet.</td></tr>";',
+    '  }).catch(function(e){console.error(e);});',
+    '}',
+    'loadStats();loadEmailLog();loadSmsLog();loadReplies();',
+    'setInterval(function(){loadStats();if(curPage==="replies")loadReplies();},30000);',
+    '})();',
+    '<\/script>',
+    '</body></html>'
+  ].join('\n');
   res.setHeader('Content-Type','text/html');
   res.status(200).send(html);
 }
