@@ -1,10 +1,9 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    { "source": "/unsubscribe", "destination": "/api/unsubscribe" },
-    { "source": "/dashboard", "destination": "/api/dashboard" }
-  ],
+  "version": 2,
   "crons": [
-    { "path": "/api/cron", "schedule": "30 18 * * *" }
+    {
+      "path": "/api/cron",
+      "schedule": "0 17 * * *"
+    }
   ]
 }
