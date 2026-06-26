@@ -1,134 +1,150 @@
-// Autonomous sender. Vercel Cron hits this on a schedule. Each run sends a small,
-// capped batch: it searches Apollo (free), skips anyone already seen/contacted/
-// suppressed, enriches only NEW people, writes each email with Claude, and sends.
-import { searchPeople, enrichBatch } from "../lib/apollo.js";
-import { writeEmail } from "../lib/personalize.js";
-import { sendEmail } from "../lib/mailer.js";
-import {
-  storeReady, isSuppressed, isContacted, addContacted,
-  isSeen, addSeen, sentToday, incrSentToday, logEmail,
-} from "../lib/store.js";
+import Anthropic from '@anthropic-ai/sdk';
+import { Resend } from 'resend';
+import twilio from 'twilio';
+import { logEmail, logSms, addToSuppression, isSuppressed } from '../lib/store.js';
 
-export const config = { maxDuration: 60 };
+export const config = { runtime: 'edge' };
+export const maxDuration = 300;
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const list = (s) => (s || "").split(",").map((x) => x.trim()).filter(Boolean);
+const CRON_SECRET = process.env.CRON_SECRET;
+const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
+const DAILY_CAP = parseInt(process.env.DAILY_CAP || '500');
+const SMS_DAILY_CAP = parseInt(process.env.SMS_DAILY_CAP || '500');
+const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
+const PITCH = process.env.OUTREACH_PITCH || 'we offer seo optimized websites, manage google business profile, run google/meta ads, create customized mobile apps';
+const TARGET_TITLES = process.env.TARGET_TITLES || 'CEO,Owner,Founder,President';
+const TARGET_KEYWORDS = process.env.TARGET_KEYWORDS || 'service based businesses';
+const TARGET_LOCATIONS = process.env.TARGET_LOCATIONS || 'United States';
 
-export default async function handler(req, res) {
-  const secret = process.env.CRON_SECRET;
-  const auth = req.headers["authorization"] || "";
-  if (secret && auth !== `Bearer ${secret}`) return res.status(401).json({ error: "unauthorized" });
+const resend = new Resend(process.env.RESEND_API_KEY);
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 
-  if (process.env.AUTOSEND_ENABLED !== "true") {
-    return res.status(200).json({ skipped: "AUTOSEND_ENABLED is not true" });
-  }
-  if (!storeReady) return res.status(500).json({ error: "no KV store configured" });
-
-  const cfg = {
-    apolloKey: process.env.APOLLO_API_KEY,
-    anthropicKey: process.env.ANTHROPIC_API_KEY,
-    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-    resendKey: process.env.RESEND_API_KEY,
-    from: process.env.FROM,
-    replyTo: process.env.REPLY_TO,
-    companyName: process.env.COMPANY_NAME,
-    physicalAddress: process.env.PHYSICAL_ADDRESS,
-    unsubscribeEmail: process.env.UNSUBSCRIBE_EMAIL,
-    unsubscribeUrl: process.env.UNSUBSCRIBE_URL,
+async function fetchContacts(page = 1) {
+  const body = {
+    api_key: APOLLO_API_KEY,
+    q_keywords: TARGET_KEYWORDS,
+    person_titles: TARGET_TITLES.split(',').map(t => t.trim()),
+    person_locations: [TARGET_LOCATIONS],
+    contact_email_status: ['verified', 'likely to engage'],
+    per_page: 25,
+    page
   };
-  const target = {
-    titles: list(process.env.TARGET_TITLES),
-    keywords: list(process.env.TARGET_KEYWORDS),
-    locations: list(process.env.TARGET_LOCATIONS),
-  };
-  const senderPitch = process.env.SENDER_PITCH || `${cfg.companyName} helps companies like the recipient's get more booked calls.`;
-  const dailyCap = parseInt(process.env.DAILY_CAP || "20", 10);
-  const batchSize = parseInt(process.env.BATCH_SIZE || "5", 10);
-  const delayMs = parseInt(process.env.SEND_DELAY_SECONDS || "3", 10) * 1000;
+  const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('Apollo error: ' + res.status);
+  return res.json();
+}
 
-  const already = await sentToday();
-  const room = Math.max(0, dailyCap - already);
-  const want = Math.min(batchSize, room);
-  if (want <= 0) return res.status(200).json({ sentToday: already, dailyCap, note: "daily cap reached" });
+async function generateEmail(contact) {
+  const firstName = contact.first_name || 'there';
+  const company = contact.organization_name || 'your company';
+  const title = contact.title || 'business owner';
+  const msg = await anthropic.messages.create({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 400,
+    messages: [{
+      role: 'user',
+      content: `Write a short, personalized cold outreach email (under 150 words) to ${firstName}, who is a ${title} at ${company}. We are Ascend Web Development. ${PITCH}. Be friendly, conversational, no fluff. End with a soft CTA to reply if interested. Subject line on first line starting with "Subject:". Do not use placeholders.`
+    }]
+  });
+  const text = msg.content[0].text;
+  const lines = text.split('\n');
+  const subjectLine = lines.find(l => l.startsWith('Subject:'));
+  const subject = subjectLine ? subjectLine.replace('Subject:', '').trim() : 'Quick question';
+  const body = lines.filter(l => !l.startsWith('Subject:')).join('\n').trim();
+  return { subject, body };
+}
 
-  let found;
-  try { found = await searchPeople(cfg.apolloKey, target); }
-  catch (e) { return res.status(502).json({ error: `apollo search: ${e.message}` }); }
+async function generateSms(contact) {
+  const firstName = contact.first_name || 'there';
+  const company = contact.organization_name || 'your company';
+  const msg = await anthropic.messages.create({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 160,
+    messages: [{
+      role: 'user',
+      content: `Write a short SMS outreach message (under 160 chars) to ${firstName} at ${company}. We are Ascend Web Development. ${PITCH}. Friendly, direct, one sentence CTA. No emojis. Must be under 160 characters total.`
+    }]
+  });
+  let smsText = msg.content[0].text.trim();
+  if (smsText.length > 160) smsText = smsText.substring(0, 157) + '...';
+  return smsText;
+}
 
-  const fresh = [];
-  for (const p of found) {
-    if (fresh.length >= want) break;
-    if (!(p.has_email || p.email_status === "verified")) continue;
-    if (await isSeen(p.id)) continue;
-    fresh.push(p);
+export default async function handler(req) {
+  if (req.method !== 'GET') return new Response('Method not allowed', { status: 405 });
+  const auth = req.headers.get('authorization');
+  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
+    return new Response('Unauthorized', { status: 401 });
   }
-  if (!fresh.length) return res.status(200).json({ sentToday: already, note: "no new leads this run" });
 
-  let matches = [];
-  try { matches = await enrichBatch(cfg.apolloKey, fresh); }
-  catch (e) { return res.status(502).json({ error: `apollo enrich: ${e.message}` }); }
-  for (const p of fresh) { try { await addSeen(p.id); } catch {} }
+  let emailsSent = 0, smsSent = 0, errors = [];
+  let page = 1;
 
-  const leads = [];
-  for (const m of matches) {
-    if (!m?.email || /email_not_unlocked/i.test(m.email)) continue;
-    const email = m.email.toLowerCase();
-    if (await isSuppressed(email) || await isContacted(email)) continue;
-    leads.push({
-      firstName: m.first_name || (m.name || "there").split(" ")[0],
-      lastName: m.last_name || "",
-      email: m.email,
-      title: m.title || "",
-      company: m.organization?.name || "",
-      website: m.organization?.website_url || "",
-      signal: m.headline || m.organization?.short_description || `works as ${m.title || "a decision-maker"}`,
-    });
-  }
+  try {
+    while (emailsSent < DAILY_CAP || smsSent < SMS_DAILY_CAP) {
+      const data = await fetchContacts(page++);
+      const contacts = data.people || data.contacts || [];
+      if (!contacts.length) break;
 
-  const drafts = await Promise.all(
-    leads.map((l) => writeEmail(cfg.anthropicKey, cfg.model, l, { senderPitch }).then((d) => ({ l, d })))
-  );
+      for (const contact of contacts) {
+        if (emailsSent >= DAILY_CAP && smsSent >= SMS_DAILY_CAP) break;
 
-  const results = [];
-  for (const [i, { l, d }] of drafts.entries()) {
-    try {
-      const id = await sendEmail(cfg, l, d.subject, d.body);
-      await addContacted(l.email);
-      // Log the sent email for the dashboard
-      await logEmail({
-        type: "sent",
-        resendId: id,
-        to: l.email,
-        firstName: l.firstName,
-        lastName: l.lastName,
-        title: l.title,
-        company: l.company,
-        website: l.website,
-        subject: d.subject,
-        status: "sent",
-      }).catch(() => {});
-      results.push({ email: l.email, status: "sent", id });
-    } catch (e) {
-      await logEmail({
-        type: "sent",
-        to: l.email,
-        firstName: l.firstName,
-        lastName: l.lastName,
-        title: l.title,
-        company: l.company,
-        subject: d.subject,
-        status: "failed",
-        error: e.message,
-      }).catch(() => {});
-      results.push({ email: l.email, status: "failed", error: e.message });
+        const email = contact.email;
+        const phone = contact.phone_numbers?.[0]?.sanitized_number || contact.mobile_phone;
+
+        // Send email
+        if (email && emailsSent < DAILY_CAP) {
+          try {
+            const suppressed = await isSuppressed(email);
+            if (!suppressed) {
+              const { subject, body } = await generateEmail(contact);
+              const emailBody = body + `\n\n--\n${PHYSICAL_ADDRESS}\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a>`;
+              await resend.emails.send({
+                from: FROM_EMAIL,
+                to: email,
+                subject,
+                html: emailBody.replace(/\n/g, '<br>')
+              });
+              await logEmail({ to: email, subject, contactId: contact.id, timestamp: Date.now() });
+              emailsSent++;
+            }
+          } catch (e) {
+            errors.push({ type: 'email', to: email, error: e.message });
+          }
+        }
+
+        // Send SMS
+        if (phone && smsSent < SMS_DAILY_CAP) {
+          try {
+            const smsBody = await generateSms(contact);
+            await twilioClient.messages.create({
+              body: smsBody,
+              from: TWILIO_FROM,
+              to: phone
+            });
+            await logSms({ to: phone, body: smsBody, contactId: contact.id, timestamp: Date.now() });
+            smsSent++;
+          } catch (e) {
+            errors.push({ type: 'sms', to: phone, error: e.message });
+          }
+        }
+      }
+
+      if (page > 20) break; // safety limit
     }
-    if (i < drafts.length - 1) await sleep(delayMs);
+  } catch (e) {
+    errors.push({ type: 'fatal', error: e.message });
   }
 
-  const sent = results.filter((r) => r.status === "sent").length;
-  if (sent) await incrSentToday(sent);
-
-  const summary = { sent, attempted: results.length, sentTodayNow: already + sent, dailyCap, results };
-  console.log("[cron]", JSON.stringify(summary));
-  return res.status(200).json(summary);
+  return new Response(JSON.stringify({ emailsSent, smsSent, errors, timestamp: new Date().toISOString() }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
