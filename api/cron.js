@@ -14,8 +14,8 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 // 70 emails + 70 SMS per run x 3 runs/day = 210 emails + 210 SMS daily
 const EMAIL_CAP = 70;
 const SMS_CAP = 70;
-// Fetch 5 per query (10 total) - 1 AI call per lead stays under 60s
-const FETCH_LIMIT = 5;
+// Fetch 10 per query (20 total) - ~20 AI calls at 2s each = ~40s, under 60s limit
+const FETCH_LIMIT = 10;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
