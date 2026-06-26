@@ -43,20 +43,35 @@ export default function handler(req, res) {
   lines.push('.br{background:#166534;color:#bbf7d0;padding:2px 8px;border-radius:99px;font-size:11px}');
   lines.push('.bsm{background:#92400e;color:#fde68a;padding:2px 8px;border-radius:99px;font-size:11px}');
   lines.push('.empty{text-align:center;color:#475569;padding:40px}');
+  // Subtabs for replies
+  lines.push('.subtabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid #334155;padding-bottom:0}');
+  lines.push('.stab{padding:10px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:-1px}');
+  lines.push('.stab.active{color:#f8fafc;border-bottom-color:#f8fafc}');
+  lines.push('.stab.email-stab.active{color:#6366f1;border-bottom-color:#6366f1}');
+  lines.push('.stab.sms-stab.active{color:#f59e0b;border-bottom-color:#f59e0b}');
+  lines.push('.sbadge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}');
+  lines.push('.email-stab .sbadge{background:#1d4ed8;color:#bfdbfe}');
+  lines.push('.sms-stab .sbadge{background:#92400e;color:#fde68a}');
+  lines.push('.subpage{display:none}.subpage.active{display:block}');
+  // Reply cards
   lines.push('.reply-list{display:flex;flex-direction:column;gap:12px}');
-  lines.push('.rc2{background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s}');
-  lines.push('.rc2:hover{border-color:#6366f1}.rc2.open{border-color:#f59e0b}');
-  lines.push('.rh{padding:16px 20px;display:flex;align-items:center;gap:16px}');
-  lines.push('.ra{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}');
+  lines.push('.rc2{background:#0f172a;border:1px solid #334155;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s}');
+  lines.push('.rc2:hover{border-color:#475569}.rc2.open{border-color:#f59e0b}');
+  lines.push('.rc2.email-reply.open{border-color:#6366f1}');
+  lines.push('.rh{padding:16px 20px;display:flex;align-items:center;gap:12px}');
+  lines.push('.ra{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}');
+  lines.push('.ra.email-av{background:linear-gradient(135deg,#6366f1,#818cf8)}');
+  lines.push('.ra.sms-av{background:linear-gradient(135deg,#f59e0b,#fbbf24)}');
   lines.push('.rm{flex:1;min-width:0}.rf{font-weight:600;color:#f8fafc;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
   lines.push('.rs{color:#94a3b8;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
   lines.push('.rt{font-size:11px;color:#64748b;flex-shrink:0}.rv{color:#64748b;font-size:18px;flex-shrink:0;transition:transform .2s}');
   lines.push('.rc2.open .rv{transform:rotate(90deg)}');
-  lines.push('.rb2{display:none;padding:0 20px 20px;border-top:1px solid #334155}.rc2.open .rb2{display:block}');
-  lines.push('.rbi{background:#0f172a;border-radius:8px;padding:16px;margin-top:16px;font-size:13px;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}');
+  lines.push('.rb2{display:none;padding:0 20px 20px;border-top:1px solid #1e293b}.rc2.open .rb2{display:block}');
+  lines.push('.rbi{background:#1e293b;border-radius:8px;padding:16px;margin-top:16px;font-size:13px;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}');
   lines.push('.ract{display:flex;gap:8px;margin-top:12px}');
   lines.push('.btn-r{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;background:#6366f1;color:#fff}');
-  lines.push('.btn-r:hover{background:#4f46e5}');
+  lines.push('.btn-r:hover{background:#4f46e5}.btn-sms-r{background:#f59e0b;color:#0f172a}');
+  lines.push('.btn-sms-r:hover{background:#d97706}');
   lines.push('.no-rep{text-align:center;padding:60px 20px}.no-rep .icon{font-size:48px;margin-bottom:16px}.no-rep p{color:#64748b;font-size:15px}');
   lines.push('.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}');
   lines.push('.rph h2{font-size:20px;font-weight:700;color:#f8fafc}');
@@ -71,7 +86,7 @@ export default function handler(req, res) {
   lines.push('<button class="nav-btn replies-btn" id="nb-replies" onclick="showPage(event,\'replies\')">Replies<span class="rbadge" id="rbadge">0</span></button>');
   lines.push('</nav>');
   lines.push('<div class="container">');
-  // Overview
+  // Overview page
   lines.push('<div class="page active" id="page-overview">');
   lines.push('<div class="stats-grid">');
   lines.push('<div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">—</div><div class="sub" id="tde">Today: —</div></div>');
@@ -81,67 +96,100 @@ export default function handler(req, res) {
   lines.push('<div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">—</div><div class="sub">removed</div></div>');
   lines.push('</div>');
   lines.push('<div class="section"><h2>30-Day Activity</h2>');
-  lines.push('<div class="chart" id="chart"></div>');
-  lines.push('<div class="chart-labels" id="clabels"></div>');
+  lines.push('<div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>');
   lines.push('<div class="legend"><div class="li"><div class="ld" style="background:#6366f1"></div>Emails</div><div class="li"><div class="ld" style="background:#f59e0b"></div>SMS</div></div>');
   lines.push('</div></div>');
-  // Emails
+  // Emails page
   lines.push('<div class="page" id="page-emails">');
   lines.push('<div class="section"><h2>Email Log</h2>');
   lines.push('<table><thead><tr><th>To</th><th>Subject</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>');
   lines.push('<tbody id="email-tbody"></tbody></table></div></div>');
-  // SMS
+  // SMS page
   lines.push('<div class="page" id="page-sms">');
   lines.push('<div class="section"><h2>SMS Log</h2>');
   lines.push('<table><thead><tr><th>To</th><th>Message</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>');
   lines.push('<tbody id="sms-tbody"></tbody></table></div></div>');
-  // Replies
+  // Replies page with subtabs
   lines.push('<div class="page" id="page-replies">');
   lines.push('<div class="rph"><h2>Replies <span id="rtc" style="color:#64748b;font-size:16px;font-weight:400"></span></h2>');
   lines.push('<button class="rfbtn" onclick="loadReplies()">&#8635; Refresh</button></div>');
-  lines.push('<div class="reply-list" id="reply-list"></div>');
+  // Subtabs
+  lines.push('<div class="subtabs">');
+  lines.push('<button class="stab email-stab active" id="stab-email" onclick="showSubtab(\'email\')">&#9993; Email Replies<span class="sbadge" id="email-reply-badge">0</span></button>');
+  lines.push('<button class="stab sms-stab" id="stab-sms" onclick="showSubtab(\'sms\')">&#128241; SMS Replies<span class="sbadge" id="sms-reply-badge">0</span></button>');
   lines.push('</div>');
-  lines.push('</div>'); // container
+  // Email replies subpage
+  lines.push('<div class="subpage active" id="subpage-email">');
+  lines.push('<div class="reply-list" id="email-reply-list"></div>');
+  lines.push('</div>');
+  // SMS replies subpage
+  lines.push('<div class="subpage" id="subpage-sms">');
+  lines.push('<div class="reply-list" id="sms-reply-list"></div>');
+  lines.push('</div>');
+  lines.push('</div>'); // end replies page
+  lines.push('</div>'); // end container
   lines.push('<script>');
-  lines.push('var curPage="overview";');
+  lines.push('var curPage="overview";var curSubtab="email";');
   lines.push('function showPage(e,p){');
   lines.push('  document.querySelectorAll(".page").forEach(function(x){x.classList.remove("active")});');
   lines.push('  document.querySelectorAll(".nav-btn").forEach(function(x){x.classList.remove("active")});');
   lines.push('  document.getElementById("page-"+p).classList.add("active");');
-  lines.push('  e.currentTarget.classList.add("active");');
-  lines.push('  curPage=p;');
+  lines.push('  e.currentTarget.classList.add("active");curPage=p;');
   lines.push('  if(p==="replies")loadReplies();');
   lines.push('  if(p==="emails")loadEmailLog();');
   lines.push('  if(p==="sms")loadSmsLog();');
   lines.push('}');
+  lines.push('function showSubtab(t){');
+  lines.push('  curSubtab=t;');
+  lines.push('  document.querySelectorAll(".subpage").forEach(function(x){x.classList.remove("active")});');
+  lines.push('  document.querySelectorAll(".stab").forEach(function(x){x.classList.remove("active")});');
+  lines.push('  document.getElementById("subpage-"+t).classList.add("active");');
+  lines.push('  document.getElementById("stab-"+t).classList.add("active");');
+  lines.push('}');
   lines.push('function fmt(ts){return ts?new Date(ts).toLocaleString():"—"}');
-  lines.push('function ini(e){return e?e[0].toUpperCase():"?"}');
+  lines.push('function ini(s){return s?s[0].toUpperCase():"?"}');
   lines.push('function toggleCard(id){var c=document.getElementById("rc-"+id);c.classList.toggle("open")}');
+  lines.push('function renderReplyCards(replies, listId, isEmail) {');
+  lines.push('  var list=document.getElementById(listId);');
+  lines.push('  if(!replies||!replies.length){');
+  lines.push('    list.innerHTML=\'<div class="no-rep"><div class="icon">\'+( isEmail ? \'&#128235;\' : \'&#128241;\')+\'</div><p>No \'+( isEmail ? \'email\' : \'SMS\')+\" replies yet.</p></div>\';');
+  lines.push('    return;');
+  lines.push('  }');
+  lines.push('  list.innerHTML=replies.map(function(r,i){');
+  lines.push('    var uid=listId+i;');
+  lines.push('    var from=r.from||"—";');
+  lines.push('    var subj=isEmail?(r.subject||"(no subject)"):(r.body||"").substring(0,60);');
+  lines.push('    var body=(r.body||"").replace(/<[^>]*>/g,"").trim()||"(no content)";');
+  lines.push('    var avClass=isEmail?"email-av":"sms-av";');
+  lines.push('    var cardClass=isEmail?"email-reply":"sms-reply";');
+  lines.push('    var actionBtn=isEmail');
+  lines.push('      ?\'<a href="mailto:\'+encodeURIComponent(from)+\'?subject=\'+encodeURIComponent("Re: "+(r.subject||""))+\'" class="btn-r" target="_blank">&#9993; Reply in Email</a>\'');
+  lines.push('      :\'<a href="sms:\'+from+\'&body=Re: " class="btn-r btn-sms-r">&#128241; Reply via SMS</a>\';');
+  lines.push('    return \'<div class="rc2 \'+cardClass+\'" id="rc-\'+uid+\'">\'+');
+  lines.push('      \'<div class="rh" onclick="toggleCard(\'\'+uid+\')">\'+');
+  lines.push('      \'<div class="ra \'+avClass+\'">\'+ini(from)+\'</div>\'+');
+  lines.push('      \'<div class="rm"><div class="rf">\'+from+\'</div><div class="rs">\'+subj+\'</div></div>\'+');
+  lines.push('      \'<span class="rt">\'+fmt(r.timestamp)+\'</span>\'+');
+  lines.push('      \'<span class="rv">&#8250;</span></div>\'+');
+  lines.push('      \'<div class="rb2"><div class="rbi">\'+body+\'</div>\'+');
+  lines.push('      \'<div class="ract">\'+actionBtn+\'</div></div></div>\';');
+  lines.push('  }).join("");');
+  lines.push('}');
   lines.push('function loadReplies(){');
-  lines.push('  fetch("/api/logs?type=replies&limit=100").then(function(r){return r.json()}).then(function(replies){');
-  lines.push('    var list=document.getElementById("reply-list");');
-  lines.push('    var tc=document.getElementById("rtc");');
-  lines.push('    var badge=document.getElementById("rbadge");');
-  lines.push('    if(!replies||!replies.length){');
-  lines.push('      list.innerHTML=\'<div class="no-rep"><div class="icon">&#128235;</div><p>No replies yet. When someone responds to an outreach email, it will appear here.</p></div>\';');
-  lines.push('      tc.textContent="";badge.style.display="none";return;');
-  lines.push('    }');
-  lines.push('    tc.textContent="("+replies.length+")";');
-  lines.push('    badge.textContent=replies.length;badge.style.display="inline-block";');
-  lines.push('    list.innerHTML=replies.map(function(r,i){');
-  lines.push('      var from=r.from||"—";');
-  lines.push('      var subj=r.subject||"(no subject)";');
-  lines.push('      var body=(r.body||"").replace(/<[^>]*>/g,"").trim()||"(no content)";');
-  lines.push('      var ml="mailto:"+encodeURIComponent(from)+"?subject="+encodeURIComponent("Re: "+subj);');
-  lines.push('      return \'<div class="rc2" id="rc-\'+i+\'">\'+');
-  lines.push('        \'<div class="rh" onclick="toggleCard(\'+i+\')">\'+');
-  lines.push('        \'<div class="ra">\'+ini(from)+\'</div>\'+');
-  lines.push('        \'<div class="rm"><div class="rf">\'+from+\'</div><div class="rs">\'+subj+\'</div></div>\'+');
-  lines.push('        \'<span class="rt">\'+fmt(r.timestamp)+\'</span>\'+');
-  lines.push('        \'<span class="rv">&#8250;</span></div>\'+');
-  lines.push('        \'<div class="rb2"><div class="rbi">\'+body+\'</div>\'+');
-  lines.push('        \'<div class="ract"><a href="\'+ml+\'" class="btn-r" target="_blank">&#9993; Reply in Email</a></div></div></div>\';');
-  lines.push('    }).join("");');
+  lines.push('  var badge=document.getElementById("rbadge");');
+  lines.push('  var tc=document.getElementById("rtc");');
+  lines.push('  Promise.all([');
+  lines.push('    fetch("/api/logs?type=replies&subtype=email&limit=100").then(function(r){return r.json()}),');
+  lines.push('    fetch("/api/logs?type=replies&subtype=sms&limit=100").then(function(r){return r.json()})');
+  lines.push('  ]).then(function(results){');
+  lines.push('    var emailReplies=results[0];var smsReplies=results[1];');
+  lines.push('    var total=(emailReplies.length||0)+(smsReplies.length||0);');
+  lines.push('    tc.textContent=total?"("+total+")":"";');
+  lines.push('    badge.textContent=total;badge.style.display=total?"inline-block":"none";');
+  lines.push('    document.getElementById("email-reply-badge").textContent=emailReplies.length||0;');
+  lines.push('    document.getElementById("sms-reply-badge").textContent=smsReplies.length||0;');
+  lines.push('    renderReplyCards(emailReplies,"email-reply-list",true);');
+  lines.push('    renderReplyCards(smsReplies,"sms-reply-list",false);');
   lines.push('  }).catch(function(e){console.error(e)});');
   lines.push('}');
   lines.push('function loadStats(){');
@@ -154,13 +202,11 @@ export default function handler(req, res) {
   lines.push('    document.getElementById("sr").textContent=(s.smsReplies||0).toLocaleString();');
   lines.push('    document.getElementById("un").textContent=(s.unsubscribed||0).toLocaleString();');
   lines.push('    var days=s.dailyChart||[];');
-  lines.push('    var maxV=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0)}));');
-  lines.push('    maxV=maxV||1;');
+  lines.push('    var maxV=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0)}));maxV=maxV||1;');
   lines.push('    var chart=document.getElementById("chart");var cl=document.getElementById("clabels");');
   lines.push('    chart.innerHTML="";cl.innerHTML="";');
   lines.push('    days.forEach(function(d){');
-  lines.push('      var eH=Math.round(((d.emails||0)/maxV)*100);');
-  lines.push('      var sH=Math.round(((d.sms||0)/maxV)*100);');
+  lines.push('      var eH=Math.round(((d.emails||0)/maxV)*100);var sH=Math.round(((d.sms||0)/maxV)*100);');
   lines.push('      var g=document.createElement("div");g.className="bg";g.title=d.date+": "+d.emails+" emails, "+d.sms+" SMS";');
   lines.push('      g.innerHTML=\'<div class="bar eb" style="height:\'+eH+\'%"></div><div class="bar sb" style="height:\'+sH+\'%"></div>\';');
   lines.push('      chart.appendChild(g);');
@@ -173,7 +219,7 @@ export default function handler(req, res) {
   lines.push('    var sl={no_website:"No Website",needs_app:"App",general:"General"};');
   lines.push('    document.getElementById("email-tbody").innerHTML=emails.length');
   lines.push('      ?emails.map(function(e){return "<tr><td>"+(e.to||"—")+"</td><td>"+(e.subject||"—")+"</td><td>"+(sl[e.segment]||e.segment||"—")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\'"+(e.replied?"br":"bs")+"\'>"+(e.replied?"Replied":"Sent")+"</span></td></tr>"}).join("")');
-  lines.push('      :\'<tr><td colspan="5" class="empty">No emails sent yet. First run at 10am MST.</td></tr>\';');
+  lines.push('      :\'<tr><td colspan="5" class="empty">No emails sent yet.</td></tr>\';');
   lines.push('  }).catch(function(e){console.error(e)});');
   lines.push('}');
   lines.push('function loadSmsLog(){');
@@ -181,7 +227,7 @@ export default function handler(req, res) {
   lines.push('    var sl={no_website:"No Website",needs_app:"App",general:"General"};');
   lines.push('    document.getElementById("sms-tbody").innerHTML=sms.length');
   lines.push('      ?sms.map(function(e){return "<tr><td>"+(e.to||"—")+"</td><td>"+((e.body||"—").substring(0,100))+"</td><td>"+(sl[e.segment]||e.segment||"—")+"</td><td>"+fmt(e.timestamp)+"</td><td><span class=\'"+(e.replied?"br":"bsm")+"\'>"+(e.replied?"Replied":"Sent")+"</span></td></tr>"}).join("")');
-  lines.push('      :\'<tr><td colspan="5" class="empty">No SMS sent yet. First run at 10am MST.</td></tr>\';');
+  lines.push('      :\'<tr><td colspan="5" class="empty">No SMS sent yet.</td></tr>\';');
   lines.push('  }).catch(function(e){console.error(e)});');
   lines.push('}');
   lines.push('loadStats();loadEmailLog();loadSmsLog();loadReplies();');
