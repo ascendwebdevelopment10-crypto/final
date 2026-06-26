@@ -1,38 +1,33 @@
-import {
-  getEmailLog, getReplyLog, getDailySentCounts, getTotalStats,
-  listSuppressed, storeReady
-} from "../lib/store.js";
+import { getEmailLog, getSmsLog, getTotalStats } from '../lib/store.js';
 
-export default async function handler(req, res) {
-  if (!storeReady) return res.status(500).json({ error: "no KV store configured" });
+export const config = { runtime: 'edge' };
 
-  const limit = Math.min(parseInt(req.query.limit || "200"), 1000);
-  const offset = parseInt(req.query.offset || "0");
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const type = url.searchParams.get('type') || 'stats';
 
   try {
-    const [emails, replies, dailyCounts, stats, suppressed] = await Promise.all([
-      getEmailLog(limit, offset),
-      getReplyLog(100),
-      getDailySentCounts(30),
-      getTotalStats(),
-      listSuppressed(),
-    ]);
-
-    const repliedSet = new Set(replies.map(r => r.email?.toLowerCase()));
-    const enrichedEmails = emails.map(e => ({
-      ...e,
-      replied: repliedSet.has(e.to?.toLowerCase()),
-    }));
-
-    return res.status(200).json({
-      stats,
-      emails: enrichedEmails,
-      replies,
-      dailyCounts,
-      suppressed: Array.isArray(suppressed) ? suppressed : [],
-      generatedAt: new Date().toISOString(),
-    });
+    if (type === 'stats') {
+      const stats = await getTotalStats();
+      return new Response(JSON.stringify(stats), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } else if (type === 'emails') {
+      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const log = await getEmailLog(limit);
+      return new Response(JSON.stringify(log), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } else if (type === 'sms') {
+      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const log = await getSmsLog(limit);
+      return new Response(JSON.stringify(log), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400 });
+    }
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }
