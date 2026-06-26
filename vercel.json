@@ -1,9 +1,17 @@
 {
-  "version": 2,
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "30 18 * * *"
-    }
-  ]
+    "version": 2,
+    "crons": [
+          {
+                  "path": "/api/cron",
+                  "schedule": "30 18 * * *"
+          }
+    ],
+    "rewrites": [
+          { "source": "/dashboard", "destination": "/api/dashboard" },
+          { "source": "/logs", "destination": "/api/logs" },
+          { "source": "/suppressed", "destination": "/api/suppressed" },
+          { "source": "/unsubscribe", "destination": "/api/unsubscribe" },
+          { "source": "/webhook", "destination": "/api/webhook" },
+          { "source": "/sms-webhook", "destination": "/api/sms-webhook" }
+    ]
 }
