@@ -7,6 +7,8 @@ export const config = { maxDuration: 300 };
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
+const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com'; // BCC for first 10 only
+const BCC_PREVIEW_LIMIT = 10;
 const DAILY_CAP = parseInt(process.env.DAILY_CAP || '500');
 const SMS_DAILY_CAP = parseInt(process.env.SMS_DAILY_CAP || '500');
 const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
@@ -17,7 +19,6 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 
-// Industries that strongly benefit from a mobile app
 const APP_INDUSTRIES = [
   'restaurant','food','cafe','bar','gym','fitness','yoga','personal training',
   'salon','barbershop','spa','nail','beauty','massage',
@@ -130,7 +131,20 @@ export default async function handler(req, res) {
           if (!suppressed) {
             const { subject, body } = await generateEmail(contact, segment);
             const footer = `\n\n--\nAscend Web Development\n${PHYSICAL_ADDRESS}\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a>`;
-            await resend.emails.send({ from: FROM_EMAIL, to: email, subject, html: (body + footer).replace(/\n/g, '<br>') });
+            
+            // BCC yourself on the first 10 emails so you can verify they look right
+            const sendOptions = {
+              from: FROM_EMAIL,
+              to: email,
+              subject,
+              html: (body + footer).replace(/\n/g, '<br>'),
+              reply_to: FROM_EMAIL
+            };
+            if (emailsSent < BCC_PREVIEW_LIMIT) {
+              sendOptions.bcc = BCC_PREVIEW_EMAIL;
+            }
+
+            await resend.emails.send(sendOptions);
             await logEmail({ to: email, subject, contactId: contact.id, timestamp: Date.now(), segment });
             emailsSent++;
           }
@@ -150,9 +164,8 @@ export default async function handler(req, res) {
 
   try {
     const halfCap = Math.floor(DAILY_CAP / 2);
-    const halfSmsCap = Math.floor(SMS_DAILY_CAP / 2);
 
-    // Segment 1: No website (250 emails + 250 SMS)
+    // Segment 1: No website
     const noWebContacts = [];
     for (let page = 1; page <= 12 && noWebContacts.length < halfCap + 50; page++) {
       const data = await fetchContacts('local service business small company', page);
@@ -162,7 +175,7 @@ export default async function handler(req, res) {
     }
     await processContacts(noWebContacts.slice(0, halfCap + 50), 'no_website');
 
-    // Segment 2: App-ready industries (remaining cap)
+    // Segment 2: App-ready industries
     const remaining = DAILY_CAP - emailsSent;
     const appContacts = [];
     for (let page = 1; page <= 12 && appContacts.length < remaining + 50; page++) {
@@ -175,5 +188,5 @@ export default async function handler(req, res) {
 
   } catch (e) { errors.push({ type: 'fatal', error: e.message }); }
 
-  res.status(200).json({ emailsSent, smsSent, errors, timestamp: new Date().toISOString() });
+  res.status(200).json({ emailsSent, smsSent, errors, bccSentFor: Math.min(emailsSent, BCC_PREVIEW_LIMIT), timestamp: new Date().toISOString() });
 }
