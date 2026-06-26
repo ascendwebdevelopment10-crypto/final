@@ -1,9 +1,9 @@
 // Resend webhook. Verifies the Svix signature, then auto-suppresses any address
 // that bounces or files a spam complaint, plus Resend's own unsubscribe events.
+// Also logs replies/opens to the dashboard store.
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { addSuppressed } from "../lib/store.js";
+import { addSuppressed, markReplied } from "../lib/store.js";
 
-// Read the raw bytes ourselves so the signature check is over the exact payload.
 export const config = { api: { bodyParser: false } };
 
 async function rawBody(req) {
@@ -12,16 +12,14 @@ async function rawBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-// Svix signature scheme: HMAC-SHA256 over `${id}.${timestamp}.${body}`.
 function verify(secret, headers, body) {
-  if (!secret) return true; // not configured -> don't hard-fail, but you SHOULD set it
+  if (!secret) return true;
   const id = headers["svix-id"];
   const ts = headers["svix-timestamp"];
   const sigHeader = headers["svix-signature"] || "";
   if (!id || !ts || !sigHeader) return false;
   const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
   const expected = createHmac("sha256", key).update(`${id}.${ts}.${body}`).digest("base64");
-  // Header may contain several space-separated "v1,<sig>" values.
   return sigHeader.split(" ").some((part) => {
     const sig = part.split(",")[1] || "";
     const a = Buffer.from(sig);
@@ -42,10 +40,22 @@ export default async function handler(req, res) {
   try { event = JSON.parse(body); } catch { return res.status(400).json({ error: "bad json" }); }
 
   const SUPPRESS_ON = new Set(["email.bounced", "email.complained", "contact.unsubscribed"]);
+  const REPLY_ON = new Set(["email.replied"]);
+
   if (SUPPRESS_ON.has(event.type)) {
     const to = [].concat(event.data?.to || event.data?.email || []);
     for (const addr of to) { try { await addSuppressed(addr); } catch {} }
     console.log(`Suppressed ${to.join(", ")} via ${event.type}`);
   }
+
+  if (REPLY_ON.has(event.type)) {
+    const from = event.data?.from || event.data?.reply_from || "";
+    const msgId = event.data?.email_id || event.data?.id || "";
+    if (from) {
+      try { await markReplied(from, msgId); } catch {}
+      console.log(`Reply tracked from ${from}`);
+    }
+  }
+
   return res.status(200).json({ received: true });
 }
