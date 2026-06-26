@@ -1,361 +1,191 @@
-export default function handler(req, res) {
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).send(`<!DOCTYPE html>
+export const config = { runtime: 'edge' };
+
+export default function handler(req) {
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ascend Outreach Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
-    --accent:#6c63ff;--accent2:#00d4aa;--red:#ff4d6d;--yellow:#ffd166;
-    --text:#e8eaf6;--muted:#8892b0;--font:'Inter',system-ui,sans-serif;
-  }
-  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
-  .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:8px;z-index:10}
-  .logo{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;padding-left:8px}
-  .logo span{color:var(--text)}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:14px;transition:all .15s}
-  .nav-item:hover,.nav-item.active{background:var(--surface2);color:var(--text)}
-  .nav-item.active{border-left:3px solid var(--accent);padding-left:9px}
-  .nav-icon{font-size:16px;width:20px;text-align:center}
-  .main{margin-left:220px;padding:32px;min-height:100vh}
-  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
-  .header h1{font-size:24px;font-weight:700}
-  .header-right{display:flex;align-items:center;gap:12px}
-  .badge{background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--muted)}
-  .badge.live{border-color:var(--accent2);color:var(--accent2)}
-  .badge.live::before{content:'● ';color:var(--accent2)}
-  .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
-  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
-  .btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
-  .stat-label{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
-  .stat-value{font-size:32px;font-weight:700;line-height:1}
-  .stat-sub{font-size:12px;color:var(--muted);margin-top:6px}
-  .stat-card.accent .stat-value{color:var(--accent)}
-  .stat-card.green .stat-value{color:var(--accent2)}
-  .stat-card.red .stat-value{color:var(--red)}
-  .stat-card.yellow .stat-value{color:var(--yellow)}
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:28px}
-  .chart-card h3{font-size:15px;font-weight:600;margin-bottom:20px;color:var(--muted)}
-  .chart-wrap{position:relative;height:200px}
-  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-  .table-header h3{font-size:15px;font-weight:600}
-  .search-wrap{position:relative}
-  .search-wrap input{padding:8px 12px 8px 32px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;width:220px}
-  .search-wrap input:focus{border-color:var(--accent)}
-  .search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
-  table{width:100%;border-collapse:collapse}
-  th{padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:600}
-  td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text)}
-  tr:last-child td{border-bottom:none}
-  tr:hover td{background:var(--surface2)}
-  .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-  .pill.sent{background:rgba(0,212,170,.12);color:var(--accent2)}
-  .pill.failed{background:rgba(255,77,109,.12);color:var(--red)}
-  .pill.replied{background:rgba(108,99,255,.15);color:var(--accent)}
-  .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
-  .page-btns{display:flex;gap:6px}
-  .page-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:12px}
-  .page-btn:hover{border-color:var(--accent);color:var(--accent)}
-  .page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .page-btn:disabled{opacity:.4;cursor:default}
-  .section{display:none}
-  .section.active{display:block}
-  .loader{text-align:center;padding:60px;color:var(--muted)}
-  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .empty{text-align:center;padding:60px;color:var(--muted)}
-  .empty-icon{font-size:40px;margin-bottom:12px}
-  @media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #f8fafc; }
+  .header .badge { background: #22c55e; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }
+  .stat-card .label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 32px; font-weight: 700; color: #f8fafc; }
+  .stat-card .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .stat-card.email { border-top: 3px solid #6366f1; }
+  .stat-card.sms { border-top: 3px solid #f59e0b; }
+  .stat-card.reply { border-top: 3px solid #22c55e; }
+  .stat-card.unsub { border-top: 3px solid #ef4444; }
+  .section { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 20px; color: #f8fafc; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; font-size: 14px; }
+  .tab.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+  .chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 8px; }
+  .bar-group { flex: 1; display: flex; gap: 2px; align-items: flex-end; height: 100%; }
+  .bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: opacity 0.2s; }
+  .bar.email-bar { background: #6366f1; }
+  .bar.sms-bar { background: #f59e0b; }
+  .bar:hover { opacity: 0.8; }
+  .chart-labels { display: flex; gap: 4px; margin-top: 4px; }
+  .chart-label { flex: 1; text-align: center; font-size: 9px; color: #475569; overflow: hidden; }
+  .legend { display: flex; gap: 16px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: #64748b; font-weight: 500; border-bottom: 1px solid #334155; font-size: 11px; text-transform: uppercase; }
+  td { padding: 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+  tr:last-child td { border-bottom: none; }
+  .badge-sent { background: #1d4ed8; color: #bfdbfe; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
+  .badge-replied { background: #166534; color: #bbf7d0; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
+  .badge-sms { background: #92400e; color: #fde68a; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
+  .empty { text-align: center; color: #475569; padding: 40px; }
+  #log-panel { display: none; }
+  #sms-panel { display: none; }
 </style>
 </head>
 <body>
-
-<div id="app">
-  <div class="sidebar">
-    <div class="logo">Ascend <span>Outreach</span></div>
-    <div class="nav-item active" onclick="showSection('overview')"><span class="nav-icon">📊</span> Overview</div>
-    <div class="nav-item" onclick="showSection('emails')"><span class="nav-icon">📧</span> Emails Sent</div>
-    <div class="nav-item" onclick="showSection('replies')"><span class="nav-icon">💬</span> Replies</div>
-    <div class="nav-item" onclick="showSection('suppressed')"><span class="nav-icon">🚫</span> Unsubscribed</div>
+<div class="header">
+  <h1>&#128640; Ascend Outreach</h1>
+  <span class="badge">LIVE</span>
+</div>
+<div class="container">
+  <!-- Stats Grid -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card email"><div class="label">Emails Sent</div><div class="value" id="total-email">—</div><div class="sub" id="today-email">Today: —</div></div>
+    <div class="stat-card sms"><div class="label">SMS Sent</div><div class="value" id="total-sms">—</div><div class="sub" id="today-sms">Today: —</div></div>
+    <div class="stat-card reply"><div class="label">Email Replies</div><div class="value" id="email-replies">—</div><div class="sub">responses received</div></div>
+    <div class="stat-card reply"><div class="label">SMS Replies</div><div class="value" id="sms-replies">—</div><div class="sub">responses received</div></div>
+    <div class="stat-card unsub"><div class="label">Unsubscribed</div><div class="value" id="unsubscribed">—</div><div class="sub">removed from list</div></div>
   </div>
 
-  <div class="main">
-    <div class="header">
-      <h1 id="pageTitle">Overview</h1>
-      <div class="header-right">
-        <span class="badge live">Live</span>
-        <button class="btn btn-outline" onclick="refresh()">↺ Refresh</button>
-      </div>
+  <!-- Chart -->
+  <div class="section">
+    <h2>30-Day Activity</h2>
+    <div class="chart" id="chart"></div>
+    <div class="chart-labels" id="chart-labels"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Emails</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>SMS</div>
     </div>
+  </div>
 
-    <!-- OVERVIEW -->
-    <div id="section-overview" class="section active">
-      <div class="stats-grid">
-        <div class="stat-card accent"><div class="stat-label">Total Sent</div><div class="stat-value" id="st-sent">—</div><div class="stat-sub">All time</div></div>
-        <div class="stat-card green"><div class="stat-label">Replies</div><div class="stat-value" id="st-replied">—</div><div class="stat-sub">Response rate: <span id="st-rate">—</span></div></div>
-        <div class="stat-card yellow"><div class="stat-label">Today's Sends</div><div class="stat-value" id="st-today">—</div><div class="stat-sub">of 500 cap</div></div>
-        <div class="stat-card red"><div class="stat-label">Unsubscribed</div><div class="stat-value" id="st-unsub">—</div><div class="stat-sub">Opt-outs</div></div>
-      </div>
-      <div class="chart-card">
-        <h3>Emails Sent — Last 30 Days</h3>
-        <div class="chart-wrap"><canvas id="myChart"></canvas></div>
-      </div>
-      <div class="table-card">
-        <div class="table-header"><h3>Recent Activity</h3></div>
-        <table>
-          <thead><tr><th>Time</th><th>To</th><th>Company</th><th>Subject</th><th>Status</th></tr></thead>
-          <tbody id="recentBody"><tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Loading...</td></tr></tbody>
-        </table>
-      </div>
+  <!-- Activity Log -->
+  <div class="section">
+    <h2>Recent Activity</h2>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('email')">Emails</button>
+      <button class="tab" onclick="showTab('sms')">SMS</button>
     </div>
-
-    <!-- EMAILS -->
-    <div id="section-emails" class="section">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>All Sent Emails</h3>
-          <div class="search-wrap"><input id="emailSearch" placeholder="Search..." oninput="filterEmails()"/></div>
-        </div>
-        <div id="emailsLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="emailsTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Title</th><th>Company</th><th>Subject</th><th>Status</th></tr></thead>
-            <tbody id="emailsBody"></tbody>
-          </table>
-          <div class="pagination">
-            <span id="emailsCount"></span>
-            <div class="page-btns" id="emailsPages"></div>
-          </div>
-        </div>
-        <div id="emailsEmpty" class="empty" style="display:none"><div class="empty-icon">📭</div>No emails sent yet</div>
-      </div>
+    <div id="log-panel">
+      <table>
+        <thead><tr><th>To</th><th>Subject</th><th>Time</th><th>Status</th></tr></thead>
+        <tbody id="email-log-body"></tbody>
+      </table>
     </div>
-
-    <!-- REPLIES -->
-    <div id="section-replies" class="section">
-      <div class="table-card">
-        <div class="table-header"><h3>Replies Received</h3></div>
-        <div id="repliesLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="repliesTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>Date</th><th>From</th><th>Message ID</th></tr></thead>
-            <tbody id="repliesBody"></tbody>
-          </table>
-        </div>
-        <div id="repliesEmpty" class="empty" style="display:none"><div class="empty-icon">💬</div>No replies tracked yet</div>
-      </div>
-    </div>
-
-    <!-- SUPPRESSED -->
-    <div id="section-suppressed" class="section">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>Unsubscribed / Suppressed</h3>
-          <div class="search-wrap"><input id="suppressSearch" placeholder="Search..." oninput="filterSuppressed()"/></div>
-        </div>
-        <div id="suppressLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="suppressTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>#</th><th>Email Address</th></tr></thead>
-            <tbody id="suppressBody"></tbody>
-          </table>
-          <div class="pagination"><span id="suppressCount"></span></div>
-        </div>
-        <div id="suppressEmpty" class="empty" style="display:none"><div class="empty-icon">🚫</div>No unsubscribes yet</div>
-      </div>
+    <div id="sms-panel">
+      <table>
+        <thead><tr><th>To</th><th>Message</th><th>Time</th><th>Status</th></tr></thead>
+        <tbody id="sms-log-body"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
 <script>
-let data = null;
-let chart = null;
-let allEmails = [];
-let allSuppressed = [];
-let emailPage = 0;
-const PAGE_SIZE = 50;
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('log-panel').style.display = tab === 'email' ? 'block' : 'none';
+  document.getElementById('sms-panel').style.display = tab === 'sms' ? 'block' : 'none';
+}
 
-async function loadData() {
+function formatTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString();
+}
+
+async function loadStats() {
   try {
-    const r = await fetch('/api/logs');
-    data = await r.json();
-    renderAll();
-  } catch(e) {
-    console.error('Failed to load data', e);
-  }
+    const res = await fetch('/api/logs?type=stats');
+    const data = await res.json();
+    document.getElementById('total-email').textContent = (data.totalEmailSent || 0).toLocaleString();
+    document.getElementById('total-sms').textContent = (data.totalSmsSent || 0).toLocaleString();
+    document.getElementById('today-email').textContent = 'Today: ' + (data.todayEmailSent || 0);
+    document.getElementById('today-sms').textContent = 'Today: ' + (data.todaySmsSent || 0);
+    document.getElementById('email-replies').textContent = (data.emailReplies || 0).toLocaleString();
+    document.getElementById('sms-replies').textContent = (data.smsReplies || 0).toLocaleString();
+    document.getElementById('unsubscribed').textContent = (data.unsubscribed || 0).toLocaleString();
+
+    // Chart
+    const days = data.dailyChart || [];
+    const maxVal = Math.max(...days.map(d => Math.max(d.emails || 0, d.sms || 0)), 1);
+    const chart = document.getElementById('chart');
+    const labels = document.getElementById('chart-labels');
+    chart.innerHTML = '';
+    labels.innerHTML = '';
+    days.forEach(d => {
+      const emailH = Math.round(((d.emails || 0) / maxVal) * 100);
+      const smsH = Math.round(((d.sms || 0) / maxVal) * 100);
+      const group = document.createElement('div');
+      group.className = 'bar-group';
+      group.title = d.date + ': ' + d.emails + ' emails, ' + d.sms + ' SMS';
+      group.innerHTML = '<div class="bar email-bar" style="height:' + emailH + '%"></div><div class="bar sms-bar" style="height:' + smsH + '%"></div>';
+      chart.appendChild(group);
+      const lbl = document.createElement('div');
+      lbl.className = 'chart-label';
+      lbl.textContent = d.date.slice(5);
+      labels.appendChild(lbl);
+    });
+  } catch(e) { console.error(e); }
 }
 
-async function refresh() {
-  data = null;
-  document.getElementById('recentBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Loading...</td></tr>';
-  await loadData();
-}
-
-function showSection(name) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('section-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-  const titles = {overview:'Overview',emails:'Emails Sent',replies:'Replies',suppressed:'Unsubscribed'};
-  document.getElementById('pageTitle').textContent = titles[name];
-}
-
-function fmt(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-}
-
-function statusPill(e) {
-  if (e.replied) return '<span class="pill replied">💬 Replied</span>';
-  if (e.status === 'failed') return '<span class="pill failed">✗ Failed</span>';
-  return '<span class="pill sent">✓ Sent</span>';
-}
-
-function renderAll() {
-  if (!data) return;
-  const s = data.stats || {};
-  const emails = data.emails || [];
-  const replies = data.replies || [];
-  const suppressed = data.suppressed || [];
-  const daily = data.dailyCounts || {};
-  allEmails = emails;
-  allSuppressed = suppressed;
-
-  document.getElementById('st-sent').textContent = (s.totalSent || 0).toLocaleString();
-  document.getElementById('st-replied').textContent = (s.totalReplied || 0).toLocaleString();
-  const rate = s.totalSent > 0 ? ((s.totalReplied / s.totalSent) * 100).toFixed(1) : '0.0';
-  document.getElementById('st-rate').textContent = rate + '%';
-  document.getElementById('st-unsub').textContent = (s.totalUnsubscribed || 0).toLocaleString();
-
-  const todayKey = new Date().toISOString().slice(0, 10);
-  document.getElementById('st-today').textContent = (daily[todayKey] || 0).toLocaleString();
-
-  const labels = Object.keys(daily).sort();
-  const values = labels.map(k => daily[k]);
-  if (chart) chart.destroy();
-  const ctx = document.getElementById('myChart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels.map(l => { const d=new Date(l); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }),
-      datasets: [{ data: values, backgroundColor: 'rgba(108,99,255,0.5)', borderColor: '#6c63ff', borderWidth: 1, borderRadius: 4 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: '#2e3250' }, ticks: { color: '#8892b0', maxTicksLimit: 10 } },
-        y: { grid: { color: '#2e3250' }, ticks: { color: '#8892b0', precision: 0 }, beginAtZero: true }
-      }
-    }
-  });
-
-  const recent = emails.slice(0, 10);
-  document.getElementById('recentBody').innerHTML = recent.length === 0
-    ? '<tr><td colspan="5" class="empty" style="text-align:center;padding:40px;color:var(--muted)">No emails sent yet</td></tr>'
-    : recent.map(e => \`<tr>
-        <td style="color:var(--muted);white-space:nowrap">\${fmt(e.ts)}</td>
-        <td>\${e.to || '—'}</td>
-        <td style="color:var(--muted)">\${e.company || '—'}</td>
-        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${e.subject || '—'}</td>
-        <td>\${statusPill(e)}</td>
-      </tr>\`).join('');
-
-  renderEmailsPage(0);
-
-  document.getElementById('repliesLoader').style.display = 'none';
-  if (replies.length === 0) {
-    document.getElementById('repliesEmpty').style.display = 'block';
-  } else {
-    document.getElementById('repliesTableWrap').style.display = 'block';
-    document.getElementById('repliesBody').innerHTML = replies.map(r => \`<tr>
-      <td style="color:var(--muted)">\${fmt(r.ts)}</td>
-      <td>\${r.email || '—'}</td>
-      <td style="color:var(--muted);font-size:12px">\${r.messageId || '—'}</td>
+async function loadEmailLog() {
+  try {
+    const res = await fetch('/api/logs?type=emails&limit=50');
+    const log = await res.json();
+    const tbody = document.getElementById('email-log-body');
+    if (!log.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No emails sent yet. First run at 3pm UTC.</td></tr>'; return; }
+    tbody.innerHTML = log.map(e => \`<tr>
+      <td>\${e.to || '—'}</td>
+      <td>\${e.subject || '—'}</td>
+      <td>\${formatTime(e.timestamp)}</td>
+      <td><span class="\${e.replied ? 'badge-replied' : 'badge-sent'}">\${e.replied ? 'Replied' : 'Sent'}</span></td>
     </tr>\`).join('');
-  }
-
-  document.getElementById('suppressLoader').style.display = 'none';
-  filterSuppressed();
+    document.getElementById('log-panel').style.display = 'block';
+  } catch(e) { console.error(e); }
 }
 
-function renderEmailsPage(page) {
-  emailPage = page;
-  const search = (document.getElementById('emailSearch')?.value || '').toLowerCase();
-  const filtered = allEmails.filter(e =>
-    !search || (e.to||'').toLowerCase().includes(search) ||
-    (e.company||'').toLowerCase().includes(search) ||
-    (e.firstName||'').toLowerCase().includes(search) ||
-    (e.subject||'').toLowerCase().includes(search)
-  );
-  const total = filtered.length;
-  const pages = Math.ceil(total / PAGE_SIZE);
-  const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  document.getElementById('emailsLoader').style.display = 'none';
-  if (allEmails.length === 0) {
-    document.getElementById('emailsEmpty').style.display = 'block';
-    return;
-  }
-  document.getElementById('emailsTableWrap').style.display = 'block';
-  document.getElementById('emailsCount').textContent = total.toLocaleString() + ' emails';
-
-  document.getElementById('emailsBody').innerHTML = slice.map(e => \`<tr>
-    <td style="color:var(--muted);white-space:nowrap;font-size:12px">\${fmt(e.ts)}</td>
-    <td>\${e.firstName||''} \${e.lastName||''}</td>
-    <td style="color:var(--muted)">\${e.to||'—'}</td>
-    <td style="color:var(--muted);font-size:12px">\${e.title||'—'}</td>
-    <td>\${e.company||'—'}</td>
-    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">\${e.subject||'—'}</td>
-    <td>\${statusPill(e)}</td>
-  </tr>\`).join('');
-
-  const pb = document.getElementById('emailsPages');
-  pb.innerHTML = '';
-  const addBtn = (label, p, disabled=false) => {
-    const b = document.createElement('button');
-    b.className = 'page-btn' + (p === page ? ' active' : '');
-    b.textContent = label; b.disabled = disabled;
-    b.onclick = () => renderEmailsPage(p);
-    pb.appendChild(b);
-  };
-  addBtn('‹', page - 1, page === 0);
-  const start = Math.max(0, page - 2), end = Math.min(pages - 1, start + 4);
-  for (let i = start; i <= end; i++) addBtn(i + 1, i);
-  addBtn('›', page + 1, page >= pages - 1);
+async function loadSmsLog() {
+  try {
+    const res = await fetch('/api/logs?type=sms&limit=50');
+    const log = await res.json();
+    const tbody = document.getElementById('sms-log-body');
+    if (!log.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No SMS sent yet. First run at 3pm UTC.</td></tr>'; return; }
+    tbody.innerHTML = log.map(e => \`<tr>
+      <td>\${e.to || '—'}</td>
+      <td>\${(e.body || '—').substring(0, 80)}</td>
+      <td>\${formatTime(e.timestamp)}</td>
+      <td><span class="\${e.replied ? 'badge-replied' : 'badge-sms'}">\${e.replied ? 'Replied' : 'Sent'}</span></td>
+    </tr>\`).join('');
+  } catch(e) { console.error(e); }
 }
 
-function filterEmails() { renderEmailsPage(0); }
-
-function filterSuppressed() {
-  const search = (document.getElementById('suppressSearch')?.value || '').toLowerCase();
-  const filtered = allSuppressed.filter(e => !search || e.toLowerCase().includes(search));
-  document.getElementById('suppressLoader').style.display = 'none';
-  if (filtered.length === 0) {
-    document.getElementById('suppressEmpty').style.display = 'block';
-    document.getElementById('suppressTableWrap').style.display = 'none';
-    return;
-  }
-  document.getElementById('suppressEmpty').style.display = 'none';
-  document.getElementById('suppressTableWrap').style.display = 'block';
-  document.getElementById('suppressCount').textContent = filtered.length.toLocaleString() + ' addresses';
-  document.getElementById('suppressBody').innerHTML = filtered.map((e,i) =>
-    \`<tr><td style="color:var(--muted);width:50px">\${i+1}</td><td>\${e}</td></tr>\`
-  ).join('');
-}
-
-loadData();
-</script>
+// Init
+showTab('email');
+loadStats();
+loadEmailLog();
+loadSmsLog();
+setInterval(() => { loadStats(); loadEmailLog(); loadSmsLog(); }, 30000);
+<\/script>
 </body>
-</html>`);
+</html>`;
+  return new Response(html, { headers: { 'Content-Type': 'text/html' } });
 }
