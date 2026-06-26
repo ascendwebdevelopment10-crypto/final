@@ -19,9 +19,14 @@ export default async function handler(req, res) {
       res.status(200).json(log);
     } else if (type === 'replies') {
       const limit = parseInt(req.query.limit || '100');
-      const replies = await getReplies(limit);
+      const all = await getReplies(limit);
+      // Filter by subtype if requested
+      const subtype = req.query.subtype; // 'email' or 'sms'
+      const filtered = subtype
+        ? all.filter(r => subtype === 'sms' ? r.type === 'sms_reply' : r.type !== 'sms_reply')
+        : all;
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.status(200).json(replies);
+      res.status(200).json(filtered);
     } else {
       res.status(400).json({ error: 'Unknown type' });
     }
