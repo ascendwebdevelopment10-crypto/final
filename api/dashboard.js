@@ -16,9 +16,6 @@ export default function handler(req, res) {
     --text:#e8eaf6;--muted:#8892b0;--font:'Inter',system-ui,sans-serif;
   }
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
-  a{color:var(--accent);text-decoration:none}
-
-  /* Layout */
   .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:8px;z-index:10}
   .logo{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;padding-left:8px}
   .logo span{color:var(--text)}
@@ -34,21 +31,8 @@ export default function handler(req, res) {
   .badge.live{border-color:var(--accent2);color:var(--accent2)}
   .badge.live::before{content:'● ';color:var(--accent2)}
   .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
-  .btn-primary{background:var(--accent);color:#fff}
-  .btn-primary:hover{opacity:.9}
   .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
   .btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-
-  /* Auth gate */
-  .auth-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
-  .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:380px;text-align:center}
-  .auth-card h2{margin-bottom:8px;font-size:20px}
-  .auth-card p{color:var(--muted);font-size:14px;margin-bottom:24px}
-  .input{width:100%;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border .15s}
-  .input:focus{border-color:var(--accent)}
-  .auth-card .btn{width:100%;margin-top:12px;padding:12px}
-
-  /* Stats grid */
   .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
   .stat-label{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
@@ -58,23 +42,15 @@ export default function handler(req, res) {
   .stat-card.green .stat-value{color:var(--accent2)}
   .stat-card.red .stat-value{color:var(--red)}
   .stat-card.yellow .stat-value{color:var(--yellow)}
-
-  /* Chart */
   .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:28px}
   .chart-card h3{font-size:15px;font-weight:600;margin-bottom:20px;color:var(--muted)}
   .chart-wrap{position:relative;height:200px}
-
-  /* Tabs */
-  .tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content}
-  .tab{padding:8px 20px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s}
-  .tab.active{background:var(--accent);color:#fff}
-
-  /* Table */
   .table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
   .table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
   .table-header h3{font-size:15px;font-weight:600}
   .search-wrap{position:relative}
   .search-wrap input{padding:8px 12px 8px 32px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;width:220px}
+  .search-wrap input:focus{border-color:var(--accent)}
   .search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
   table{width:100%;border-collapse:collapse}
   th{padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:600}
@@ -85,58 +61,25 @@ export default function handler(req, res) {
   .pill.sent{background:rgba(0,212,170,.12);color:var(--accent2)}
   .pill.failed{background:rgba(255,77,109,.12);color:var(--red)}
   .pill.replied{background:rgba(108,99,255,.15);color:var(--accent)}
-  .pill.unsubscribed{background:rgba(255,209,102,.12);color:var(--yellow)}
-  .pill.opened{background:rgba(0,212,170,.08);color:var(--accent2);opacity:.7}
-
-  /* Pagination */
   .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
   .page-btns{display:flex;gap:6px}
   .page-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:12px}
   .page-btn:hover{border-color:var(--accent);color:var(--accent)}
   .page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
   .page-btn:disabled{opacity:.4;cursor:default}
-
-  /* Sections */
   .section{display:none}
   .section.active{display:block}
-
-  /* Loader */
   .loader{text-align:center;padding:60px;color:var(--muted)}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
   @keyframes spin{to{transform:rotate(360deg)}}
-
-  /* Empty */
   .empty{text-align:center;padding:60px;color:var(--muted)}
   .empty-icon{font-size:40px;margin-bottom:12px}
-
-  /* Responsive */
-  @media(max-width:900px){
-    .sidebar{display:none}
-    .main{margin-left:0;padding:20px}
-    .stats-grid{grid-template-columns:repeat(2,1fr)}
-  }
-  @media(max-width:500px){
-    .stats-grid{grid-template-columns:1fr 1fr}
-    .stat-value{font-size:24px}
-  }
+  @media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.stats-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<!-- AUTH GATE -->
-<div id="authGate" class="auth-gate">
-  <div class="auth-card">
-    <div style="font-size:36px;margin-bottom:16px">📬</div>
-    <h2>Outreach Dashboard</h2>
-    <p>Enter your API key to access the dashboard</p>
-    <input id="apiKeyInput" class="input" type="password" placeholder="API Key (SUPPRESS_API_SECRET)" />
-    <button class="btn btn-primary" onclick="login()">Sign In</button>
-    <div id="authError" style="color:var(--red);font-size:13px;margin-top:12px;display:none">Invalid API key</div>
-  </div>
-</div>
-
-<!-- MAIN APP -->
-<div id="app" style="display:none">
+<div id="app">
   <div class="sidebar">
     <div class="logo">Ascend <span>Outreach</span></div>
     <div class="nav-item active" onclick="showSection('overview')"><span class="nav-icon">📊</span> Overview</div>
@@ -156,10 +99,10 @@ export default function handler(req, res) {
 
     <!-- OVERVIEW -->
     <div id="section-overview" class="section active">
-      <div id="statsGrid" class="stats-grid">
+      <div class="stats-grid">
         <div class="stat-card accent"><div class="stat-label">Total Sent</div><div class="stat-value" id="st-sent">—</div><div class="stat-sub">All time</div></div>
         <div class="stat-card green"><div class="stat-label">Replies</div><div class="stat-value" id="st-replied">—</div><div class="stat-sub">Response rate: <span id="st-rate">—</span></div></div>
-        <div class="stat-card yellow"><div class="stat-label">Today's Sends</div><div class="stat-value" id="st-today">—</div><div class="stat-sub" id="st-cap">of 500 cap</div></div>
+        <div class="stat-card yellow"><div class="stat-label">Today's Sends</div><div class="stat-value" id="st-today">—</div><div class="stat-sub">of 500 cap</div></div>
         <div class="stat-card red"><div class="stat-label">Unsubscribed</div><div class="stat-value" id="st-unsub">—</div><div class="stat-sub">Opt-outs</div></div>
       </div>
       <div class="chart-card">
@@ -170,7 +113,7 @@ export default function handler(req, res) {
         <div class="table-header"><h3>Recent Activity</h3></div>
         <table>
           <thead><tr><th>Time</th><th>To</th><th>Company</th><th>Subject</th><th>Status</th></tr></thead>
-          <tbody id="recentBody"></tbody>
+          <tbody id="recentBody"><tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -234,7 +177,6 @@ export default function handler(req, res) {
 </div>
 
 <script>
-let API_KEY = '';
 let data = null;
 let chart = null;
 let allEmails = [];
@@ -242,41 +184,27 @@ let allSuppressed = [];
 let emailPage = 0;
 const PAGE_SIZE = 50;
 
-const BASE = window.location.origin;
-
-async function login() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) return;
+async function loadData() {
   try {
-    const r = await fetch(BASE + '/api/logs?key=' + encodeURIComponent(key));
-    if (r.status === 401) { document.getElementById('authError').style.display='block'; return; }
-    const d = await r.json();
-    if (d.error) { document.getElementById('authError').style.display='block'; return; }
-    API_KEY = key;
-    data = d;
-    document.getElementById('authGate').style.display='none';
-    document.getElementById('app').style.display='block';
+    const r = await fetch('/api/logs');
+    data = await r.json();
     renderAll();
   } catch(e) {
-    document.getElementById('authError').style.display='block';
+    console.error('Failed to load data', e);
   }
 }
 
 async function refresh() {
-  try {
-    const r = await fetch(BASE + '/api/logs?key=' + encodeURIComponent(API_KEY));
-    data = await r.json();
-    renderAll();
-  } catch {}
+  data = null;
+  document.getElementById('recentBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Loading...</td></tr>';
+  await loadData();
 }
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if(n.textContent.toLowerCase().includes(name === 'overview' ? 'overview' : name === 'emails' ? 'emails' : name === 'replies' ? 'replies' : 'unsub')) n.classList.add('active');
-  });
+  event.currentTarget.classList.add('active');
   const titles = {overview:'Overview',emails:'Emails Sent',replies:'Replies',suppressed:'Unsubscribed'};
   document.getElementById('pageTitle').textContent = titles[name];
 }
@@ -303,19 +231,15 @@ function renderAll() {
   allEmails = emails;
   allSuppressed = suppressed;
 
-  // Stats
   document.getElementById('st-sent').textContent = (s.totalSent || 0).toLocaleString();
   document.getElementById('st-replied').textContent = (s.totalReplied || 0).toLocaleString();
   const rate = s.totalSent > 0 ? ((s.totalReplied / s.totalSent) * 100).toFixed(1) : '0.0';
   document.getElementById('st-rate').textContent = rate + '%';
   document.getElementById('st-unsub').textContent = (s.totalUnsubscribed || 0).toLocaleString();
 
-  // Today count from dailyCounts
   const todayKey = new Date().toISOString().slice(0, 10);
-  const todayCount = daily[todayKey] || 0;
-  document.getElementById('st-today').textContent = todayCount.toLocaleString();
+  document.getElementById('st-today').textContent = (daily[todayKey] || 0).toLocaleString();
 
-  // Chart
   const labels = Object.keys(daily).sort();
   const values = labels.map(k => daily[k]);
   if (chart) chart.destroy();
@@ -324,13 +248,7 @@ function renderAll() {
     type: 'bar',
     data: {
       labels: labels.map(l => { const d=new Date(l); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }),
-      datasets: [{
-        data: values,
-        backgroundColor: 'rgba(108,99,255,0.5)',
-        borderColor: '#6c63ff',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
+      datasets: [{ data: values, backgroundColor: 'rgba(108,99,255,0.5)', borderColor: '#6c63ff', borderWidth: 1, borderRadius: 4 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -342,10 +260,9 @@ function renderAll() {
     }
   });
 
-  // Recent table (last 10)
   const recent = emails.slice(0, 10);
   document.getElementById('recentBody').innerHTML = recent.length === 0
-    ? '<tr><td colspan="5" class="empty">No emails sent yet</td></tr>'
+    ? '<tr><td colspan="5" class="empty" style="text-align:center;padding:40px;color:var(--muted)">No emails sent yet</td></tr>'
     : recent.map(e => \`<tr>
         <td style="color:var(--muted);white-space:nowrap">\${fmt(e.ts)}</td>
         <td>\${e.to || '—'}</td>
@@ -354,10 +271,8 @@ function renderAll() {
         <td>\${statusPill(e)}</td>
       </tr>\`).join('');
 
-  // Emails table
   renderEmailsPage(0);
 
-  // Replies table
   document.getElementById('repliesLoader').style.display = 'none';
   if (replies.length === 0) {
     document.getElementById('repliesEmpty').style.display = 'block';
@@ -370,7 +285,6 @@ function renderAll() {
     </tr>\`).join('');
   }
 
-  // Suppressed table
   document.getElementById('suppressLoader').style.display = 'none';
   filterSuppressed();
 }
@@ -394,7 +308,7 @@ function renderEmailsPage(page) {
     return;
   }
   document.getElementById('emailsTableWrap').style.display = 'block';
-  document.getElementById('emailsCount').textContent = \`\${total.toLocaleString()} emails\`;
+  document.getElementById('emailsCount').textContent = total.toLocaleString() + ' emails';
 
   document.getElementById('emailsBody').innerHTML = slice.map(e => \`<tr>
     <td style="color:var(--muted);white-space:nowrap;font-size:12px">\${fmt(e.ts)}</td>
@@ -406,7 +320,6 @@ function renderEmailsPage(page) {
     <td>\${statusPill(e)}</td>
   </tr>\`).join('');
 
-  // Pagination
   const pb = document.getElementById('emailsPages');
   pb.innerHTML = '';
   const addBtn = (label, p, disabled=false) => {
@@ -441,7 +354,7 @@ function filterSuppressed() {
   ).join('');
 }
 
-document.getElementById('apiKeyInput').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+loadData();
 </script>
 </body>
 </html>`);
