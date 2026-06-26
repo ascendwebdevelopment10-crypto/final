@@ -1,4 +1,4 @@
-import { getEmailLog, getSmsLog, getTotalStats } from '../lib/store.js';
+import { getEmailLog, getSmsLog, getTotalStats, getReplies } from '../lib/store.js';
 
 export default async function handler(req, res) {
   const type = req.query.type || 'stats';
@@ -17,6 +17,11 @@ export default async function handler(req, res) {
       const log = await getSmsLog(limit);
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.status(200).json(log);
+    } else if (type === 'replies') {
+      const limit = parseInt(req.query.limit || '100');
+      const replies = await getReplies(limit);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.status(200).json(replies);
     } else {
       res.status(400).json({ error: 'Unknown type' });
     }
