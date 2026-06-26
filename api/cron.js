@@ -1,18 +1,12 @@
 // Autonomous sender. Vercel Cron hits this on a schedule. Each run sends a small,
 // capped batch: it searches Apollo (free), skips anyone already seen/contacted/
 // suppressed, enriches only NEW people, writes each email with Claude, and sends.
-//
-// Safety rails that always apply:
-//   - Off unless AUTOSEND_ENABLED=true
-//   - Only Vercel Cron (or a request with CRON_SECRET) can trigger it
-//   - Hard daily cap (DAILY_CAP) tracked in the store
-//   - Never emails the same person twice; never emails a suppressed address
 import { searchPeople, enrichBatch } from "../lib/apollo.js";
 import { writeEmail } from "../lib/personalize.js";
 import { sendEmail } from "../lib/mailer.js";
 import {
   storeReady, isSuppressed, isContacted, addContacted,
-  isSeen, addSeen, sentToday, incrSentToday,
+  isSeen, addSeen, sentToday, incrSentToday, logEmail,
 } from "../lib/store.js";
 
 export const config = { maxDuration: 60 };
@@ -21,12 +15,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const list = (s) => (s || "").split(",").map((x) => x.trim()).filter(Boolean);
 
 export default async function handler(req, res) {
-  // 1. auth — Vercel sends `Authorization: Bearer ${CRON_SECRET}`
   const secret = process.env.CRON_SECRET;
   const auth = req.headers["authorization"] || "";
   if (secret && auth !== `Bearer ${secret}`) return res.status(401).json({ error: "unauthorized" });
 
-  // 2. master switch — stays off until you deliberately turn it on
   if (process.env.AUTOSEND_ENABLED !== "true") {
     return res.status(200).json({ skipped: "AUTOSEND_ENABLED is not true" });
   }
@@ -54,13 +46,11 @@ export default async function handler(req, res) {
   const batchSize = parseInt(process.env.BATCH_SIZE || "5", 10);
   const delayMs = parseInt(process.env.SEND_DELAY_SECONDS || "3", 10) * 1000;
 
-  // 3. respect the daily cap
   const already = await sentToday();
   const room = Math.max(0, dailyCap - already);
   const want = Math.min(batchSize, room);
   if (want <= 0) return res.status(200).json({ sentToday: already, dailyCap, note: "daily cap reached" });
 
-  // 4. find NEW people (search is free; only enrich ones we haven't seen)
   let found;
   try { found = await searchPeople(cfg.apolloKey, target); }
   catch (e) { return res.status(502).json({ error: `apollo search: ${e.message}` }); }
@@ -74,7 +64,6 @@ export default async function handler(req, res) {
   }
   if (!fresh.length) return res.status(200).json({ sentToday: already, note: "no new leads this run" });
 
-  // 5. enrich only the fresh ones (costs credits), mark them seen so we never repeat
   let matches = [];
   try { matches = await enrichBatch(cfg.apolloKey, fresh); }
   catch (e) { return res.status(502).json({ error: `apollo enrich: ${e.message}` }); }
@@ -87,14 +76,15 @@ export default async function handler(req, res) {
     if (await isSuppressed(email) || await isContacted(email)) continue;
     leads.push({
       firstName: m.first_name || (m.name || "there").split(" ")[0],
+      lastName: m.last_name || "",
       email: m.email,
       title: m.title || "",
       company: m.organization?.name || "",
+      website: m.organization?.website_url || "",
       signal: m.headline || m.organization?.short_description || `works as ${m.title || "a decision-maker"}`,
     });
   }
 
-  // 6. write all emails in parallel (fits the function window), then send paced
   const drafts = await Promise.all(
     leads.map((l) => writeEmail(cfg.anthropicKey, cfg.model, l, { senderPitch }).then((d) => ({ l, d })))
   );
@@ -104,8 +94,32 @@ export default async function handler(req, res) {
     try {
       const id = await sendEmail(cfg, l, d.subject, d.body);
       await addContacted(l.email);
+      // Log the sent email for the dashboard
+      await logEmail({
+        type: "sent",
+        resendId: id,
+        to: l.email,
+        firstName: l.firstName,
+        lastName: l.lastName,
+        title: l.title,
+        company: l.company,
+        website: l.website,
+        subject: d.subject,
+        status: "sent",
+      }).catch(() => {});
       results.push({ email: l.email, status: "sent", id });
     } catch (e) {
+      await logEmail({
+        type: "sent",
+        to: l.email,
+        firstName: l.firstName,
+        lastName: l.lastName,
+        title: l.title,
+        company: l.company,
+        subject: d.subject,
+        status: "failed",
+        error: e.message,
+      }).catch(() => {});
       results.push({ email: l.email, status: "failed", error: e.message });
     }
     if (i < drafts.length - 1) await sleep(delayMs);
