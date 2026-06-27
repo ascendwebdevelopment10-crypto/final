@@ -14,6 +14,9 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 const EMAIL_CAP = 70;
 const SMS_CAP = 70;
 const FETCH_LIMIT = 10;
+// Max email enrichment calls per run - keep total runtime under 60s
+// Each enrichment ~2s, each AI call ~2s. Budget: 5 enrichments + 15 AI calls = ~40s
+const ENRICH_LIMIT = 5;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -40,7 +43,6 @@ async function fetchOutscraperLeads(query, limit = FETCH_LIMIT) {
     limit: limit,
     language: 'en',
     region: 'us',
-    // 'website' is the correct field name (not 'site')
     fields: 'name,full_address,phone,website,type,subtypes',
     async: 'false'
   });
@@ -55,19 +57,22 @@ async function fetchOutscraperLeads(query, limit = FETCH_LIMIT) {
   return data?.data?.[0] || [];
 }
 
-// Enrich a website URL to get email addresses via Outscraper
+// Enrich email from a website with a hard 5s timeout
 async function enrichEmail(websiteUrl) {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     const params = new URLSearchParams({ query: websiteUrl, async: 'false' });
     const res = await fetch(`https://api.app.outscraper.com/emails-and-contacts?${params}`, {
-      headers: { 'X-API-KEY': OUTSCRAPER_API_KEY }
+      headers: { 'X-API-KEY': OUTSCRAPER_API_KEY },
+      signal: controller.signal
     });
+    clearTimeout(timer);
     if (!res.ok) return null;
     const data = await res.json();
     const emails = data?.data?.[0]?.emails || [];
-    // Return first valid-looking business email (skip no-reply, info@, support@, etc generic ones last)
-    const sorted = emails.map(e => e.value).filter(e => e && e.includes('@'));
-    return sorted[0] || null;
+    const found = emails.map(e => e.value).filter(e => e && e.includes('@') && !e.includes('example'));
+    return found[0] || null;
   } catch {
     return null;
   }
@@ -77,9 +82,9 @@ function normalizeContact(place) {
   return {
     first_name: (place.name || '').split(' ')[0] || 'there',
     organization_name: place.name || '',
-    email: null, // will be enriched below for leads with websites
+    email: null,
     phone: place.phone || null,
-    website_url: place.website || '',  // correct field name is 'website'
+    website_url: place.website || '',
     industry: place.type || place.subtypes || ''
   };
 }
@@ -93,7 +98,6 @@ async function generateEmail(contact, segment) {
   const company = contact.organization_name || 'your business';
   const industry = contact.industry || 'your industry';
   const service = pickService();
-
   let prompt;
   if (service === 'website') {
     prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company}${segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry'}. We are Ascend Web Development. We build SEO-optimized websites that bring in more Google traffic and make the business look credible and professional. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
@@ -102,10 +106,8 @@ async function generateEmail(contact, segment) {
   } else {
     prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps — online booking, loyalty rewards, push notifications. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
   }
-
   const msg = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: 350,
+    model: ANTHROPIC_MODEL, max_tokens: 350,
     messages: [{ role: 'user', content: prompt }]
   });
   const text = msg.content[0].text;
@@ -121,19 +123,16 @@ async function generateSms(contact, segment) {
   const company = contact.organization_name || 'your business';
   const industry = contact.industry || 'your industry';
   const service = pickService();
-
   let prompt;
   if (service === 'website') {
-    prompt = `Write a single SMS message to ${firstName} at ${company}${segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry'}. We are Ascend Web Development. We build websites that get more Google traffic and customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company}${segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry'}. We are Ascend Web Development. We build websites that get more Google traffic and customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else.`;
   } else if (service === 'ads') {
-    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ads that bring in paying customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ads that bring in paying customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else.`;
   } else {
-    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps with booking, loyalty, and push notifications. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps with booking, loyalty, and push notifications. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else.`;
   }
-
   const msg = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: 120,
+    model: ANTHROPIC_MODEL, max_tokens: 120,
     messages: [{ role: 'user', content: prompt }]
   });
   let fullText = msg.content[0].text.trim();
@@ -156,31 +155,25 @@ export default async function handler(req, res) {
     const primaryQuery = SEARCH_QUERIES[queryIndex];
     const secondaryQuery = SEARCH_QUERIES[(queryIndex + 1) % SEARCH_QUERIES.length];
 
+    // Fetch leads from two industries in parallel
     const [batch1, batch2] = await Promise.all([
       fetchOutscraperLeads(primaryQuery, FETCH_LIMIT),
       fetchOutscraperLeads(secondaryQuery, FETCH_LIMIT)
     ]);
 
-    const allLeads = [...batch1, ...batch2].map(normalizeContact);
-    const usableLeads = allLeads.filter(c => c.phone); // must have phone at minimum
-    const noWebLeads = usableLeads.filter(c => hasNoWebsite(c));
-    const hasWebLeads = usableLeads.filter(c => !hasNoWebsite(c));
+    const allLeads = [...batch1, ...batch2].map(normalizeContact).filter(c => c.phone);
+    const noWebLeads = allLeads.filter(c => hasNoWebsite(c));
+    const hasWebLeads = allLeads.filter(c => !hasNoWebsite(c));
+
+    // Enrich emails in parallel for leads that have a website, capped at ENRICH_LIMIT
+    const toEnrich = hasWebLeads.slice(0, ENRICH_LIMIT);
+    const enrichedEmails = await Promise.all(toEnrich.map(c => enrichEmail(c.website_url)));
+    toEnrich.forEach((c, i) => { c.email = enrichedEmails[i]; });
+
+    // Process: no-website leads first (SMS only), then website leads (email + SMS)
     const leads = [...noWebLeads, ...hasWebLeads];
 
-    // Enrich emails for leads that have a website (up to EMAIL_CAP worth)
-    // Do this in parallel for speed, but cap enrichment calls to avoid timeout
-    const emailCandidates = hasWebLeads.slice(0, Math.min(hasWebLeads.length, 8));
-    const enriched = await Promise.all(
-      emailCandidates.map(async c => {
-        const email = await enrichEmail(c.website_url);
-        return { ...c, email };
-      })
-    );
-    // Rebuild leads: no-website leads first (SMS only), then enriched leads (email + SMS)
-    const enrichedMap = new Map(enriched.map(c => [c.organization_name, c]));
-    const finalLeads = leads.map(c => enrichedMap.get(c.organization_name) || c);
-
-    for (const contact of finalLeads) {
+    for (const contact of leads) {
       if (emailsSent >= EMAIL_CAP && smsSent >= SMS_CAP) break;
       const segment = hasNoWebsite(contact) ? 'no_website' : 'needs_app';
 
