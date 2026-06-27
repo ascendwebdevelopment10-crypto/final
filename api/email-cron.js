@@ -11,15 +11,15 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 const EMAIL_CAP = 70;
-// Fetch more leads since we only need ones with websites + emails
-const FETCH_LIMIT = 15;
+// Keep fetch small: 5 per query = 10 leads total
+// Scrape 10 sites in parallel (~4s), then AI + send per lead (~2s each) = well under 60s
+const FETCH_LIMIT = 5;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
 const BCC_PREVIEW_LIMIT = 5;
 
-// Use different industries than SMS cron to maximize unique reach
 const SEARCH_QUERIES = [
   'dental office','law firm attorney','accounting cpa','insurance agency',
   'real estate agency','mortgage broker','veterinarian','optometrist',
@@ -47,15 +47,13 @@ async function fetchLeadsWithWebsites(query, limit = FETCH_LIMIT) {
   if (!res.ok) throw new Error(`Outscraper error: ${res.status}`);
   const data = await res.json();
   const all = data?.data?.[0] || [];
-  // Only return leads that have a website — these are the only ones we can email
   return all.filter(p => p.website && p.website.trim() !== '');
 }
 
-// Scrape email from business website with 5s timeout
 async function scrapeEmail(url) {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
+    const timer = setTimeout(() => controller.abort(), 4000);
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
@@ -68,7 +66,6 @@ async function scrapeEmail(url) {
     const junk = ['example.','sentry.','w3.org','schema.','wix','squarespace','shopify',
       'google.','facebook.','twitter.','instagram.','youtube.','.png','.jpg','.svg','.gif','.css','.js'];
     const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j)));
-    // Prefer business-style emails
     const preferred = clean.find(e => /^(info|contact|hello|sales|office|admin|support|team|booking)@/i.test(e));
     return preferred || clean[0] || null;
   } catch {
@@ -92,19 +89,16 @@ async function generateEmail(contact) {
   const company = contact.organization_name || 'your business';
   const industry = contact.industry || 'your industry';
   const service = pickService();
-
   let prompt;
   if (service === 'website') {
-    prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build SEO-optimized websites that drive more Google traffic and make businesses look professional and credible online. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
+    prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build SEO-optimized websites that drive more Google traffic and make businesses look professional online. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
   } else if (service === 'ads') {
-    prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ad campaigns that bring in real paying customers. Mention targeting, ROI, and local reach. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
+    prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ads that bring in real paying customers — targeted, measurable, and ROI-focused. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
   } else {
     prompt = `Write a short cold email (under 150 words) to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps — online booking, loyalty rewards, push notifications. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Output only the subject line and email body. No intro, no commentary, no placeholders.`;
   }
-
   const msg = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: 350,
+    model: ANTHROPIC_MODEL, max_tokens: 350,
     messages: [{ role: 'user', content: prompt }]
   });
   const text = msg.content[0].text;
@@ -129,7 +123,7 @@ export default async function handler(req, res) {
     const q1 = SEARCH_QUERIES[queryIndex];
     const q2 = SEARCH_QUERIES[(queryIndex + 1) % SEARCH_QUERIES.length];
 
-    // Fetch two batches of leads that have websites, in parallel
+    // Fetch two small batches in parallel
     const [batch1, batch2] = await Promise.all([
       fetchLeadsWithWebsites(q1, FETCH_LIMIT),
       fetchLeadsWithWebsites(q2, FETCH_LIMIT)
@@ -137,41 +131,27 @@ export default async function handler(req, res) {
 
     const leads = [...batch1, ...batch2].map(normalizeContact);
 
-    // Scrape emails from all leads in parallel with 5s timeout each
-    // This runs concurrently so 20 sites at 5s max = ~5s total (not 100s)
+    // Scrape all emails in parallel - 10 sites × 4s timeout = ~4s total (parallel)
     const emailResults = await Promise.all(leads.map(c => scrapeEmail(c.website_url)));
     leads.forEach((c, i) => { c.email = emailResults[i] || null; });
 
-    // Only keep leads where we found an email
     const emailableLeads = leads.filter(c => c.email);
 
     for (const contact of emailableLeads) {
       if (emailsSent >= EMAIL_CAP) break;
-
       try {
         const suppressed = await isSuppressed(contact.email);
         if (suppressed) continue;
-
         const { subject, body, service } = await generateEmail(contact);
         const footer = `\n\n--\nAscend Web Development\n${PHYSICAL_ADDRESS}\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=${encodeURIComponent(contact.email)}">Unsubscribe</a>`;
         const sendOptions = {
-          from: FROM_EMAIL,
-          to: contact.email,
-          subject,
+          from: FROM_EMAIL, to: contact.email, subject,
           html: (body + footer).replace(/\n/g, '<br>'),
           reply_to: FROM_EMAIL
         };
         if (emailsSent < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
         await resend.emails.send(sendOptions);
-        await logEmail({
-          to: contact.email,
-          subject,
-          body,
-          contactName: contact.organization_name,
-          timestamp: Date.now(),
-          segment: 'needs_app',
-          service
-        });
+        await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_app', service });
         emailsSent++;
       } catch (e) {
         errors.push({ type: 'email', to: contact.email, error: e.message });
@@ -181,10 +161,5 @@ export default async function handler(req, res) {
     errors.push({ type: 'fatal', error: e.message });
   }
 
-  res.status(200).json({
-    emailsSent,
-    emailCap: EMAIL_CAP,
-    errors,
-    timestamp: new Date().toISOString()
-  });
+  res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, errors, timestamp: new Date().toISOString() });
 }
