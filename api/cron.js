@@ -11,10 +11,8 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
-// 70 emails + 70 SMS per run x 3 runs/day = 210 emails + 210 SMS daily
 const EMAIL_CAP = 70;
 const SMS_CAP = 70;
-// Fetch 10 per query (20 total) - ~20 AI calls at 2s each = ~40s, under 60s limit
 const FETCH_LIMIT = 10;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -25,15 +23,13 @@ const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
 const BCC_PREVIEW_LIMIT = 5;
 
 const SEARCH_QUERIES = [
-'restaurant','gym fitness yoga','salon barbershop spa','real estate agent',
-'landscaping lawn care','plumbing hvac electrical','roofing cleaning pest control',
-'dental chiropractic healthcare','auto repair mechanic','childcare daycare tutoring',
-'photography event planning catering','moving delivery courier','church nonprofit organization'
+  'restaurant','gym fitness yoga','salon barbershop spa','real estate agent',
+  'landscaping lawn care','plumbing hvac electrical','roofing cleaning pest control',
+  'dental chiropractic healthcare','auto repair mechanic','childcare daycare tutoring',
+  'photography event planning catering','moving delivery courier','church nonprofit organization'
 ];
 
-// Service offerings to rotate through - websites, ads, apps
 const SERVICES = ['website', 'ads', 'app'];
-
 function pickService() {
   return SERVICES[Math.floor(Math.random() * SERVICES.length)];
 }
@@ -109,25 +105,26 @@ async function generateSms(contact, segment) {
 
   let prompt;
   if (service === 'website') {
-    prompt = `Write a single SMS message under 160 characters to ${firstName} at ${company}${segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry'}. We are Ascend Web Development. We build websites that get more Google traffic and customers. Include a CTA to reply. No emojis. Output ONLY the SMS text itself, nothing else.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company}${segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry'}. We are Ascend Web Development. We build websites that get more Google traffic and customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
   } else if (service === 'ads') {
-    prompt = `Write a single SMS message under 160 characters to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ads that bring in paying customers. Include a CTA to reply. No emojis. Output ONLY the SMS text itself, nothing else.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We run Google and Meta ads that bring in paying customers. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
   } else {
-    prompt = `Write a single SMS message under 160 characters to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps with booking, loyalty, and push notifications. Include a CTA to reply. No emojis. Output ONLY the SMS text itself, nothing else.`;
+    prompt = `Write a single SMS message to ${firstName} at ${company} in the ${industry} industry. We are Ascend Web Development. We build custom mobile apps with booking, loyalty, and push notifications. Include a CTA to reply. No emojis. Output ONLY the raw SMS text, nothing else. No quotes, no labels, no intro.`;
   }
 
   const msg = await anthropic.messages.create({
     model: ANTHROPIC_MODEL,
-    max_tokens: 100,
+    max_tokens: 120,
     messages: [{ role: 'user', content: prompt }]
   });
-  let smsText = msg.content[0].text.trim();
-  // Strip any leading wrapper text like "Here's the SMS:" or "Here is the message:"
-  smsText = smsText.replace(/^(here'?s?\s+(the|your|an?)\s+sms[^:]*:|here\s+is\s+the\s+message[^:]*:|sms[^:]*:)\s*/i, '');
-  // Remove surrounding quotes if present
-  smsText = smsText.replace(/^["'](.+)["']$/s, '$1').trim();
-  if (smsText.length > 160) smsText = smsText.substring(0, 157) + '...';
-  return { smsText, service };
+  // Full text for logging - no truncation
+  let fullText = msg.content[0].text.trim();
+  // Strip any wrapper the AI adds anyway
+  fullText = fullText.replace(/^(here'?s?\s+(the|your|an?)\s+sms[^:\n]*:|here\s+is\s+the\s+(message|sms)[^:\n]*:|sms[^:\n]*:)\s*/i, '').trim();
+  fullText = fullText.replace(/^["'](.+)["']$/s, '$1').trim();
+  // Truncated version for sending via Twilio (160 char limit)
+  const sendText = fullText.length > 160 ? fullText.substring(0, 157) + '...' : fullText;
+  return { fullText, sendText, service };
 }
 
 export default async function handler(req, res) {
@@ -138,7 +135,6 @@ export default async function handler(req, res) {
   let emailsSent = 0, smsSent = 0, errors = [];
 
   try {
-    // Rotate queries by UTC hour so each of the 3 daily runs hits different industries
     const hour = new Date().getUTCHours();
     const queryIndex = Math.floor(hour / 3) % SEARCH_QUERIES.length;
     const primaryQuery = SEARCH_QUERIES[queryIndex];
@@ -150,7 +146,6 @@ export default async function handler(req, res) {
     ]);
 
     const allLeads = [...batch1, ...batch2].map(normalizeContact);
-    // Only keep leads that have email OR phone - skip leads with neither
     const usableLeads = allLeads.filter(c => c.email || c.phone);
     const noWebLeads = usableLeads.filter(c => hasNoWebsite(c));
     const appLeads = usableLeads.filter(c => !hasNoWebsite(c));
@@ -173,6 +168,7 @@ export default async function handler(req, res) {
             };
             if (emailsSent < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
             await resend.emails.send(sendOptions);
+            // Store full body for dashboard display
             await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment, service });
             emailsSent++;
           }
@@ -181,9 +177,11 @@ export default async function handler(req, res) {
 
       if (contact.phone && smsSent < SMS_CAP) {
         try {
-          const { smsText, service } = await generateSms(contact, segment);
-          await twilioClient.messages.create({ body: smsText, from: TWILIO_FROM, to: contact.phone });
-          await logSms({ to: contact.phone, body: smsText, contactName: contact.organization_name, timestamp: Date.now(), segment, service });
+          const { fullText, sendText, service } = await generateSms(contact, segment);
+          // Send truncated version to Twilio (160 char limit)
+          await twilioClient.messages.create({ body: sendText, from: TWILIO_FROM, to: contact.phone });
+          // Log the FULL untruncated text for dashboard display
+          await logSms({ to: contact.phone, body: fullText, contactName: contact.organization_name, timestamp: Date.now(), segment, service });
           smsSent++;
         } catch (e) { errors.push({ type: 'sms', to: contact.phone, error: e.message }); }
       }
