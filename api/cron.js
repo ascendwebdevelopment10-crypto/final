@@ -14,9 +14,6 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 const EMAIL_CAP = 70;
 const SMS_CAP = 70;
 const FETCH_LIMIT = 10;
-// Max email enrichment calls per run - keep total runtime under 60s
-// Each enrichment ~2s, each AI call ~2s. Budget: 5 enrichments + 15 AI calls = ~40s
-const ENRICH_LIMIT = 5;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -57,22 +54,27 @@ async function fetchOutscraperLeads(query, limit = FETCH_LIMIT) {
   return data?.data?.[0] || [];
 }
 
-// Enrich email from a website with a hard 5s timeout
-async function enrichEmail(websiteUrl) {
+// Scrape a business website directly to find email addresses - fast, no extra credits
+async function scrapeEmailFromWebsite(url) {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const params = new URLSearchParams({ query: websiteUrl, async: 'false' });
-    const res = await fetch(`https://api.app.outscraper.com/emails-and-contacts?${params}`, {
-      headers: { 'X-API-KEY': OUTSCRAPER_API_KEY },
-      signal: controller.signal
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; emailbot/1.0)' }
     });
     clearTimeout(timer);
     if (!res.ok) return null;
-    const data = await res.json();
-    const emails = data?.data?.[0]?.emails || [];
-    const found = emails.map(e => e.value).filter(e => e && e.includes('@') && !e.includes('example'));
-    return found[0] || null;
+    const html = await res.text();
+    // Extract emails using regex - match standard email patterns
+    const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+    const matches = html.match(emailRegex) || [];
+    // Filter out common junk: image files, css, js, social domains, examples
+    const junkDomains = ['example.com','sentry.io','w3.org','schema.org','wixpress.com','squarespace.com','google.com','facebook.com','twitter.com','instagram.com','png','jpg','svg','gif','css','js'];
+    const clean = [...new Set(matches)].filter(e => !junkDomains.some(j => e.toLowerCase().includes(j)));
+    // Prefer info@, contact@, hello@ style emails, then anything else
+    const preferred = clean.find(e => /^(info|contact|hello|sales|office|admin)@/i.test(e));
+    return preferred || clean[0] || null;
   } catch {
     return null;
   }
@@ -155,7 +157,7 @@ export default async function handler(req, res) {
     const primaryQuery = SEARCH_QUERIES[queryIndex];
     const secondaryQuery = SEARCH_QUERIES[(queryIndex + 1) % SEARCH_QUERIES.length];
 
-    // Fetch leads from two industries in parallel
+    // Fetch leads + scrape emails all in parallel to save time
     const [batch1, batch2] = await Promise.all([
       fetchOutscraperLeads(primaryQuery, FETCH_LIMIT),
       fetchOutscraperLeads(secondaryQuery, FETCH_LIMIT)
@@ -165,12 +167,11 @@ export default async function handler(req, res) {
     const noWebLeads = allLeads.filter(c => hasNoWebsite(c));
     const hasWebLeads = allLeads.filter(c => !hasNoWebsite(c));
 
-    // Enrich emails in parallel for leads that have a website, capped at ENRICH_LIMIT
-    const toEnrich = hasWebLeads.slice(0, ENRICH_LIMIT);
-    const enrichedEmails = await Promise.all(toEnrich.map(c => enrichEmail(c.website_url)));
-    toEnrich.forEach((c, i) => { c.email = enrichedEmails[i]; });
+    // Scrape emails from business websites in parallel - capped at 5, 4s timeout each
+    const toScrape = hasWebLeads.slice(0, 5);
+    const scrapedEmails = await Promise.all(toScrape.map(c => scrapeEmailFromWebsite(c.website_url)));
+    toScrape.forEach((c, i) => { c.email = scrapedEmails[i] || null; });
 
-    // Process: no-website leads first (SMS only), then website leads (email + SMS)
     const leads = [...noWebLeads, ...hasWebLeads];
 
     for (const contact of leads) {
