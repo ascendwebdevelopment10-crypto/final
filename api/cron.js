@@ -40,7 +40,8 @@ async function fetchOutscraperLeads(query, limit = FETCH_LIMIT) {
     limit: limit,
     language: 'en',
     region: 'us',
-    fields: 'name,full_address,phone,site,type,subtypes,email1,email2',
+    // 'website' is the correct field name (not 'site')
+    fields: 'name,full_address,phone,website,type,subtypes',
     async: 'false'
   });
   const res = await fetch(`https://api.app.outscraper.com/maps/search-v3?${params}`, {
@@ -54,13 +55,31 @@ async function fetchOutscraperLeads(query, limit = FETCH_LIMIT) {
   return data?.data?.[0] || [];
 }
 
+// Enrich a website URL to get email addresses via Outscraper
+async function enrichEmail(websiteUrl) {
+  try {
+    const params = new URLSearchParams({ query: websiteUrl, async: 'false' });
+    const res = await fetch(`https://api.app.outscraper.com/emails-and-contacts?${params}`, {
+      headers: { 'X-API-KEY': OUTSCRAPER_API_KEY }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const emails = data?.data?.[0]?.emails || [];
+    // Return first valid-looking business email (skip no-reply, info@, support@, etc generic ones last)
+    const sorted = emails.map(e => e.value).filter(e => e && e.includes('@'));
+    return sorted[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeContact(place) {
   return {
     first_name: (place.name || '').split(' ')[0] || 'there',
     organization_name: place.name || '',
-    email: place.email1 || place.email2 || null,
+    email: null, // will be enriched below for leads with websites
     phone: place.phone || null,
-    website_url: place.site || '',
+    website_url: place.website || '',  // correct field name is 'website'
     industry: place.type || place.subtypes || ''
   };
 }
@@ -117,12 +136,9 @@ async function generateSms(contact, segment) {
     max_tokens: 120,
     messages: [{ role: 'user', content: prompt }]
   });
-  // Full text for logging - no truncation
   let fullText = msg.content[0].text.trim();
-  // Strip any wrapper the AI adds anyway
   fullText = fullText.replace(/^(here'?s?\s+(the|your|an?)\s+sms[^:\n]*:|here\s+is\s+the\s+(message|sms)[^:\n]*:|sms[^:\n]*:)\s*/i, '').trim();
   fullText = fullText.replace(/^["'](.+)["']$/s, '$1').trim();
-  // Truncated version for sending via Twilio (160 char limit)
   const sendText = fullText.length > 160 ? fullText.substring(0, 157) + '...' : fullText;
   return { fullText, sendText, service };
 }
@@ -146,12 +162,25 @@ export default async function handler(req, res) {
     ]);
 
     const allLeads = [...batch1, ...batch2].map(normalizeContact);
-    const usableLeads = allLeads.filter(c => c.email || c.phone);
+    const usableLeads = allLeads.filter(c => c.phone); // must have phone at minimum
     const noWebLeads = usableLeads.filter(c => hasNoWebsite(c));
-    const appLeads = usableLeads.filter(c => !hasNoWebsite(c));
-    const leads = [...noWebLeads, ...appLeads];
+    const hasWebLeads = usableLeads.filter(c => !hasNoWebsite(c));
+    const leads = [...noWebLeads, ...hasWebLeads];
 
-    for (const contact of leads) {
+    // Enrich emails for leads that have a website (up to EMAIL_CAP worth)
+    // Do this in parallel for speed, but cap enrichment calls to avoid timeout
+    const emailCandidates = hasWebLeads.slice(0, Math.min(hasWebLeads.length, 8));
+    const enriched = await Promise.all(
+      emailCandidates.map(async c => {
+        const email = await enrichEmail(c.website_url);
+        return { ...c, email };
+      })
+    );
+    // Rebuild leads: no-website leads first (SMS only), then enriched leads (email + SMS)
+    const enrichedMap = new Map(enriched.map(c => [c.organization_name, c]));
+    const finalLeads = leads.map(c => enrichedMap.get(c.organization_name) || c);
+
+    for (const contact of finalLeads) {
       if (emailsSent >= EMAIL_CAP && smsSent >= SMS_CAP) break;
       const segment = hasNoWebsite(contact) ? 'no_website' : 'needs_app';
 
@@ -168,7 +197,6 @@ export default async function handler(req, res) {
             };
             if (emailsSent < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
             await resend.emails.send(sendOptions);
-            // Store full body for dashboard display
             await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment, service });
             emailsSent++;
           }
@@ -178,9 +206,7 @@ export default async function handler(req, res) {
       if (contact.phone && smsSent < SMS_CAP) {
         try {
           const { fullText, sendText, service } = await generateSms(contact, segment);
-          // Send truncated version to Twilio (160 char limit)
           await twilioClient.messages.create({ body: sendText, from: TWILIO_FROM, to: contact.phone });
-          // Log the FULL untruncated text for dashboard display
           await logSms({ to: contact.phone, body: fullText, contactName: contact.organization_name, timestamp: Date.now(), segment, service });
           smsSent++;
         } catch (e) { errors.push({ type: 'sms', to: contact.phone, error: e.message }); }
