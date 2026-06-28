@@ -63,16 +63,16 @@ tr.data-row:hover td{background:#f0f9ff}
 .conv-search input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b}
 .conv-search input:focus{border-color:#0ea5e9}
 .conv-list{overflow-y:auto;flex:1}
-.conv-item{padding:14px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .1s}
+.conv-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .1s;position:relative;display:flex;flex-direction:column;gap:3px}
 .conv-item:hover{background:#f0f9ff}
 .conv-item.active{background:#e0f2fe;border-left:3px solid #0ea5e9}
-.ci-name{font-weight:600;font-size:13px;color:#0f172a;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ci-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ci-name{font-weight:600;font-size:13px;color:#0f172a}
 .ci-preview{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ci-time{font-size:10px;color:#94a3b8;margin-left:auto;flex-shrink:0}
 .ci-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:600}
 .ci-badge.email{background:#dbeafe;color:#1d4ed8}
 .ci-badge.sms{background:#e0f2fe;color:#0369a1}
-.ci-badge.reply{background:#fee2e2;color:#dc2626}
+.ci-badge.reply{background:#fee2e2;color:#dc2626}.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:15px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:opacity .15s,color .15s}.conv-item:hover .del-btn{opacity:1}.del-btn:hover{color:#ef4444;background:#fee2e2}
 .conv-main{flex:1;display:flex;flex-direction:column;min-width:0}
 .conv-header{padding:16px 20px;border-bottom:1px solid #e2e8f0}
 .ch-name{font-weight:700;font-size:15px;color:#0f172a}
@@ -194,6 +194,8 @@ document.getElementById("conv-search").addEventListener("input", function() {
 });
 
 document.getElementById("conv-list").addEventListener("click", function(e) {
+  var delBtn = e.target.closest(".del-btn");
+  if (delBtn) { e.stopPropagation(); deleteConv(delBtn.dataset.key, delBtn.dataset.contact); return; }
   var item = e.target.closest(".conv-item");
   if (item) openConv(item.dataset.key);
 });
@@ -292,12 +294,33 @@ function renderList() {
     var preview = lastIn ? String(lastIn.body||"").substring(0,50) : "";
     var tb = cv.type==="sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
     var ub = cv.inCount ? '<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?" reply":" replies")+"</span>" : "";
-    return '<div class="conv-item'+(cv.key===activeKey?" active":"")+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'
-      +'<div class="ci-name">'+tb+" "+esc(cv.contact)+" "+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+"</span></div>"
+    return '<div class="conv-item'+(cv.key===activeKey?" active":"")+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete conversation">&#128465;</button>'
+      +'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+"</span> "+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+"</span></div>"
       +'<div class="ci-preview">'+esc(preview)+"</div>"
       +"</div>";
   }).join("");
   if (activeKey && convData[activeKey]) openConv(activeKey);
+}
+
+function deleteConv(key, contact) {
+  if (!confirm("Delete conversation with " + contact + "? This cannot be undone.")) return;
+  fetch("/api/delete-conv", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({contact: contact, key: REPLY_KEY})
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      delete convData[key];
+      if (activeKey === key) {
+        activeKey = null;
+        document.getElementById("conv-main").innerHTML = '<div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';
+      }
+      renderList();
+      var tot = Object.values(convData).filter(function(cv) { return cv.hasReply; }).length;
+      var b = document.getElementById("rbadge"); b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
+      lstats();
+    } else { alert("Delete failed: " + (d.error || "Unknown error")); }
+  }).catch(function() { alert("Network error - could not delete."); });
 }
 
 function openConv(key) {
