@@ -4,441 +4,405 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Ascend Outreach Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
-    --accent:#6c63ff;--accent2:#00d4aa;--red:#ff4d6d;--yellow:#ffd166;
-    --text:#e8eaf6;--muted:#8892b0;--font:'Inter',system-ui,sans-serif;
-  }
-  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
-  a{color:var(--accent);text-decoration:none}
-
-  /* Layout */
-  .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:8px;z-index:10}
-  .logo{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;padding-left:8px}
-  .logo span{color:var(--text)}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:14px;transition:all .15s}
-  .nav-item:hover,.nav-item.active{background:var(--surface2);color:var(--text)}
-  .nav-item.active{border-left:3px solid var(--accent);padding-left:9px}
-  .nav-icon{font-size:16px;width:20px;text-align:center}
-  .main{margin-left:220px;padding:32px;min-height:100vh}
-  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
-  .header h1{font-size:24px;font-weight:700}
-  .header-right{display:flex;align-items:center;gap:12px}
-  .badge{background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--muted)}
-  .badge.live{border-color:var(--accent2);color:var(--accent2)}
-  .badge.live::before{content:'● ';color:var(--accent2)}
-  .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
-  .btn-primary{background:var(--accent);color:#fff}
-  .btn-primary:hover{opacity:.9}
-  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
-  .btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-
-  /* Auth gate */
-  .auth-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
-  .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:380px;text-align:center}
-  .auth-card h2{margin-bottom:8px;font-size:20px}
-  .auth-card p{color:var(--muted);font-size:14px;margin-bottom:24px}
-  .input{width:100%;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border .15s}
-  .input:focus{border-color:var(--accent)}
-  .auth-card .btn{width:100%;margin-top:12px;padding:12px}
-
-  /* Stats grid */
-  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
-  .stat-label{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
-  .stat-value{font-size:32px;font-weight:700;line-height:1}
-  .stat-sub{font-size:12px;color:var(--muted);margin-top:6px}
-  .stat-card.accent .stat-value{color:var(--accent)}
-  .stat-card.green .stat-value{color:var(--accent2)}
-  .stat-card.red .stat-value{color:var(--red)}
-  .stat-card.yellow .stat-value{color:var(--yellow)}
-
-  /* Chart */
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:28px}
-  .chart-card h3{font-size:15px;font-weight:600;margin-bottom:20px;color:var(--muted)}
-  .chart-wrap{position:relative;height:200px}
-
-  /* Tabs */
-  .tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content}
-  .tab{padding:8px 20px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s}
-  .tab.active{background:var(--accent);color:#fff}
-
-  /* Table */
-  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-  .table-header h3{font-size:15px;font-weight:600}
-  .search-wrap{position:relative}
-  .search-wrap input{padding:8px 12px 8px 32px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;width:220px}
-  .search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
-  table{width:100%;border-collapse:collapse}
-  th{padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:600}
-  td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text)}
-  tr:last-child td{border-bottom:none}
-  tr:hover td{background:var(--surface2)}
-  .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-  .pill.sent{background:rgba(0,212,170,.12);color:var(--accent2)}
-  .pill.failed{background:rgba(255,77,109,.12);color:var(--red)}
-  .pill.replied{background:rgba(108,99,255,.15);color:var(--accent)}
-  .pill.unsubscribed{background:rgba(255,209,102,.12);color:var(--yellow)}
-  .pill.opened{background:rgba(0,212,170,.08);color:var(--accent2);opacity:.7}
-
-  /* Pagination */
-  .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
-  .page-btns{display:flex;gap:6px}
-  .page-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:12px}
-  .page-btn:hover{border-color:var(--accent);color:var(--accent)}
-  .page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .page-btn:disabled{opacity:.4;cursor:default}
-
-  /* Sections */
-  .section{display:none}
-  .section.active{display:block}
-
-  /* Loader */
-  .loader{text-align:center;padding:60px;color:var(--muted)}
-  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  /* Empty */
-  .empty{text-align:center;padding:60px;color:var(--muted)}
-  .empty-icon{font-size:40px;margin-bottom:12px}
-
-  /* Responsive */
-  @media(max-width:900px){
-    .sidebar{display:none}
-    .main{margin-left:0;padding:20px}
-    .stats-grid{grid-template-columns:repeat(2,1fr)}
-  }
-  @media(max-width:500px){
-    .stats-grid{grid-template-columns:1fr 1fr}
-    .stat-value{font-size:24px}
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f6ff;color:#1e293b;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.header h1{font-size:20px;font-weight:700;color:#0284c7}
+.badge-live{background:#0ea5e9;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}
+.nav{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 32px;display:flex;gap:4px}
+.nav-btn{padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#64748b;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}
+.nav-btn:hover{color:#0284c7}
+.nav-btn.active{color:#0284c7;border-bottom-color:#0284c7}
+.rbadge{display:none;background:#dc2626;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}
+.container{max-width:1200px;margin:0 auto;padding:32px}
+.page{display:none}
+.page.active{display:block}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.stat-card .label{font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.stat-card .value{font-size:32px;font-weight:700;color:#0284c7}
+.stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}
+.stat-card.ec{border-top:3px solid #0ea5e9}
+.stat-card.sc{border-top:3px solid #38bdf8}
+.stat-card.rc{border-top:3px solid #22c55e}
+.stat-card.uc{border-top:3px solid #f87171}
+.section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#0f172a}
+.chart{display:flex;align-items:flex-end;gap:4px;height:120px}
+.bg{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}
+.bar{flex:1;border-radius:2px 2px 0 0;min-height:2px}
+.eb{background:#0ea5e9}.sb{background:#38bdf8}
+.chart-labels{display:flex;gap:4px;margin-top:4px}
+.cl{flex:1;text-align:center;font-size:9px;color:#64748b;overflow:hidden}
+.legend{display:flex;gap:16px;margin-top:12px}
+.li{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b}
+.ld{width:10px;height:10px;border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #e2e8f0;font-size:11px;text-transform:uppercase}
+td{padding:12px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+tr.data-row{cursor:pointer}
+tr.data-row:hover td{background:#f0f9ff}
+.bs{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.br{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bsm{background:#fef3c7;color:#0369a1;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bweb{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bads{background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bapp{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.empty{text-align:center;color:#64748b;padding:40px}
+.expand-row{display:none}
+.expand-row.open{display:table-row}
+.expand-row td{padding:0 12px 20px;background:#f8fafc;border-bottom:2px solid #e2e8f0}
+.msg-full{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;font-size:14px;line-height:1.8;color:#1e293b;white-space:pre-wrap;word-break:break-word}
+.msg-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:10px}
+.expand-indicator{color:#94a3b8;font-size:12px;margin-left:6px;transition:transform .15s;display:inline-block}
+.row-open .expand-indicator{transform:rotate(90deg)}
+/* Conversations */
+.conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+.conv-sidebar{width:300px;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
+.conv-search{padding:12px;border-bottom:1px solid #e2e8f0}
+.conv-search input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b}
+.conv-search input:focus{border-color:#0ea5e9}
+.conv-list{overflow-y:auto;flex:1}
+.conv-item{padding:14px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .1s}
+.conv-item:hover{background:#f0f9ff}
+.conv-item.active{background:#e0f2fe;border-left:3px solid #0ea5e9}
+.ci-name{font-weight:600;font-size:13px;color:#0f172a;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ci-preview{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-time{font-size:10px;color:#94a3b8;margin-left:auto;flex-shrink:0}
+.ci-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:600}
+.ci-badge.email{background:#dbeafe;color:#1d4ed8}
+.ci-badge.sms{background:#e0f2fe;color:#0369a1}
+.ci-badge.unread{background:#fee2e2;color:#dc2626}
+.conv-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.conv-header{padding:16px 20px;border-bottom:1px solid #e2e8f0}
+.ch-name{font-weight:700;font-size:15px;color:#0f172a}
+.ch-sub{font-size:12px;color:#64748b;margin-top:3px}
+.conv-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.msg-bw{display:flex;flex-direction:column}
+.msg-bw.out{align-items:flex-end}
+.msg-bw.in{align-items:flex-start}
+.msg-b{max-width:70%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.msg-b.out{background:#0ea5e9;color:#fff;border-bottom-right-radius:3px}
+.msg-b.in{background:#f1f5f9;color:#1e293b;border-bottom-left-radius:3px}
+.msg-meta{font-size:10px;color:#94a3b8;margin-top:3px;padding:0 2px}
+.conv-reply-box{padding:16px;border-top:1px solid #e2e8f0;display:flex;flex-direction:column;gap:8px}
+.conv-reply-box input[type=text]{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b;margin-bottom:4px}
+.conv-reply-box input[type=text]:focus{border-color:#0ea5e9}
+.conv-reply-box textarea{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;min-height:70px;outline:none;font-family:inherit;color:#1e293b}
+.conv-reply-box textarea:focus{border-color:#0ea5e9}
+.conv-reply-actions{display:flex;align-items:center;gap:8px}
+.btn-send{padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-send:hover{background:#0284c7}
+.btn-send:disabled{opacity:.5;cursor:default}
+.send-ok{font-size:12px;color:#22c55e}
+.send-err{font-size:12px;color:#ef4444}
+.conv-empty{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#64748b}
+.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.rph h2{font-size:20px;font-weight:700;color:#0f172a}
+.rfbtn{padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
+.rfbtn:hover{color:#0284c7;border-color:#0ea5e9}
 </style>
 </head>
 <body>
+<div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>
+<nav class="nav">
+  <button class="nav-btn active" data-page="overview">Overview</button>
+  <button class="nav-btn" data-page="emails">Emails</button>
+  <button class="nav-btn" data-page="sms">SMS</button>
+  <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
+</nav>
+<div class="container">
 
-<!-- AUTH GATE -->
-<div id="authGate" class="auth-gate">
-  <div class="auth-card">
-    <div style="font-size:36px;margin-bottom:16px">📬</div>
-    <h2>Outreach Dashboard</h2>
-    <p>Enter your API key to access the dashboard</p>
-    <input id="apiKeyInput" class="input" type="password" placeholder="API Key (SUPPRESS_API_SECRET)" />
-    <button class="btn btn-primary" onclick="login()">Sign In</button>
-    <div id="authError" style="color:var(--red);font-size:13px;margin-top:12px;display:none">Invalid API key</div>
+<!-- OVERVIEW -->
+<div class="page active" id="page-overview">
+  <div class="stats-grid">
+    <div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">-</div><div class="sub" id="tde">Today: -</div></div>
+    <div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">-</div><div class="sub" id="tds">Today: -</div></div>
+    <div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">-</div><div class="sub">received</div></div>
+    <div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">-</div><div class="sub">received</div></div>
+    <div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
+  </div>
+  <div class="section"><h2>30-Day Activity</h2><div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>
+    <div class="legend"><div class="li"><div class="ld" style="background:#0ea5e9"></div>Emails</div><div class="li"><div class="ld" style="background:#38bdf8"></div>SMS</div></div>
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app" style="display:none">
-  <div class="sidebar">
-    <div class="logo">Ascend <span>Outreach</span></div>
-    <div class="nav-item active" onclick="showSection('overview')"><span class="nav-icon">📊</span> Overview</div>
-    <div class="nav-item" onclick="showSection('emails')"><span class="nav-icon">📧</span> Emails Sent</div>
-    <div class="nav-item" onclick="showSection('replies')"><span class="nav-icon">💬</span> Replies</div>
-    <div class="nav-item" onclick="showSection('suppressed')"><span class="nav-icon">🚫</span> Unsubscribed</div>
+<!-- EMAILS -->
+<div class="page" id="page-emails">
+  <div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+    <table><thead><tr><th>To</th><th>Subject</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
+    <tbody id="email-tbody"></tbody></table>
   </div>
+</div>
 
-  <div class="main">
-    <div class="header">
-      <h1 id="pageTitle">Overview</h1>
-      <div class="header-right">
-        <span class="badge live">Live</span>
-        <button class="btn btn-outline" onclick="refresh()">↺ Refresh</button>
-      </div>
+<!-- SMS -->
+<div class="page" id="page-sms">
+  <div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+    <table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
+    <tbody id="sms-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- CONVERSATIONS -->
+<div class="page" id="page-conversations">
+  <div class="rph"><h2>Conversations</h2><button class="rfbtn" id="conv-refresh-btn">&#8635; Refresh</button></div>
+  <div class="conv-wrap">
+    <div class="conv-sidebar">
+      <div class="conv-search"><input id="conv-search" type="text" placeholder="Search contacts..." /></div>
+      <div class="conv-list" id="conv-list"><div class="empty">Loading...</div></div>
     </div>
-
-    <!-- OVERVIEW -->
-    <div id="section-overview" class="section active">
-      <div id="statsGrid" class="stats-grid">
-        <div class="stat-card accent"><div class="stat-label">Total Sent</div><div class="stat-value" id="st-sent">—</div><div class="stat-sub">All time</div></div>
-        <div class="stat-card green"><div class="stat-label">Replies</div><div class="stat-value" id="st-replied">—</div><div class="stat-sub">Response rate: <span id="st-rate">—</span></div></div>
-        <div class="stat-card yellow"><div class="stat-label">Today's Sends</div><div class="stat-value" id="st-today">—</div><div class="stat-sub" id="st-cap">of 500 cap</div></div>
-        <div class="stat-card red"><div class="stat-label">Unsubscribed</div><div class="stat-value" id="st-unsub">—</div><div class="stat-sub">Opt-outs</div></div>
-      </div>
-      <div class="chart-card">
-        <h3>Emails Sent — Last 30 Days</h3>
-        <div class="chart-wrap"><canvas id="myChart"></canvas></div>
-      </div>
-      <div class="table-card">
-        <div class="table-header"><h3>Recent Activity</h3></div>
-        <table>
-          <thead><tr><th>Time</th><th>To</th><th>Company</th><th>Subject</th><th>Status</th></tr></thead>
-          <tbody id="recentBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- EMAILS -->
-    <div id="section-emails" class="section">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>All Sent Emails</h3>
-          <div class="search-wrap"><input id="emailSearch" placeholder="Search..." oninput="filterEmails()"/></div>
-        </div>
-        <div id="emailsLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="emailsTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Title</th><th>Company</th><th>Subject</th><th>Status</th></tr></thead>
-            <tbody id="emailsBody"></tbody>
-          </table>
-          <div class="pagination">
-            <span id="emailsCount"></span>
-            <div class="page-btns" id="emailsPages"></div>
-          </div>
-        </div>
-        <div id="emailsEmpty" class="empty" style="display:none"><div class="empty-icon">📭</div>No emails sent yet</div>
-      </div>
-    </div>
-
-    <!-- REPLIES -->
-    <div id="section-replies" class="section">
-      <div class="table-card">
-        <div class="table-header"><h3>Replies Received</h3></div>
-        <div id="repliesLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="repliesTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>Date</th><th>From</th><th>Message ID</th></tr></thead>
-            <tbody id="repliesBody"></tbody>
-          </table>
-        </div>
-        <div id="repliesEmpty" class="empty" style="display:none"><div class="empty-icon">💬</div>No replies tracked yet</div>
-      </div>
-    </div>
-
-    <!-- SUPPRESSED -->
-    <div id="section-suppressed" class="section">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>Unsubscribed / Suppressed</h3>
-          <div class="search-wrap"><input id="suppressSearch" placeholder="Search..." oninput="filterSuppressed()"/></div>
-        </div>
-        <div id="suppressLoader" class="loader"><div class="spinner"></div>Loading...</div>
-        <div id="suppressTableWrap" style="display:none">
-          <table>
-            <thead><tr><th>#</th><th>Email Address</th></tr></thead>
-            <tbody id="suppressBody"></tbody>
-          </table>
-          <div class="pagination"><span id="suppressCount"></span></div>
-        </div>
-        <div id="suppressEmpty" class="empty" style="display:none"><div class="empty-icon">🚫</div>No unsubscribes yet</div>
-      </div>
+    <div class="conv-main" id="conv-main">
+      <div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation from the left</p></div>
     </div>
   </div>
 </div>
 
+</div>
 <script>
-let API_KEY = '';
-let data = null;
-let chart = null;
-let allEmails = [];
-let allSuppressed = [];
-let emailPage = 0;
-const PAGE_SIZE = 50;
+(function() {
+  var cp = "overview";
+  var convData = {};
+  var activeContact = null;
+  var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
 
-const BASE = window.location.origin;
-
-async function login() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) return;
-  try {
-    const r = await fetch(BASE + '/api/logs?key=' + encodeURIComponent(key));
-    if (r.status === 401) { document.getElementById('authError').style.display='block'; return; }
-    const d = await r.json();
-    if (d.error) { document.getElementById('authError').style.display='block'; return; }
-    API_KEY = key;
-    data = d;
-    document.getElementById('authGate').style.display='none';
-    document.getElementById('app').style.display='block';
-    renderAll();
-  } catch(e) {
-    document.getElementById('authError').style.display='block';
-  }
-}
-
-async function refresh() {
-  try {
-    const r = await fetch(BASE + '/api/logs?key=' + encodeURIComponent(API_KEY));
-    data = await r.json();
-    renderAll();
-  } catch {}
-}
-
-function showSection(name) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('section-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if(n.textContent.toLowerCase().includes(name === 'overview' ? 'overview' : name === 'emails' ? 'emails' : name === 'replies' ? 'replies' : 'unsub')) n.classList.add('active');
+  // Navigation
+  document.querySelectorAll(".nav-btn").forEach(function(b) {
+    b.addEventListener("click", function() {
+      var p = b.dataset.page;
+      document.querySelectorAll(".page").forEach(function(x) { x.classList.remove("active"); });
+      document.querySelectorAll(".nav-btn").forEach(function(x) { x.classList.remove("active"); });
+      document.getElementById("page-" + p).classList.add("active");
+      b.classList.add("active");
+      cp = p;
+      if (p === "conversations") lconvs();
+      if (p === "emails") le();
+      if (p === "sms") ls();
+    });
   });
-  const titles = {overview:'Overview',emails:'Emails Sent',replies:'Replies',suppressed:'Unsubscribed'};
-  document.getElementById('pageTitle').textContent = titles[name];
-}
 
-function fmt(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-}
+  document.getElementById("conv-refresh-btn").addEventListener("click", lconvs);
+  document.getElementById("conv-search").addEventListener("input", function() {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll(".conv-item").forEach(function(el) {
+      el.style.display = (el.dataset.contact || "").toLowerCase().includes(q) ? "" : "none";
+    });
+  });
 
-function statusPill(e) {
-  if (e.replied) return '<span class="pill replied">💬 Replied</span>';
-  if (e.status === 'failed') return '<span class="pill failed">✗ Failed</span>';
-  return '<span class="pill sent">✓ Sent</span>';
-}
+  function fmt(ts) { return ts ? new Date(ts).toLocaleString() : "-"; }
+  function fmtShort(ts) {
+    if (!ts) return "";
+    var d = new Date(ts), now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+    return d.toLocaleDateString([], {month: "short", day: "numeric"});
+  }
+  function esc(s) {
+    return s ? (s + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
+  }
+  function svcBadge(svc) {
+    if (svc === "ads") return '<span class="bads">Ads</span>';
+    if (svc === "app") return '<span class="bapp">App</span>';
+    return '<span class="bweb">Website</span>';
+  }
 
-function renderAll() {
-  if (!data) return;
-  const s = data.stats || {};
-  const emails = data.emails || [];
-  const replies = data.replies || [];
-  const suppressed = data.suppressed || [];
-  const daily = data.dailyCounts || {};
-  allEmails = emails;
-  allSuppressed = suppressed;
-
-  // Stats
-  document.getElementById('st-sent').textContent = (s.totalSent || 0).toLocaleString();
-  document.getElementById('st-replied').textContent = (s.totalReplied || 0).toLocaleString();
-  const rate = s.totalSent > 0 ? ((s.totalReplied / s.totalSent) * 100).toFixed(1) : '0.0';
-  document.getElementById('st-rate').textContent = rate + '%';
-  document.getElementById('st-unsub').textContent = (s.totalUnsubscribed || 0).toLocaleString();
-
-  // Today count from dailyCounts
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayCount = daily[todayKey] || 0;
-  document.getElementById('st-today').textContent = todayCount.toLocaleString();
-
-  // Chart
-  const labels = Object.keys(daily).sort();
-  const values = labels.map(k => daily[k]);
-  if (chart) chart.destroy();
-  const ctx = document.getElementById('myChart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels.map(l => { const d=new Date(l); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }),
-      datasets: [{
-        data: values,
-        backgroundColor: 'rgba(108,99,255,0.5)',
-        borderColor: '#6c63ff',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: '#2e3250' }, ticks: { color: '#8892b0', maxTicksLimit: 10 } },
-        y: { grid: { color: '#2e3250' }, ticks: { color: '#8892b0', precision: 0 }, beginAtZero: true }
+  function buildConvs(emails, smsArr, replies) {
+    var c = {};
+    emails.forEach(function(e) {
+      var k = e.to; if (!k) return;
+      if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
+      c[k].msgs.push({dir: "out", type: "email", body: e.body || e.subject || "(email)", ts: e.timestamp || 0});
+      if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+    });
+    smsArr.forEach(function(e) {
+      var k = e.to; if (!k) return;
+      if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
+      else c[k].type = "sms";
+      c[k].msgs.push({dir: "out", type: "sms", body: e.body || "", ts: e.timestamp || 0});
+      if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+    });
+    replies.forEach(function(r) {
+      var isOS = r.type === "sms_reply_out", isOE = r.type === "email_reply_out", isIS = r.type === "sms_reply";
+      if (isOS || isOE) {
+        var k = r.to; if (!k) return;
+        if (!c[k]) c[k] = {contact: k, type: isOS ? "sms" : "email", msgs: [], lastTs: 0};
+        c[k].msgs.push({dir: "out", type: isOS ? "sms" : "email", body: r.body || "", ts: r.timestamp || 0});
+        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+      } else if (isIS) {
+        var k = r.from; if (!k) return;
+        if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
+        c[k].msgs.push({dir: "in", type: "sms", body: r.body || "", ts: r.timestamp || 0});
+        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+      } else {
+        var k = r.from || r.originalTo; if (!k) return;
+        if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
+        c[k].msgs.push({dir: "in", type: "email", body: (r.body || "").replace(/<[^>]+>/g, "").trim(), ts: r.timestamp || 0});
+        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
       }
+    });
+    Object.values(c).forEach(function(v) {
+      v.msgs.sort(function(a, b) { return a.ts - b.ts; });
+      v.lastMsg = v.msgs[v.msgs.length - 1];
+      v.unread = v.msgs.filter(function(m) { return m.dir === "in"; }).length;
+    });
+    return c;
+  }
+
+  function lconvs() {
+    document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
+    Promise.all([
+      fetch("/api/logs?type=emails&limit=500").then(function(r) { return r.json(); }),
+      fetch("/api/logs?type=sms&limit=500").then(function(r) { return r.json(); }),
+      fetch("/api/logs?type=replies&limit=200").then(function(r) { return r.json(); })
+    ]).then(function(res) {
+      var emails = Array.isArray(res[0]) ? res[0] : [];
+      var smsArr = Array.isArray(res[1]) ? res[1] : [];
+      var reps = Array.isArray(res[2]) ? res[2] : [];
+      convData = buildConvs(emails, smsArr, reps);
+      renderList();
+      var tot = Object.values(convData).reduce(function(a, cv) { return a + (cv.unread > 0 ? 1 : 0); }, 0);
+      var b = document.getElementById("rbadge");
+      b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
+    }).catch(function() {
+      document.getElementById("conv-list").innerHTML = '<div class="empty">Error loading</div>';
+    });
+  }
+
+  function renderList() {
+    var list = document.getElementById("conv-list");
+    var items = Object.values(convData).sort(function(a, b) { return b.lastTs - a.lastTs; });
+    if (!items.length) { list.innerHTML = '<div class="empty">No conversations yet</div>'; return; }
+    list.innerHTML = items.map(function(cv) {
+      var last = (cv.lastMsg ? (cv.lastMsg.body || "").substring(0, 50) : "");
+      var tb = cv.type === "sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
+      var ub = cv.unread ? '<span class="ci-badge unread">' + cv.unread + "</span>" : "";
+      return '<div class="conv-item" data-contact="' + esc(cv.contact) + '" onclick="openConv(' + JSON.stringify(cv.contact) + ')">'
+        + '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + ub + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
+        + '<div class="ci-preview">' + esc(last) + "</div>"
+        + "</div>";
+    }).join("");
+    if (activeContact && convData[activeContact]) openConv(activeContact);
+  }
+
+  window.openConv = function(contact) {
+    activeContact = contact;
+    document.querySelectorAll(".conv-item").forEach(function(el) {
+      el.classList.toggle("active", el.dataset.contact === contact);
+    });
+    var cv = convData[contact]; if (!cv) return;
+    var isSms = cv.type === "sms";
+    var main = document.getElementById("conv-main");
+    var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
+    main.innerHTML = '<div class="conv-header"><div class="ch-name">' + esc(contact) + '</div><div class="ch-sub">' + (isSms ? "SMS" : "Email") + " Conversation &mdash; " + cv.msgs.length + " message" + (cv.msgs.length !== 1 ? "s" : "") + "</div></div>"
+      + '<div class="conv-messages" id="conv-msgs">'
+      + cv.msgs.map(function(m) {
+          var isOut = m.dir === "out";
+          var body = (m.body || "").replace(/<[^>]+>/g, "").trim() || "(empty)";
+          return '<div class="msg-bw ' + (isOut ? "out" : "in") + '"><div class="msg-b ' + (isOut ? "out" : "in") + '">' + esc(body) + '</div><div class="msg-meta">' + (isOut ? "You" : "Them") + " &bull; " + fmt(m.ts) + "</div></div>";
+        }).join("")
+      + "</div>"
+      + '<div class="conv-reply-box">' + subjRow
+      + '<textarea id="reply-msg" placeholder="Type your reply..."></textarea>'
+      + '<div class="conv-reply-actions"><button class="btn-send" id="send-btn">' + (isSms ? "Send SMS" : "Send Email") + "</button><span id="send-status"></span></div></div>";
+    var msgs = document.getElementById("conv-msgs");
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById("send-btn").onclick = function() { doSend(contact, isSms ? "sms" : "email"); };
+  };
+
+  function doSend(contact, type) {
+    var msgEl = document.getElementById("reply-msg");
+    var msg = (msgEl.value || "").trim();
+    if (!msg) return;
+    var subject = "Re: Your inquiry";
+    var subEl = document.getElementById("reply-subject");
+    if (subEl) subject = subEl.value || subject;
+    var btn = document.getElementById("send-btn");
+    var status = document.getElementById("send-status");
+    btn.disabled = true; status.className = ""; status.textContent = "Sending...";
+    fetch("/api/reply", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({type: type, to: contact, message: msg, subject: subject, key: REPLY_KEY})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) {
+        status.className = "send-ok"; status.textContent = "Sent!";
+        msgEl.value = "";
+        var msgs = document.getElementById("conv-msgs");
+        var w = document.createElement("div"); w.className = "msg-bw out";
+        w.innerHTML = '<div class="msg-b out">' + esc(msg) + '</div><div class="msg-meta">You &bull; just now</div>';
+        msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
+        if (convData[contact]) {
+          convData[contact].msgs.push({dir: "out", type: type, body: msg, ts: Date.now()});
+          convData[contact].lastTs = Date.now();
+          convData[contact].lastMsg = {body: msg, ts: Date.now()};
+          renderList();
+        }
+        setTimeout(function() { status.textContent = ""; }, 3000);
+      } else { status.className = "send-err"; status.textContent = d.error || "Failed"; }
+      btn.disabled = false;
+    }).catch(function() { status.className = "send-err"; status.textContent = "Network error"; btn.disabled = false; });
+  }
+
+  function lstats() {
+    fetch("/api/logs?type=stats").then(function(r) { return r.json(); }).then(function(s) {
+      document.getElementById("te").textContent = (s.totalEmailSent || 0).toLocaleString();
+      document.getElementById("ts").textContent = (s.totalSmsSent || 0).toLocaleString();
+      document.getElementById("tde").textContent = "Today: " + (s.todayEmailSent || 0);
+      document.getElementById("tds").textContent = "Today: " + (s.todaySmsSent || 0);
+      document.getElementById("er").textContent = (s.emailReplies || 0).toLocaleString();
+      document.getElementById("sr").textContent = (s.smsReplies || 0).toLocaleString();
+      document.getElementById("un").textContent = (s.unsubscribed || 0).toLocaleString();
+      var days = s.dailyChart || [];
+      var mx = Math.max.apply(null, days.map(function(d) { return Math.max(d.emails || 0, d.sms || 0); })); mx = mx || 1;
+      var ch = document.getElementById("chart"), cl = document.getElementById("clabels");
+      ch.innerHTML = ""; cl.innerHTML = "";
+      days.forEach(function(d) {
+        var eH = Math.round(((d.emails || 0) / mx) * 100), sH = Math.round(((d.sms || 0) / mx) * 100);
+        var g = document.createElement("div"); g.className = "bg";
+        g.innerHTML = '<div class="bar eb" style="height:' + eH + '%"></div><div class="bar sb" style="height:' + sH + '%"></div>';
+        ch.appendChild(g);
+        var l = document.createElement("div"); l.className = "cl"; l.textContent = d.date.slice(5); cl.appendChild(l);
+      });
+    }).catch(function(e) { console.error(e); });
+  }
+
+  function le() {
+    fetch("/api/logs?type=emails&limit=100").then(function(r) { return r.json(); }).then(function(emails) {
+      var rows = "";
+      emails.forEach(function(e, i) {
+        var xid = "xem" + i;
+        var rawBody = (e.body || "").replace(/<[^>]+>/g, "").trim();
+        rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(e.subject || "(no subject)") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bs") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
+        rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">' + esc(rawBody || "(not stored)") + "</div></td></tr>";
+      });
+      document.getElementById("email-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
+    }).catch(function(e) { console.error(e); });
+  }
+
+  function ls() {
+    fetch("/api/logs?type=sms&limit=100").then(function(r) { return r.json(); }).then(function(sms) {
+      var rows = "";
+      sms.forEach(function(e, i) {
+        var xid = "xsms" + i;
+        var rawBody = (e.body || "").trim();
+        rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(rawBody.substring(0, 60)) + (rawBody.length > 60 ? "..." : "") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bsm") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
+        rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">' + esc(rawBody || "(empty)") + "</div></td></tr>";
+      });
+      document.getElementById("sms-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
+    }).catch(function(e) { console.error(e); });
+  }
+
+  document.addEventListener("click", function(e) {
+    var dr = e.target.closest("tr.data-row");
+    if (dr) {
+      var xid = dr.dataset.xid; if (!xid) return;
+      var xr = document.getElementById(xid); if (!xr) return;
+      xr.classList.toggle("open"); dr.classList.toggle("row-open");
     }
   });
 
-  // Recent table (last 10)
-  const recent = emails.slice(0, 10);
-  document.getElementById('recentBody').innerHTML = recent.length === 0
-    ? '<tr><td colspan="5" class="empty">No emails sent yet</td></tr>'
-    : recent.map(e => `<tr>
-        <td style="color:var(--muted);white-space:nowrap">${fmt(e.ts)}</td>
-        <td>${e.to || '—'}</td>
-        <td style="color:var(--muted)">${e.company || '—'}</td>
-        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.subject || '—'}</td>
-        <td>${statusPill(e)}</td>
-      </tr>`).join('');
-
-  // Emails table
-  renderEmailsPage(0);
-
-  // Replies table
-  document.getElementById('repliesLoader').style.display = 'none';
-  if (replies.length === 0) {
-    document.getElementById('repliesEmpty').style.display = 'block';
-  } else {
-    document.getElementById('repliesTableWrap').style.display = 'block';
-    document.getElementById('repliesBody').innerHTML = replies.map(r => `<tr>
-      <td style="color:var(--muted)">${fmt(r.ts)}</td>
-      <td>${r.email || '—'}</td>
-      <td style="color:var(--muted);font-size:12px">${r.messageId || '—'}</td>
-    </tr>`).join('');
-  }
-
-  // Suppressed table
-  document.getElementById('suppressLoader').style.display = 'none';
-  filterSuppressed();
-}
-
-function renderEmailsPage(page) {
-  emailPage = page;
-  const search = (document.getElementById('emailSearch')?.value || '').toLowerCase();
-  const filtered = allEmails.filter(e =>
-    !search || (e.to||'').toLowerCase().includes(search) ||
-    (e.company||'').toLowerCase().includes(search) ||
-    (e.firstName||'').toLowerCase().includes(search) ||
-    (e.subject||'').toLowerCase().includes(search)
-  );
-  const total = filtered.length;
-  const pages = Math.ceil(total / PAGE_SIZE);
-  const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  document.getElementById('emailsLoader').style.display = 'none';
-  if (allEmails.length === 0) {
-    document.getElementById('emailsEmpty').style.display = 'block';
-    return;
-  }
-  document.getElementById('emailsTableWrap').style.display = 'block';
-  document.getElementById('emailsCount').textContent = `${total.toLocaleString()} emails`;
-
-  document.getElementById('emailsBody').innerHTML = slice.map(e => `<tr>
-    <td style="color:var(--muted);white-space:nowrap;font-size:12px">${fmt(e.ts)}</td>
-    <td>${e.firstName||''} ${e.lastName||''}</td>
-    <td style="color:var(--muted)">${e.to||'—'}</td>
-    <td style="color:var(--muted);font-size:12px">${e.title||'—'}</td>
-    <td>${e.company||'—'}</td>
-    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${e.subject||'—'}</td>
-    <td>${statusPill(e)}</td>
-  </tr>`).join('');
-
-  // Pagination
-  const pb = document.getElementById('emailsPages');
-  pb.innerHTML = '';
-  const addBtn = (label, p, disabled=false) => {
-    const b = document.createElement('button');
-    b.className = 'page-btn' + (p === page ? ' active' : '');
-    b.textContent = label; b.disabled = disabled;
-    b.onclick = () => renderEmailsPage(p);
-    pb.appendChild(b);
-  };
-  addBtn('‹', page - 1, page === 0);
-  const start = Math.max(0, page - 2), end = Math.min(pages - 1, start + 4);
-  for (let i = start; i <= end; i++) addBtn(i + 1, i);
-  addBtn('›', page + 1, page >= pages - 1);
-}
-
-function filterEmails() { renderEmailsPage(0); }
-
-function filterSuppressed() {
-  const search = (document.getElementById('suppressSearch')?.value || '').toLowerCase();
-  const filtered = allSuppressed.filter(e => !search || e.toLowerCase().includes(search));
-  document.getElementById('suppressLoader').style.display = 'none';
-  if (filtered.length === 0) {
-    document.getElementById('suppressEmpty').style.display = 'block';
-    document.getElementById('suppressTableWrap').style.display = 'none';
-    return;
-  }
-  document.getElementById('suppressEmpty').style.display = 'none';
-  document.getElementById('suppressTableWrap').style.display = 'block';
-  document.getElementById('suppressCount').textContent = filtered.length.toLocaleString() + ' addresses';
-  document.getElementById('suppressBody').innerHTML = filtered.map((e,i) =>
-    `<tr><td style="color:var(--muted);width:50px">${i+1}</td><td>${e}</td></tr>`
-  ).join('');
-}
-
-document.getElementById('apiKeyInput').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+  lstats(); le(); ls();
+  setInterval(function() { lstats(); if (cp === "conversations") lconvs(); }, 30000);
+})();
 </script>
 </body>
 </html>
