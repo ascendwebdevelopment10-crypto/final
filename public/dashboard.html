@@ -258,7 +258,8 @@ list.innerHTML = items.map(function(cv) {
 var last = (cv.lastMsg ? (cv.lastMsg.body || "").substring(0, 50) : "");
 var tb = cv.type === "sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
 var ub = cv.unread ? '<span class="ci-badge unread">' + cv.unread + "</span>" : "";
-return '<div class="conv-item" data-contact="' + esc(cv.contact) + '" onclick="openConv(' + JSON.stringify(cv.contact) + ')">'
+var safeContact = cv.contact.replace(/\/g, "\\").replace(/'/g, "\'");
+return '<div class="conv-item" data-contact="' + esc(cv.contact) + '" onclick="openConv('' + safeContact + '')">'
 + '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + ub + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
 + '<div class="ci-preview">' + esc(last) + "</div>"
 + "</div>";
