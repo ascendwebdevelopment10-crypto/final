@@ -250,9 +250,9 @@ tr.data-row:hover td{background:#f0f9ff}
   function lconvs() {
     document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
     Promise.all([
-      fetch("/api/logs?type=emails&limit=500").then(function(r) { return r.json(); }),
-      fetch("/api/logs?type=sms&limit=500").then(function(r) { return r.json(); }),
-      fetch("/api/logs?type=replies&limit=200").then(function(r) { return r.json(); })
+      fetch("/api/logs?type=emails&limit=200").then(function(r) { return r.json(); }),
+      fetch("/api/logs?type=sms&limit=200").then(function(r) { return r.json(); }),
+      fetch("/api/logs?type=replies&limit=100").then(function(r) { return r.json(); })
     ]).then(function(res) {
       var emails = Array.isArray(res[0]) ? res[0] : [];
       var smsArr = Array.isArray(res[1]) ? res[1] : [];
