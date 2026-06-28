@@ -57,7 +57,6 @@ tr.data-row:hover td{background:#f0f9ff}
 .msg-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:10px}
 .expand-indicator{color:#94a3b8;font-size:12px;margin-left:6px;transition:transform .15s;display:inline-block}
 .row-open .expand-indicator{transform:rotate(90deg)}
-/* Conversations */
 .conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
 .conv-sidebar{width:300px;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
 .conv-search{padding:12px;border-bottom:1px solid #e2e8f0}
@@ -107,301 +106,278 @@ tr.data-row:hover td{background:#f0f9ff}
 <body>
 <div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>
 <nav class="nav">
-  <button class="nav-btn active" data-page="overview">Overview</button>
-  <button class="nav-btn" data-page="emails">Emails</button>
-  <button class="nav-btn" data-page="sms">SMS</button>
-  <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
+<button class="nav-btn active" data-page="overview">Overview</button>
+<button class="nav-btn" data-page="emails">Emails</button>
+<button class="nav-btn" data-page="sms">SMS</button>
+<button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
 </nav>
 <div class="container">
-
-<!-- OVERVIEW -->
 <div class="page active" id="page-overview">
-  <div class="stats-grid">
-    <div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">-</div><div class="sub" id="tde">Today: -</div></div>
-    <div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">-</div><div class="sub" id="tds">Today: -</div></div>
-    <div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">-</div><div class="sub">received</div></div>
-    <div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">-</div><div class="sub">received</div></div>
-    <div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
-  </div>
-  <div class="section"><h2>30-Day Activity</h2><div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>
-    <div class="legend"><div class="li"><div class="ld" style="background:#0ea5e9"></div>Emails</div><div class="li"><div class="ld" style="background:#38bdf8"></div>SMS</div></div>
-  </div>
+<div class="stats-grid">
+<div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">-</div><div class="sub" id="tde">Today: -</div></div>
+<div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">-</div><div class="sub" id="tds">Today: -</div></div>
+<div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">-</div><div class="sub">received</div></div>
+<div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">-</div><div class="sub">received</div></div>
+<div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
 </div>
-
-<!-- EMAILS -->
+<div class="section"><h2>30-Day Activity</h2><div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>
+<div class="legend"><div class="li"><div class="ld" style="background:#0ea5e9"></div>Emails</div><div class="li"><div class="ld" style="background:#38bdf8"></div>SMS</div></div>
+</div>
+</div>
 <div class="page" id="page-emails">
-  <div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
-    <table><thead><tr><th>To</th><th>Subject</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
-    <tbody id="email-tbody"></tbody></table>
-  </div>
+<div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+<table><thead><tr><th>To</th><th>Subject</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
+<tbody id="email-tbody"></tbody></table>
 </div>
-
-<!-- SMS -->
+</div>
 <div class="page" id="page-sms">
-  <div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
-    <table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
-    <tbody id="sms-tbody"></tbody></table>
-  </div>
+<div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+<table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
+<tbody id="sms-tbody"></tbody></table>
 </div>
-
-<!-- CONVERSATIONS -->
+</div>
 <div class="page" id="page-conversations">
-  <div class="rph"><h2>Conversations</h2><button class="rfbtn" id="conv-refresh-btn">&#8635; Refresh</button></div>
-  <div class="conv-wrap">
-    <div class="conv-sidebar">
-      <div class="conv-search"><input id="conv-search" type="text" placeholder="Search contacts..." /></div>
-      <div class="conv-list" id="conv-list"><div class="empty">Loading...</div></div>
-    </div>
-    <div class="conv-main" id="conv-main">
-      <div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation from the left</p></div>
-    </div>
-  </div>
+<div class="rph"><h2>Conversations</h2><button class="rfbtn" id="conv-refresh-btn">&#8635; Refresh</button></div>
+<div class="conv-wrap">
+<div class="conv-sidebar">
+<div class="conv-search"><input id="conv-search" type="text" placeholder="Search contacts..." /></div>
+<div class="conv-list" id="conv-list"><div class="empty">Loading...</div></div>
 </div>
-
+<div class="conv-main" id="conv-main">
+<div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation from the left</p></div>
+</div>
+</div>
+</div>
 </div>
 <script>
 (function() {
-  var cp = "overview";
-  var convData = {};
-  var activeContact = null;
-  var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
-
-  // Navigation
-  document.querySelectorAll(".nav-btn").forEach(function(b) {
-    b.addEventListener("click", function() {
-      var p = b.dataset.page;
-      document.querySelectorAll(".page").forEach(function(x) { x.classList.remove("active"); });
-      document.querySelectorAll(".nav-btn").forEach(function(x) { x.classList.remove("active"); });
-      document.getElementById("page-" + p).classList.add("active");
-      b.classList.add("active");
-      cp = p;
-      if (p === "conversations") lconvs();
-      if (p === "emails") le();
-      if (p === "sms") ls();
-    });
-  });
-
-  document.getElementById("conv-refresh-btn").addEventListener("click", lconvs);
-  document.getElementById("conv-search").addEventListener("input", function() {
-    var q = this.value.toLowerCase();
-    document.querySelectorAll(".conv-item").forEach(function(el) {
-      el.style.display = (el.dataset.contact || "").toLowerCase().includes(q) ? "" : "none";
-    });
-  });
-
-  function fmt(ts) { return ts ? new Date(ts).toLocaleString() : "-"; }
-  function fmtShort(ts) {
-    if (!ts) return "";
-    var d = new Date(ts), now = new Date();
-    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-    return d.toLocaleDateString([], {month: "short", day: "numeric"});
-  }
-  function esc(s) {
-    return s ? (s + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
-  }
-  function svcBadge(svc) {
-    if (svc === "ads") return '<span class="bads">Ads</span>';
-    if (svc === "app") return '<span class="bapp">App</span>';
-    return '<span class="bweb">Website</span>';
-  }
-
-  function buildConvs(emails, smsArr, replies) {
-    var c = {};
-    emails.forEach(function(e) {
-      var k = e.to; if (!k) return;
-      if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
-      c[k].msgs.push({dir: "out", type: "email", body: e.body || e.subject || "(email)", ts: e.timestamp || 0});
-      if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
-    });
-    smsArr.forEach(function(e) {
-      var k = e.to; if (!k) return;
-      if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
-      else c[k].type = "sms";
-      c[k].msgs.push({dir: "out", type: "sms", body: e.body || "", ts: e.timestamp || 0});
-      if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
-    });
-    replies.forEach(function(r) {
-      var isOS = r.type === "sms_reply_out", isOE = r.type === "email_reply_out", isIS = r.type === "sms_reply";
-      if (isOS || isOE) {
-        var k = r.to; if (!k) return;
-        if (!c[k]) c[k] = {contact: k, type: isOS ? "sms" : "email", msgs: [], lastTs: 0};
-        c[k].msgs.push({dir: "out", type: isOS ? "sms" : "email", body: r.body || "", ts: r.timestamp || 0});
-        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
-      } else if (isIS) {
-        var k = r.from; if (!k) return;
-        if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
-        c[k].msgs.push({dir: "in", type: "sms", body: r.body || "", ts: r.timestamp || 0});
-        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
-      } else {
-        var k = r.from || r.originalTo; if (!k) return;
-        if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
-        c[k].msgs.push({dir: "in", type: "email", body: (r.body || "").replace(/<[^>]+>/g, "").trim(), ts: r.timestamp || 0});
-        if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
-      }
-    });
-    Object.values(c).forEach(function(v) {
-      v.msgs.sort(function(a, b) { return a.ts - b.ts; });
-      v.lastMsg = v.msgs[v.msgs.length - 1];
-      v.unread = v.msgs.filter(function(m) { return m.dir === "in"; }).length;
-    });
-    return c;
-  }
-
-  function lconvs() {
-    document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
-    Promise.all([
-      fetch("/api/logs?type=emails&limit=200").then(function(r) { return r.json(); }),
-      fetch("/api/logs?type=sms&limit=200").then(function(r) { return r.json(); }),
-      fetch("/api/logs?type=replies&limit=100").then(function(r) { return r.json(); })
-    ]).then(function(res) {
-      var emails = Array.isArray(res[0]) ? res[0] : [];
-      var smsArr = Array.isArray(res[1]) ? res[1] : [];
-      var reps = Array.isArray(res[2]) ? res[2] : [];
-      convData = buildConvs(emails, smsArr, reps);
-      renderList();
-      var tot = Object.values(convData).reduce(function(a, cv) { return a + (cv.unread > 0 ? 1 : 0); }, 0);
-      var b = document.getElementById("rbadge");
-      b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
-    }).catch(function() {
-      document.getElementById("conv-list").innerHTML = '<div class="empty">Error loading</div>';
-    });
-  }
-
-  function renderList() {
-    var list = document.getElementById("conv-list");
-    var items = Object.values(convData).sort(function(a, b) { return b.lastTs - a.lastTs; });
-    if (!items.length) { list.innerHTML = '<div class="empty">No conversations yet</div>'; return; }
-    list.innerHTML = items.map(function(cv) {
-      var last = (cv.lastMsg ? (cv.lastMsg.body || "").substring(0, 50) : "");
-      var tb = cv.type === "sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
-      var ub = cv.unread ? '<span class="ci-badge unread">' + cv.unread + "</span>" : "";
-      return '<div class="conv-item" data-contact="' + esc(cv.contact) + '" onclick="openConv(' + JSON.stringify(cv.contact) + ')">'
-        + '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + ub + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
-        + '<div class="ci-preview">' + esc(last) + "</div>"
-        + "</div>";
-    }).join("");
-    if (activeContact && convData[activeContact]) openConv(activeContact);
-  }
-
-  window.openConv = function(contact) {
-    activeContact = contact;
-    document.querySelectorAll(".conv-item").forEach(function(el) {
-      el.classList.toggle("active", el.dataset.contact === contact);
-    });
-    var cv = convData[contact]; if (!cv) return;
-    var isSms = cv.type === "sms";
-    var main = document.getElementById("conv-main");
-    var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
-    main.innerHTML = '<div class="conv-header"><div class="ch-name">' + esc(contact) + '</div><div class="ch-sub">' + (isSms ? "SMS" : "Email") + " Conversation &mdash; " + cv.msgs.length + " message" + (cv.msgs.length !== 1 ? "s" : "") + "</div></div>"
-      + '<div class="conv-messages" id="conv-msgs">'
-      + cv.msgs.map(function(m) {
-          var isOut = m.dir === "out";
-          var body = (m.body || "").replace(/<[^>]+>/g, "").trim() || "(empty)";
-          return '<div class="msg-bw ' + (isOut ? "out" : "in") + '"><div class="msg-b ' + (isOut ? "out" : "in") + '">' + esc(body) + '</div><div class="msg-meta">' + (isOut ? "You" : "Them") + " &bull; " + fmt(m.ts) + "</div></div>";
-        }).join("")
-      + "</div>"
-      + '<div class="conv-reply-box">' + subjRow
-      + '<textarea id="reply-msg" placeholder="Type your reply..."></textarea>'
-      + '<div class="conv-reply-actions"><button class="btn-send" id="send-btn">' + (isSms ? "Send SMS" : "Send Email") + "</button><span id="send-status"></span></div></div>";
-    var msgs = document.getElementById("conv-msgs");
-    if (msgs) msgs.scrollTop = msgs.scrollHeight;
-    document.getElementById("send-btn").onclick = function() { doSend(contact, isSms ? "sms" : "email"); };
-  };
-
-  function doSend(contact, type) {
-    var msgEl = document.getElementById("reply-msg");
-    var msg = (msgEl.value || "").trim();
-    if (!msg) return;
-    var subject = "Re: Your inquiry";
-    var subEl = document.getElementById("reply-subject");
-    if (subEl) subject = subEl.value || subject;
-    var btn = document.getElementById("send-btn");
-    var status = document.getElementById("send-status");
-    btn.disabled = true; status.className = ""; status.textContent = "Sending...";
-    fetch("/api/reply", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({type: type, to: contact, message: msg, subject: subject, key: REPLY_KEY})
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.ok) {
-        status.className = "send-ok"; status.textContent = "Sent!";
-        msgEl.value = "";
-        var msgs = document.getElementById("conv-msgs");
-        var w = document.createElement("div"); w.className = "msg-bw out";
-        w.innerHTML = '<div class="msg-b out">' + esc(msg) + '</div><div class="msg-meta">You &bull; just now</div>';
-        msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
-        if (convData[contact]) {
-          convData[contact].msgs.push({dir: "out", type: type, body: msg, ts: Date.now()});
-          convData[contact].lastTs = Date.now();
-          convData[contact].lastMsg = {body: msg, ts: Date.now()};
-          renderList();
-        }
-        setTimeout(function() { status.textContent = ""; }, 3000);
-      } else { status.className = "send-err"; status.textContent = d.error || "Failed"; }
-      btn.disabled = false;
-    }).catch(function() { status.className = "send-err"; status.textContent = "Network error"; btn.disabled = false; });
-  }
-
-  function lstats() {
-    fetch("/api/logs?type=stats").then(function(r) { return r.json(); }).then(function(s) {
-      document.getElementById("te").textContent = (s.totalEmailSent || 0).toLocaleString();
-      document.getElementById("ts").textContent = (s.totalSmsSent || 0).toLocaleString();
-      document.getElementById("tde").textContent = "Today: " + (s.todayEmailSent || 0);
-      document.getElementById("tds").textContent = "Today: " + (s.todaySmsSent || 0);
-      document.getElementById("er").textContent = (s.emailReplies || 0).toLocaleString();
-      document.getElementById("sr").textContent = (s.smsReplies || 0).toLocaleString();
-      document.getElementById("un").textContent = (s.unsubscribed || 0).toLocaleString();
-      var days = s.dailyChart || [];
-      var mx = Math.max.apply(null, days.map(function(d) { return Math.max(d.emails || 0, d.sms || 0); })); mx = mx || 1;
-      var ch = document.getElementById("chart"), cl = document.getElementById("clabels");
-      ch.innerHTML = ""; cl.innerHTML = "";
-      days.forEach(function(d) {
-        var eH = Math.round(((d.emails || 0) / mx) * 100), sH = Math.round(((d.sms || 0) / mx) * 100);
-        var g = document.createElement("div"); g.className = "bg";
-        g.innerHTML = '<div class="bar eb" style="height:' + eH + '%"></div><div class="bar sb" style="height:' + sH + '%"></div>';
-        ch.appendChild(g);
-        var l = document.createElement("div"); l.className = "cl"; l.textContent = d.date.slice(5); cl.appendChild(l);
-      });
-    }).catch(function(e) { console.error(e); });
-  }
-
-  function le() {
-    fetch("/api/logs?type=emails&limit=100").then(function(r) { return r.json(); }).then(function(emails) {
-      var rows = "";
-      emails.forEach(function(e, i) {
-        var xid = "xem" + i;
-        var rawBody = (e.body || "").replace(/<[^>]+>/g, "").trim();
-        rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(e.subject || "(no subject)") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bs") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
-        rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">' + esc(rawBody || "(not stored)") + "</div></td></tr>";
-      });
-      document.getElementById("email-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
-    }).catch(function(e) { console.error(e); });
-  }
-
-  function ls() {
-    fetch("/api/logs?type=sms&limit=100").then(function(r) { return r.json(); }).then(function(sms) {
-      var rows = "";
-      sms.forEach(function(e, i) {
-        var xid = "xsms" + i;
-        var rawBody = (e.body || "").trim();
-        rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(rawBody.substring(0, 60)) + (rawBody.length > 60 ? "..." : "") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bsm") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
-        rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">' + esc(rawBody || "(empty)") + "</div></td></tr>";
-      });
-      document.getElementById("sms-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
-    }).catch(function(e) { console.error(e); });
-  }
-
-  document.addEventListener("click", function(e) {
-    var dr = e.target.closest("tr.data-row");
-    if (dr) {
-      var xid = dr.dataset.xid; if (!xid) return;
-      var xr = document.getElementById(xid); if (!xr) return;
-      xr.classList.toggle("open"); dr.classList.toggle("row-open");
-    }
-  });
-
-  lstats(); le(); ls();
-  setInterval(function() { lstats(); if (cp === "conversations") lconvs(); }, 30000);
+var cp = "overview";
+var convData = {};
+var activeContact = null;
+var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
+document.querySelectorAll(".nav-btn").forEach(function(b) {
+b.addEventListener("click", function() {
+var p = b.dataset.page;
+document.querySelectorAll(".page").forEach(function(x) { x.classList.remove("active"); });
+document.querySelectorAll(".nav-btn").forEach(function(x) { x.classList.remove("active"); });
+document.getElementById("page-" + p).classList.add("active");
+b.classList.add("active");
+cp = p;
+if (p === "conversations") lconvs();
+if (p === "emails") le();
+if (p === "sms") ls();
+});
+});
+document.getElementById("conv-refresh-btn").addEventListener("click", lconvs);
+document.getElementById("conv-search").addEventListener("input", function() {
+var q = this.value.toLowerCase();
+document.querySelectorAll(".conv-item").forEach(function(el) {
+el.style.display = (el.dataset.contact || "").toLowerCase().includes(q) ? "" : "none";
+});
+});
+function fmt(ts) { return ts ? new Date(ts).toLocaleString() : "-"; }
+function fmtShort(ts) {
+if (!ts) return "";
+var d = new Date(ts), now = new Date();
+if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+return d.toLocaleDateString([], {month: "short", day: "numeric"});
+}
+function esc(s) {
+return s ? (s + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
+}
+function svcBadge(svc) {
+if (svc === "ads") return '<span class="bads">Ads</span>';
+if (svc === "app") return '<span class="bapp">App</span>';
+return '<span class="bweb">Website</span>';
+}
+function buildConvs(emails, smsArr, replies) {
+var c = {};
+emails.forEach(function(e) {
+var k = e.to; if (!k) return;
+if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
+c[k].msgs.push({dir: "out", type: "email", body: e.body || e.subject || "(email)", ts: e.timestamp || 0});
+if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+});
+smsArr.forEach(function(e) {
+var k = e.to; if (!k) return;
+if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
+else c[k].type = "sms";
+c[k].msgs.push({dir: "out", type: "sms", body: e.body || "", ts: e.timestamp || 0});
+if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+});
+replies.forEach(function(r) {
+var isOS = r.type === "sms_reply_out", isOE = r.type === "email_reply_out", isIS = r.type === "sms_reply";
+if (isOS || isOE) {
+var k = r.to; if (!k) return;
+if (!c[k]) c[k] = {contact: k, type: isOS ? "sms" : "email", msgs: [], lastTs: 0};
+c[k].msgs.push({dir: "out", type: isOS ? "sms" : "email", body: r.body || "", ts: r.timestamp || 0});
+if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+} else if (isIS) {
+var k = r.from; if (!k) return;
+if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
+c[k].msgs.push({dir: "in", type: "sms", body: r.body || "", ts: r.timestamp || 0});
+if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+} else {
+var k = r.from || r.originalTo; if (!k) return;
+if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
+c[k].msgs.push({dir: "in", type: "email", body: (r.body || "").replace(/<[^>]+>/g, "").trim(), ts: r.timestamp || 0});
+if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+}
+});
+Object.values(c).forEach(function(v) {
+v.msgs.sort(function(a, b) { return a.ts - b.ts; });
+v.lastMsg = v.msgs[v.msgs.length - 1];
+v.unread = v.msgs.filter(function(m) { return m.dir === "in"; }).length;
+});
+return c;
+}
+function lconvs() {
+document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
+Promise.all([
+fetch("/api/logs?type=emails&limit=200").then(function(r) { return r.json(); }),
+fetch("/api/logs?type=sms&limit=200").then(function(r) { return r.json(); }),
+fetch("/api/logs?type=replies&limit=100").then(function(r) { return r.json(); })
+]).then(function(res) {
+var emails = Array.isArray(res[0]) ? res[0] : [];
+var smsArr = Array.isArray(res[1]) ? res[1] : [];
+var reps = Array.isArray(res[2]) ? res[2] : [];
+convData = buildConvs(emails, smsArr, reps);
+renderList();
+var tot = Object.values(convData).reduce(function(a, cv) { return a + (cv.unread > 0 ? 1 : 0); }, 0);
+var b = document.getElementById("rbadge");
+b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
+}).catch(function() {
+document.getElementById("conv-list").innerHTML = '<div class="empty">Error loading</div>';
+});
+}
+function renderList() {
+var list = document.getElementById("conv-list");
+var items = Object.values(convData).sort(function(a, b) { return b.lastTs - a.lastTs; });
+if (!items.length) { list.innerHTML = '<div class="empty">No conversations yet</div>'; return; }
+list.innerHTML = items.map(function(cv) {
+var last = (cv.lastMsg ? (cv.lastMsg.body || "").substring(0, 50) : "");
+var tb = cv.type === "sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
+var ub = cv.unread ? '<span class="ci-badge unread">' + cv.unread + "</span>" : "";
+return '<div class="conv-item" data-contact="' + esc(cv.contact) + '" onclick="openConv(' + JSON.stringify(cv.contact) + ')">'
++ '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + ub + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
++ '<div class="ci-preview">' + esc(last) + "</div>"
++ "</div>";
+}).join("");
+if (activeContact && convData[activeContact]) openConv(activeContact);
+}
+window.openConv = function(contact) {
+activeContact = contact;
+document.querySelectorAll(".conv-item").forEach(function(el) {
+el.classList.toggle("active", el.dataset.contact === contact);
+});
+var cv = convData[contact]; if (!cv) return;
+var isSms = cv.type === "sms";
+var main = document.getElementById("conv-main");
+var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
+main.innerHTML = '<div class="conv-header"><div class="ch-name">' + esc(contact) + '</div><div class="ch-sub">' + (isSms ? "SMS" : "Email") + " Conversation &mdash; " + cv.msgs.length + " message" + (cv.msgs.length !== 1 ? "s" : "") + "</div></div>"
++ '<div class="conv-messages" id="conv-msgs">'
++ cv.msgs.map(function(m) {
+var isOut = m.dir === "out";
+var body = (m.body || "").replace(/<[^>]+>/g, "").trim() || "(empty)";
+return '<div class="msg-bw ' + (isOut ? "out" : "in") + '"><div class="msg-b ' + (isOut ? "out" : "in") + '">' + esc(body) + '</div><div class="msg-meta">' + (isOut ? "You" : "Them") + " &bull; " + fmt(m.ts) + "</div></div>";
+}).join("")
++ "</div>"
++ '<div class="conv-reply-box">' + subjRow
++ '<textarea id="reply-msg" placeholder="Type your reply..."></textarea>'
++ '<div class="conv-reply-actions"><button class="btn-send" id="send-btn">' + (isSms ? "Send SMS" : "Send Email") + '</button><span id="send-status"></span></div></div>';
+var msgs = document.getElementById("conv-msgs");
+if (msgs) msgs.scrollTop = msgs.scrollHeight;
+document.getElementById("send-btn").onclick = function() { doSend(contact, isSms ? "sms" : "email"); };
+};
+function doSend(contact, type) {
+var msgEl = document.getElementById("reply-msg");
+var msg = (msgEl.value || "").trim();
+if (!msg) return;
+var subject = "Re: Your inquiry";
+var subEl = document.getElementById("reply-subject");
+if (subEl) subject = subEl.value || subject;
+var btn = document.getElementById("send-btn");
+var status = document.getElementById("send-status");
+btn.disabled = true; status.className = ""; status.textContent = "Sending...";
+fetch("/api/reply", {
+method: "POST",
+headers: {"Content-Type": "application/json"},
+body: JSON.stringify({type: type, to: contact, message: msg, subject: subject, key: REPLY_KEY})
+}).then(function(r) { return r.json(); }).then(function(d) {
+if (d.ok) {
+status.className = "send-ok"; status.textContent = "Sent!";
+msgEl.value = "";
+var msgs = document.getElementById("conv-msgs");
+var w = document.createElement("div"); w.className = "msg-bw out";
+w.innerHTML = '<div class="msg-b out">' + esc(msg) + '</div><div class="msg-meta">You &bull; just now</div>';
+msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
+if (convData[contact]) {
+convData[contact].msgs.push({dir: "out", type: type, body: msg, ts: Date.now()});
+convData[contact].lastTs = Date.now();
+convData[contact].lastMsg = {body: msg, ts: Date.now()};
+renderList();
+}
+setTimeout(function() { status.textContent = ""; }, 3000);
+} else { status.className = "send-err"; status.textContent = d.error || "Failed"; }
+btn.disabled = false;
+}).catch(function() { status.className = "send-err"; status.textContent = "Network error"; btn.disabled = false; });
+}
+function lstats() {
+fetch("/api/logs?type=stats").then(function(r) { return r.json(); }).then(function(s) {
+document.getElementById("te").textContent = (s.totalEmailSent || 0).toLocaleString();
+document.getElementById("ts").textContent = (s.totalSmsSent || 0).toLocaleString();
+document.getElementById("tde").textContent = "Today: " + (s.todayEmailSent || 0);
+document.getElementById("tds").textContent = "Today: " + (s.todaySmsSent || 0);
+document.getElementById("er").textContent = (s.emailReplies || 0).toLocaleString();
+document.getElementById("sr").textContent = (s.smsReplies || 0).toLocaleString();
+document.getElementById("un").textContent = (s.unsubscribed || 0).toLocaleString();
+var days = s.dailyChart || [];
+var mx = Math.max.apply(null, days.map(function(d) { return Math.max(d.emails || 0, d.sms || 0); })); mx = mx || 1;
+var ch = document.getElementById("chart"), cl = document.getElementById("clabels");
+ch.innerHTML = ""; cl.innerHTML = "";
+days.forEach(function(d) {
+var eH = Math.round(((d.emails || 0) / mx) * 100), sH = Math.round(((d.sms || 0) / mx) * 100);
+var g = document.createElement("div"); g.className = "bg";
+g.innerHTML = '<div class="bar eb" style="height:' + eH + '%"></div><div class="bar sb" style="height:' + sH + '%"></div>';
+ch.appendChild(g);
+var l = document.createElement("div"); l.className = "cl"; l.textContent = d.date.slice(5); cl.appendChild(l);
+});
+}).catch(function(e) { console.error(e); });
+}
+function le() {
+fetch("/api/logs?type=emails&limit=100").then(function(r) { return r.json(); }).then(function(emails) {
+var rows = "";
+emails.forEach(function(e, i) {
+var xid = "xem" + i;
+var rawBody = (e.body || "").replace(/<[^>]+>/g, "").trim();
+rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(e.subject || "(no subject)") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bs") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
+rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">' + esc(rawBody || "(not stored)") + "</div></td></tr>";
+});
+document.getElementById("email-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
+}).catch(function(e) { console.error(e); });
+}
+function ls() {
+fetch("/api/logs?type=sms&limit=100").then(function(r) { return r.json(); }).then(function(sms) {
+var rows = "";
+sms.forEach(function(e, i) {
+var xid = "xsms" + i;
+var rawBody = (e.body || "").trim();
+rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(rawBody.substring(0, 60)) + (rawBody.length > 60 ? "..." : "") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bsm") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
+rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">' + esc(rawBody || "(empty)") + "</div></td></tr>";
+});
+document.getElementById("sms-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
+}).catch(function(e) { console.error(e); });
+}
+document.addEventListener("click", function(e) {
+var dr = e.target.closest("tr.data-row");
+if (dr) {
+var xid = dr.dataset.xid; if (!xid) return;
+var xr = document.getElementById(xid); if (!xr) return;
+xr.classList.toggle("open"); dr.classList.toggle("row-open");
+}
+});
+lstats(); le(); ls();
+setInterval(function() { lstats(); if (cp === "conversations") lconvs(); }, 30000);
 })();
 </script>
 </body>
