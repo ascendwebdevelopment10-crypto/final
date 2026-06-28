@@ -72,7 +72,7 @@ tr.data-row:hover td{background:#f0f9ff}
 .ci-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:600}
 .ci-badge.email{background:#dbeafe;color:#1d4ed8}
 .ci-badge.sms{background:#e0f2fe;color:#0369a1}
-.ci-badge.unread{background:#fee2e2;color:#dc2626}
+.ci-badge.reply{background:#fee2e2;color:#dc2626}
 .conv-main{flex:1;display:flex;flex-direction:column;min-width:0}
 .conv-header{padding:16px 20px;border-bottom:1px solid #e2e8f0}
 .ch-name{font-weight:700;font-size:15px;color:#0f172a}
@@ -155,6 +155,7 @@ var cp = "overview";
 var convData = {};
 var activeContact = null;
 var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
+
 document.querySelectorAll(".nav-btn").forEach(function(b) {
 b.addEventListener("click", function() {
 var p = b.dataset.page;
@@ -168,6 +169,7 @@ if (p === "emails") le();
 if (p === "sms") ls();
 });
 });
+
 document.getElementById("conv-refresh-btn").addEventListener("click", lconvs);
 document.getElementById("conv-search").addEventListener("input", function() {
 var q = this.value.toLowerCase();
@@ -179,96 +181,135 @@ document.getElementById("conv-list").addEventListener("click", function(e) {
 var item = e.target.closest(".conv-item");
 if (item && item.dataset.contact) openConv(item.dataset.contact);
 });
+
+function normPhone(n) { return (n || "").replace(/D/g, "").slice(-10); }
+
 function fmt(ts) { return ts ? new Date(ts).toLocaleString() : "-"; }
 function fmtShort(ts) {
 if (!ts) return "";
 var d = new Date(ts), now = new Date();
-if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-return d.toLocaleDateString([], {month: "short", day: "numeric"});
+if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+return d.toLocaleDateString([], {month:"short", day:"numeric"});
 }
 function esc(s) {
-return s ? (s + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
+return s ? (s+"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
 }
 function svcBadge(svc) {
 if (svc === "ads") return '<span class="bads">Ads</span>';
 if (svc === "app") return '<span class="bapp">App</span>';
 return '<span class="bweb">Website</span>';
 }
+
 function buildConvs(emails, smsArr, replies) {
 var c = {};
+var phoneIdx = {};
+var emailIdx = {};
+
+function getKey(raw, type) {
+if (type === "sms") {
+var n = normPhone(raw);
+if (!phoneIdx[n]) phoneIdx[n] = raw;
+return phoneIdx[n];
+} else {
+var e = (raw || "").toLowerCase().trim();
+if (!emailIdx[e]) emailIdx[e] = raw;
+return emailIdx[e];
+}
+}
+
 emails.forEach(function(e) {
-var k = e.to; if (!k) return;
-if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
-c[k].msgs.push({dir: "out", type: "email", body: e.body || e.subject || "(email)", ts: e.timestamp || 0});
-if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+if (!e.to) return;
+var k = getKey(e.to, "email");
+if (!c[k]) c[k] = {contact: k, type:"email", msgs:[], lastTs:0};
+c[k].msgs.push({dir:"out", type:"email", body: e.body || e.subject || "(email)", ts: e.timestamp||0});
+if ((e.timestamp||0) > c[k].lastTs) c[k].lastTs = e.timestamp||0;
 });
+
 smsArr.forEach(function(e) {
-var k = e.to; if (!k) return;
-if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
-else c[k].type = "sms";
-c[k].msgs.push({dir: "out", type: "sms", body: e.body || "", ts: e.timestamp || 0});
-if ((e.timestamp || 0) > c[k].lastTs) c[k].lastTs = e.timestamp || 0;
+if (!e.to) return;
+var k = getKey(e.to, "sms");
+if (!c[k]) c[k] = {contact: k, type:"sms", msgs:[], lastTs:0};
+c[k].type = "sms";
+c[k].msgs.push({dir:"out", type:"sms", body: e.body||"", ts: e.timestamp||0});
+if ((e.timestamp||0) > c[k].lastTs) c[k].lastTs = e.timestamp||0;
 });
+
 replies.forEach(function(r) {
-var isOS = r.type === "sms_reply_out", isOE = r.type === "email_reply_out", isIS = r.type === "sms_reply";
+var isOS = r.type==="sms_reply_out", isOE = r.type==="email_reply_out", isIS = r.type==="sms_reply";
 if (isOS || isOE) {
 var k = r.to; if (!k) return;
-if (!c[k]) c[k] = {contact: k, type: isOS ? "sms" : "email", msgs: [], lastTs: 0};
-c[k].msgs.push({dir: "out", type: isOS ? "sms" : "email", body: r.body || "", ts: r.timestamp || 0});
-if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+k = getKey(k, isOS ? "sms" : "email");
+if (!c[k]) c[k] = {contact:k, type: isOS?"sms":"email", msgs:[], lastTs:0};
+c[k].msgs.push({dir:"out", type: isOS?"sms":"email", body:r.body||"", ts:r.timestamp||0});
+if ((r.timestamp||0) > c[k].lastTs) c[k].lastTs = r.timestamp||0;
 } else if (isIS) {
-var k = r.from; if (!k) return;
-if (!c[k]) c[k] = {contact: k, type: "sms", msgs: [], lastTs: 0};
-c[k].msgs.push({dir: "in", type: "sms", body: r.body || "", ts: r.timestamp || 0});
-if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+var raw = r.from; if (!raw) return;
+var n = normPhone(raw);
+var k = phoneIdx[n] || raw;
+if (!phoneIdx[n]) phoneIdx[n] = raw;
+if (!c[k]) c[k] = {contact:k, type:"sms", msgs:[], lastTs:0};
+c[k].msgs.push({dir:"in", type:"sms", body:r.body||"", ts:r.timestamp||0});
+if ((r.timestamp||0) > c[k].lastTs) c[k].lastTs = r.timestamp||0;
 } else {
-var k = r.from || r.originalTo; if (!k) return;
-if (!c[k]) c[k] = {contact: k, type: "email", msgs: [], lastTs: 0};
-c[k].msgs.push({dir: "in", type: "email", body: (r.body || "").replace(/<[^>]+>/g, "").trim(), ts: r.timestamp || 0});
-if ((r.timestamp || 0) > c[k].lastTs) c[k].lastTs = r.timestamp || 0;
+var raw = r.from || r.originalTo; if (!raw) return;
+var e2 = raw.toLowerCase().trim();
+var k = emailIdx[e2] || raw;
+if (!emailIdx[e2]) emailIdx[e2] = raw;
+if (!c[k]) c[k] = {contact:k, type:"email", msgs:[], lastTs:0};
+c[k].msgs.push({dir:"in", type:"email", body:(r.body||"").replace(/<[^>]+>/g,"").trim(), ts:r.timestamp||0});
+if ((r.timestamp||0) > c[k].lastTs) c[k].lastTs = r.timestamp||0;
 }
 });
+
 Object.values(c).forEach(function(v) {
-v.msgs.sort(function(a, b) { return a.ts - b.ts; });
-v.lastMsg = v.msgs[v.msgs.length - 1];
-v.unread = v.msgs.filter(function(m) { return m.dir === "in"; }).length;
+v.msgs.sort(function(a,b){ return a.ts - b.ts; });
+v.lastMsg = v.msgs[v.msgs.length-1];
+v.hasReply = v.msgs.some(function(m){ return m.dir==="in"; });
+v.replyCount = v.msgs.filter(function(m){ return m.dir==="in"; }).length;
 });
 return c;
 }
+
 function lconvs() {
 document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
 Promise.all([
-fetch("/api/logs?type=emails&limit=200").then(function(r) { return r.json(); }),
-fetch("/api/logs?type=sms&limit=200").then(function(r) { return r.json(); }),
-fetch("/api/logs?type=replies&limit=100").then(function(r) { return r.json(); })
+fetch("/api/logs?type=emails&limit=200").then(function(r){return r.json();}),
+fetch("/api/logs?type=sms&limit=200").then(function(r){return r.json();}),
+fetch("/api/logs?type=replies&limit=100").then(function(r){return r.json();})
 ]).then(function(res) {
 var emails = Array.isArray(res[0]) ? res[0] : [];
 var smsArr = Array.isArray(res[1]) ? res[1] : [];
 var reps = Array.isArray(res[2]) ? res[2] : [];
 convData = buildConvs(emails, smsArr, reps);
 renderList();
-var tot = Object.values(convData).reduce(function(a, cv) { return a + (cv.unread > 0 ? 1 : 0); }, 0);
+var tot = Object.values(convData).filter(function(cv){return cv.hasReply;}).length;
 var b = document.getElementById("rbadge");
 b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
 }).catch(function() {
 document.getElementById("conv-list").innerHTML = '<div class="empty">Error loading</div>';
 });
 }
+
 function renderList() {
 var list = document.getElementById("conv-list");
-var items = Object.values(convData).sort(function(a, b) { return b.lastTs - a.lastTs; });
-if (!items.length) { list.innerHTML = '<div class="empty">No conversations yet</div>'; return; }
+var items = Object.values(convData)
+.filter(function(cv){ return cv.hasReply; })
+.sort(function(a,b){ return b.lastTs - a.lastTs; });
+if (!items.length) { list.innerHTML = '<div class="empty">No replies yet</div>'; return; }
 list.innerHTML = items.map(function(cv) {
-var last = (cv.lastMsg ? (cv.lastMsg.body || "").substring(0, 50) : "");
-var tb = cv.type === "sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
-var ub = cv.unread ? '<span class="ci-badge unread">' + cv.unread + "</span>" : "";
+var lastIn = null;
+for (var i = cv.msgs.length-1; i >= 0; i--) { if (cv.msgs[i].dir==="in"){ lastIn=cv.msgs[i]; break; } }
+var preview = lastIn ? (lastIn.body||"").substring(0,50) : "";
+var tb = cv.type==="sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
+var rb = '<span class="ci-badge reply">' + cv.replyCount + " repl" + (cv.replyCount===1?"y":"ies") + "</span>";
 return '<div class="conv-item" data-contact="' + esc(cv.contact) + '">'
-+ '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + ub + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
-+ '<div class="ci-preview">' + esc(last) + "</div>"
++ '<div class="ci-name">' + tb + " " + esc(cv.contact) + " " + rb + '<span class="ci-time">' + fmtShort(cv.lastTs) + "</span></div>"
++ '<div class="ci-preview">' + esc(preview) + "</div>"
 + "</div>";
 }).join("");
-if (activeContact && convData[activeContact]) openConv(activeContact);
+if (activeContact && convData[activeContact] && convData[activeContact].hasReply) openConv(activeContact);
 }
+
 function openConv(contact) {
 activeContact = contact;
 document.querySelectorAll(".conv-item").forEach(function(el) {
@@ -278,110 +319,107 @@ var cv = convData[contact]; if (!cv) return;
 var isSms = cv.type === "sms";
 var main = document.getElementById("conv-main");
 var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
-main.innerHTML = '<div class="conv-header"><div class="ch-name">' + esc(contact) + '</div><div class="ch-sub">' + (isSms ? "SMS" : "Email") + " Conversation &mdash; " + cv.msgs.length + " message" + (cv.msgs.length !== 1 ? "s" : "") + "</div></div>"
-+ '<div class="conv-messages" id="conv-msgs">'
-+ cv.msgs.map(function(m) {
+var msgsHtml = cv.msgs.map(function(m) {
 var isOut = m.dir === "out";
-var body = (m.body || "").replace(/<[^>]+>/g, "").trim() || "(empty)";
-return '<div class="msg-bw ' + (isOut ? "out" : "in") + '"><div class="msg-b ' + (isOut ? "out" : "in") + '">' + esc(body) + '</div><div class="msg-meta">' + (isOut ? "You" : "Them") + " &bull; " + fmt(m.ts) + "</div></div>";
-}).join("")
-+ "</div>"
-+ '<div class="conv-reply-box">' + subjRow
+var body = (m.body||"").replace(/<[^>]+>/g,"").trim() || "(empty)";
+return '<div class="msg-bw '+(isOut?"out":"in")+'"><div class="msg-b '+(isOut?"out":"in")+'">' + esc(body) + '</div><div class="msg-meta">'+(isOut?"You":"Them")+" &bull; "+fmt(m.ts)+"</div></div>";
+}).join("");
+main.innerHTML = '<div class="conv-header"><div class="ch-name">'+esc(contact)+'</div><div class="ch-sub">'+(isSms?"SMS":"Email")+" Conversation &mdash; "+cv.msgs.length+" message"+(cv.msgs.length!==1?"s":"")+"</div></div>"
++ '<div class="conv-messages" id="conv-msgs">'+msgsHtml+"</div>"
++ '<div class="conv-reply-box">'+subjRow
 + '<textarea id="reply-msg" placeholder="Type your reply..."></textarea>'
-+ '<div class="conv-reply-actions"><button class="btn-send" id="send-btn">' + (isSms ? "Send SMS" : "Send Email") + '</button><span id="send-status"></span></div></div>';
++ '<div class="conv-reply-actions"><button class="btn-send" id="send-btn">'+(isSms?"Send SMS":"Send Email")+'</button><span id="send-status"></span></div></div>';
 var msgs = document.getElementById("conv-msgs");
 if (msgs) msgs.scrollTop = msgs.scrollHeight;
-document.getElementById("send-btn").onclick = function() { doSend(contact, isSms ? "sms" : "email"); };
+document.getElementById("send-btn").onclick = function(){ doSend(contact, isSms?"sms":"email"); };
 }
+
 function doSend(contact, type) {
 var msgEl = document.getElementById("reply-msg");
-var msg = (msgEl.value || "").trim();
-if (!msg) return;
+var msg = (msgEl.value||"").trim(); if (!msg) return;
 var subject = "Re: Your inquiry";
 var subEl = document.getElementById("reply-subject");
 if (subEl) subject = subEl.value || subject;
-var btn = document.getElementById("send-btn");
-var status = document.getElementById("send-status");
-btn.disabled = true; status.className = ""; status.textContent = "Sending...";
-fetch("/api/reply", {
-method: "POST",
-headers: {"Content-Type": "application/json"},
-body: JSON.stringify({type: type, to: contact, message: msg, subject: subject, key: REPLY_KEY})
-}).then(function(r) { return r.json(); }).then(function(d) {
+var btn = document.getElementById("send-btn"), status = document.getElementById("send-status");
+btn.disabled = true; status.className=""; status.textContent="Sending...";
+fetch("/api/reply",{method:"POST",headers:{"Content-Type":"application/json"},
+body:JSON.stringify({type:type,to:contact,message:msg,subject:subject,key:REPLY_KEY})
+}).then(function(r){return r.json();}).then(function(d) {
 if (d.ok) {
-status.className = "send-ok"; status.textContent = "Sent!";
-msgEl.value = "";
-var msgs = document.getElementById("conv-msgs");
-var w = document.createElement("div"); w.className = "msg-bw out";
-w.innerHTML = '<div class="msg-b out">' + esc(msg) + '</div><div class="msg-meta">You &bull; just now</div>';
-msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
+status.className="send-ok"; status.textContent="Sent!"; msgEl.value="";
+var msgs=document.getElementById("conv-msgs");
+var w=document.createElement("div"); w.className="msg-bw out";
+w.innerHTML='<div class="msg-b out">'+esc(msg)+'</div><div class="msg-meta">You &bull; just now</div>';
+msgs.appendChild(w); msgs.scrollTop=msgs.scrollHeight;
 if (convData[contact]) {
-convData[contact].msgs.push({dir: "out", type: type, body: msg, ts: Date.now()});
-convData[contact].lastTs = Date.now();
-convData[contact].lastMsg = {body: msg, ts: Date.now()};
+convData[contact].msgs.push({dir:"out",type:type,body:msg,ts:Date.now()});
+convData[contact].lastTs=Date.now(); convData[contact].lastMsg={body:msg,ts:Date.now()};
 renderList();
 }
-setTimeout(function() { status.textContent = ""; }, 3000);
-} else { status.className = "send-err"; status.textContent = d.error || "Failed"; }
-btn.disabled = false;
-}).catch(function() { status.className = "send-err"; status.textContent = "Network error"; btn.disabled = false; });
+setTimeout(function(){status.textContent="";},3000);
+} else { status.className="send-err"; status.textContent=d.error||"Failed"; }
+btn.disabled=false;
+}).catch(function(){status.className="send-err";status.textContent="Network error";btn.disabled=false;});
 }
+
 function lstats() {
-fetch("/api/logs?type=stats").then(function(r) { return r.json(); }).then(function(s) {
-document.getElementById("te").textContent = (s.totalEmailSent || 0).toLocaleString();
-document.getElementById("ts").textContent = (s.totalSmsSent || 0).toLocaleString();
-document.getElementById("tde").textContent = "Today: " + (s.todayEmailSent || 0);
-document.getElementById("tds").textContent = "Today: " + (s.todaySmsSent || 0);
-document.getElementById("er").textContent = (s.emailReplies || 0).toLocaleString();
-document.getElementById("sr").textContent = (s.smsReplies || 0).toLocaleString();
-document.getElementById("un").textContent = (s.unsubscribed || 0).toLocaleString();
-var days = s.dailyChart || [];
-var mx = Math.max.apply(null, days.map(function(d) { return Math.max(d.emails || 0, d.sms || 0); })); mx = mx || 1;
-var ch = document.getElementById("chart"), cl = document.getElementById("clabels");
-ch.innerHTML = ""; cl.innerHTML = "";
+fetch("/api/logs?type=stats").then(function(r){return r.json();}).then(function(s) {
+document.getElementById("te").textContent=(s.totalEmailSent||0).toLocaleString();
+document.getElementById("ts").textContent=(s.totalSmsSent||0).toLocaleString();
+document.getElementById("tde").textContent="Today: "+(s.todayEmailSent||0);
+document.getElementById("tds").textContent="Today: "+(s.todaySmsSent||0);
+document.getElementById("er").textContent=(s.emailReplies||0).toLocaleString();
+document.getElementById("sr").textContent=(s.smsReplies||0).toLocaleString();
+document.getElementById("un").textContent=(s.unsubscribed||0).toLocaleString();
+var days=s.dailyChart||[];
+var mx=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0);})); mx=mx||1;
+var ch=document.getElementById("chart"),cl=document.getElementById("clabels");
+ch.innerHTML=""; cl.innerHTML="";
 days.forEach(function(d) {
-var eH = Math.round(((d.emails || 0) / mx) * 100), sH = Math.round(((d.sms || 0) / mx) * 100);
-var g = document.createElement("div"); g.className = "bg";
-g.innerHTML = '<div class="bar eb" style="height:' + eH + '%"></div><div class="bar sb" style="height:' + sH + '%"></div>';
+var eH=Math.round(((d.emails||0)/mx)*100),sH=Math.round(((d.sms||0)/mx)*100);
+var g=document.createElement("div"); g.className="bg";
+g.innerHTML='<div class="bar eb" style="height:'+eH+'%"></div><div class="bar sb" style="height:'+sH+'%"></div>';
 ch.appendChild(g);
-var l = document.createElement("div"); l.className = "cl"; l.textContent = d.date.slice(5); cl.appendChild(l);
+var l=document.createElement("div"); l.className="cl"; l.textContent=d.date.slice(5); cl.appendChild(l);
 });
-}).catch(function(e) { console.error(e); });
+}).catch(function(e){console.error(e);});
 }
+
 function le() {
-fetch("/api/logs?type=emails&limit=100").then(function(r) { return r.json(); }).then(function(emails) {
-var rows = "";
-emails.forEach(function(e, i) {
-var xid = "xem" + i;
-var rawBody = (e.body || "").replace(/<[^>]+>/g, "").trim();
-rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(e.subject || "(no subject)") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bs") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
-rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">' + esc(rawBody || "(not stored)") + "</div></td></tr>";
+fetch("/api/logs?type=emails&limit=100").then(function(r){return r.json();}).then(function(emails) {
+var rows="";
+emails.forEach(function(e,i) {
+var xid="xem"+i, rawBody=(e.body||"").replace(/<[^>]+>/g,"").trim();
+rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||"-")+"</td><td>"+esc(e.subject||"(no subject)")+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+"</td><td>"+(e.segment||"-")+"</td><td>"+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?"br":"bs")+'">'+(e.replied?"Replied":"Sent")+"</span></td></tr>";
+rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">'+esc(rawBody||"(not stored)")+"</div></td></tr>";
 });
-document.getElementById("email-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
-}).catch(function(e) { console.error(e); });
+document.getElementById("email-tbody").innerHTML=rows||'<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
+}).catch(function(e){console.error(e);});
 }
+
 function ls() {
-fetch("/api/logs?type=sms&limit=100").then(function(r) { return r.json(); }).then(function(sms) {
-var rows = "";
-sms.forEach(function(e, i) {
-var xid = "xsms" + i;
-var rawBody = (e.body || "").trim();
-rows += '<tr class="data-row" data-xid="' + xid + '"><td>' + esc(e.to || "-") + "</td><td>" + esc(rawBody.substring(0, 60)) + (rawBody.length > 60 ? "..." : "") + '<span class="expand-indicator">&#9658;</span></td><td>' + svcBadge(e.service) + "</td><td>" + (e.segment || "-") + "</td><td>" + fmt(e.timestamp) + '</td><td><span class="' + (e.replied ? "br" : "bsm") + '">' + (e.replied ? "Replied" : "Sent") + "</span></td></tr>";
-rows += '<tr class="expand-row" id="' + xid + '"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">' + esc(rawBody || "(empty)") + "</div></td></tr>";
+fetch("/api/logs?type=sms&limit=100").then(function(r){return r.json();}).then(function(sms) {
+var rows="";
+sms.forEach(function(e,i) {
+var xid="xsms"+i, rawBody=(e.body||"").trim();
+rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||"-")+"</td><td>"+esc(rawBody.substring(0,60))+(rawBody.length>60?"...":"")+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+"</td><td>"+(e.segment||"-")+"</td><td>"+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?"br":"bsm")+'">'+(e.replied?"Replied":"Sent")+"</span></td></tr>";
+rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">'+esc(rawBody||"(empty)")+"</div></td></tr>";
 });
-document.getElementById("sms-tbody").innerHTML = rows || '<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
-}).catch(function(e) { console.error(e); });
+document.getElementById("sms-tbody").innerHTML=rows||'<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
+}).catch(function(e){console.error(e);});
 }
+
 document.addEventListener("click", function(e) {
 var dr = e.target.closest("tr.data-row");
 if (dr) {
-var xid = dr.dataset.xid; if (!xid) return;
-var xr = document.getElementById(xid); if (!xr) return;
+var xid=dr.dataset.xid; if (!xid) return;
+var xr=document.getElementById(xid); if (!xr) return;
 xr.classList.toggle("open"); dr.classList.toggle("row-open");
 }
 });
+
 lstats(); le(); ls();
-setInterval(function() { lstats(); if (cp === "conversations") lconvs(); }, 30000);
+setInterval(function(){lstats(); if(cp==="conversations") lconvs();}, 30000);
 })();
 </script>
 </body>
