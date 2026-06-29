@@ -1,36 +1,36 @@
-import { getEmailLog, getSmsLog, getTotalStats, getReplies } from '../lib/store.js';
+import { getEmailLog, getSmsLog, getTotalStats, getReplies, getCallLog } from '../lib/store.js';
 
 export default async function handler(req, res) {
-  const type = req.query.type || 'stats';
-  try {
-    if (type === 'stats') {
-      const stats = await getTotalStats();
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.status(200).json(stats);
-    } else if (type === 'emails') {
-      const limit = parseInt(req.query.limit || '50');
-      const log = await getEmailLog(limit);
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.status(200).json(log);
-    } else if (type === 'sms') {
-      const limit = parseInt(req.query.limit || '50');
-      const log = await getSmsLog(limit);
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.status(200).json(log);
-    } else if (type === 'replies') {
-      const limit = parseInt(req.query.limit || '100');
-      const all = await getReplies(limit);
-      // Filter by subtype if requested
-      const subtype = req.query.subtype; // 'email' or 'sms'
-      const filtered = subtype
-        ? all.filter(r => subtype === 'sms' ? r.type === 'sms_reply' : r.type !== 'sms_reply')
-        : all;
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.status(200).json(filtered);
-    } else {
-      res.status(400).json({ error: 'Unknown type' });
+    const type = req.query.type || 'stats';
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    try {
+          if (type === 'stats') {
+                  const stats = await getTotalStats();
+                  res.status(200).json(stats);
+          } else if (type === 'emails') {
+                  const limit = parseInt(req.query.limit || '50');
+                  const log = await getEmailLog(limit);
+                  res.status(200).json(log);
+          } else if (type === 'sms') {
+                  const limit = parseInt(req.query.limit || '50');
+                  const log = await getSmsLog(limit);
+                  res.status(200).json(log);
+          } else if (type === 'replies') {
+                  const limit = parseInt(req.query.limit || '100');
+                  const all = await getReplies(limit);
+                  const subtype = req.query.subtype;
+                  const filtered = subtype
+                    ? all.filter(r => subtype === 'sms' ? r.type === 'sms_reply' : r.type !== 'sms_reply')
+                            : all;
+                  res.status(200).json(filtered);
+          } else if (type === 'calls') {
+                  const limit = parseInt(req.query.limit || '100');
+                  const log = await getCallLog(limit);
+                  res.status(200).json(log);
+          } else {
+                  res.status(400).json({ error: 'Unknown type' });
+          }
+    } catch (e) {
+          res.status(500).json({ error: e.message });
     }
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
 }
