@@ -100,10 +100,9 @@ tr.data-row:hover td{background:#f0f9ff}
 .btn-send{padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-send:hover{background:#0284c7}
 .btn-send:disabled{opacity:.5;cursor:default}
-.send-ok{font-size:12px;color:#22c55e}
-.send-err{font-size:12px;color:#ef4444}
-.conv-empty{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#64748b}
-.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+id="page-conversations">.send-err{font-size:12px;color:#ef4444}
+id="page-conversations">
+  id="page-schedule">.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .rph h2{font-size:20px;font-weight:700;color:#0f172a}
 .rfbtn{padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
 .rfbtn:hover{color:#0284c7;border-color:#0ea5e9}
@@ -120,7 +119,7 @@ tr.data-row:hover td{background:#f0f9ff}
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
 <button class="nav-btn" data-page="calls">Calls</button>
-<button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
+<button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button><button class="nav-btn" data-page="schedule">Schedule</button>
 </nav>
 <div class="container">
 <div class="page active" id="page-overview">
@@ -205,7 +204,7 @@ cp = p;
 if (p === "conversations") lconvs();
 if (p === "emails") le();
 if (p === "sms") ls();
-if (p === "calls") lcalls();
+if (p === "calls") lcalls();if (p === "schedule") lschedule();
 });
 });
 
@@ -541,7 +540,7 @@ xr.classList.toggle("open"); dr.classList.toggle("row-open");
 }
 });
 
-lstats(); le(); ls();
+function lschedule() {  var schedules = [
 setInterval(function() {
 lstats();
 if (cp === "conversations") lconvs();
