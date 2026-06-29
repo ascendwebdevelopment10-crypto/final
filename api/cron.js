@@ -12,7 +12,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 const EMAIL_CAP = 0;
-const SMS_CAP = 25;
+const SMS_CAP = 35;
 const FETCH_LIMIT = 10;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
