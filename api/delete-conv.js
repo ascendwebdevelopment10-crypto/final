@@ -47,24 +47,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, removed: 0, message: 'Nothing to remove' });
     }
 
-    // Count how many inbound SMS replies were removed (to fix stats counter)
-    const removedInbound = all.filter(r => {
-      const rFrom = getKey(r.from || '');
-      return rFrom === contactKey && r.type === 'sms_reply';
-    }).length;
-
     // Rewrite the list
     await kv.del('replies:log');
     for (const entry of kept.reverse()) {
       await kv.lpush('replies:log', JSON.stringify(entry));
     }
 
-    // Fix stats counter
-    if (removedInbound > 0) {
-      await kv.decrby('stats:sms_replies', removedInbound);
-    }
-
-    res.status(200).json({ ok: true, removed, removedInbound });
+    res.status(200).json({ ok: true, removed });
   } catch (e) {
     console.error('delete-conv error:', e.message);
     res.status(500).json({ error: e.message });
