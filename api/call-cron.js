@@ -10,8 +10,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 const kv = createClient({ url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN });
 
-const CALL_CAP = 50;
-const FETCH_LIMIT = 25;
+const CALL_CAP = 17;
+const FETCH_LIMIT = 10;
 
 const SEARCH_QUERIES = [
 'restaurant','gym fitness yoga','salon barbershop spa','real estate agent',
