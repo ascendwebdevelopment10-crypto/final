@@ -11,9 +11,9 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
-const EMAIL_CAP = 5;
-const SMS_CAP = 10;
-const FETCH_LIMIT = 5;
+const EMAIL_CAP = 0;
+const SMS_CAP = 25;
+const FETCH_LIMIT = 10;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -137,7 +137,7 @@ const allLeads = [...b1, ...b2, ...b3].map(normalizeContact).filter(c => c.phone
 const noWebLeads = allLeads.filter(c => hasNoWebsite(c));
 const hasWebLeads = allLeads.filter(c => !hasNoWebsite(c));
 
-const toScrape = hasWebLeads.slice(0, 5);
+const toScrape = hasWebLeads.slice(0, 10);
 const scraped = await Promise.all(toScrape.map(c => scrapeEmail(c.website_url)));
 toScrape.forEach((c, i) => { c.email = scraped[i] || null; });
 
