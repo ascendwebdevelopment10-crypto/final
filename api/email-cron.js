@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 import { logEmail, isSuppressed } from '../lib/store.js';
 
-export const config = { maxDuration: 60300};
+export const config = { maxDuration: 300};
 
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
