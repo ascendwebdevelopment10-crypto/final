@@ -6,111 +6,124 @@
 <title>Ascend Outreach Dashboard</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f6ff;color:#1e293b;min-height:100vh}
-.header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.header h1{font-size:20px;font-weight:700;color:#0284c7}
-.badge-live{background:#0ea5e9;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}
-.nav{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 32px;display:flex;gap:4px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+.header{background:#1a1d2e;border-bottom:1px solid #2d3148;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 20px rgba(0,0,0,.3)}
+.header h1{font-size:20px;font-weight:700;color:#7c3aed;letter-spacing:-0.3px}
+.badge-live{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600;letter-spacing:.05em}
+.nav{background:#1a1d2e;border-bottom:1px solid #2d3148;padding:0 32px;display:flex;gap:4px}
 .nav-btn{padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#64748b;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}
-.nav-btn:hover{color:#0284c7}
-.nav-btn.active{color:#0284c7;border-bottom-color:#0284c7}
+.nav-btn:hover{color:#a78bfa}
+.nav-btn.active{color:#a78bfa;border-bottom-color:#7c3aed}
 .rbadge{display:none;background:#dc2626;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}
 .container{max-width:1200px;margin:0 auto;padding:32px}
 .page{display:none}
 .page.active{display:block}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
-.stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.stat-card{background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
 .stat-card .label{font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
-.stat-card .value{font-size:32px;font-weight:700;color:#0284c7}
+.stat-card .value{font-size:32px;font-weight:700;color:#a78bfa}
 .stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}
-.stat-card.ec{border-top:3px solid #0ea5e9}
-.stat-card.sc{border-top:3px solid #38bdf8}
-.stat-card.cc{border-top:3px solid #8b5cf6}
+.stat-card.ec{border-top:3px solid #7c3aed}
+.stat-card.sc{border-top:3px solid #4f46e5}
+.stat-card.cc{border-top:3px solid #6366f1}
 .stat-card.rc{border-top:3px solid #22c55e}
 .stat-card.uc{border-top:3px solid #f87171}
-.section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#0f172a}
+.section{background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#e2e8f0}
 .chart{display:flex;align-items:flex-end;gap:4px;height:120px}
 .bg{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}
 .bar{flex:1;border-radius:2px 2px 0 0;min-height:2px}
-.eb{background:#0ea5e9}.sb{background:#38bdf8}
+.eb{background:#7c3aed}.sb{background:#4f46e5}
 .chart-labels{display:flex;gap:4px;margin-top:4px}
-.cl{flex:1;text-align:center;font-size:9px;color:#64748b;overflow:hidden}
+.cl{flex:1;text-align:center;font-size:9px;color:#475569;overflow:hidden}
 .legend{display:flex;gap:16px;margin-top:12px}
 .li{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b}
 .ld{width:10px;height:10px;border-radius:2px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #e2e8f0;font-size:11px;text-transform:uppercase}
-td{padding:12px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #2d3148;font-size:11px;text-transform:uppercase}
+td{padding:12px;border-bottom:1px solid #1e2235;color:#cbd5e1;vertical-align:top}
 tr.data-row{cursor:pointer}
-tr.data-row:hover td{background:#f0f9ff}
-.bs{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.br{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bsm{background:#fef3c7;color:#0369a1;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bweb{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bads{background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bapp{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-answered{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-voicemail{background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-completed{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-failed{background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-noanswer{background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.empty{text-align:center;color:#64748b;padding:40px}
+tr.data-row:hover td{background:#1e2235}
+.bs{background:#3b0764;color:#a78bfa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.br{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bsm{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bweb{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bads{background:#3b0764;color:#a78bfa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bapp{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bcall-answered{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bcall-voicemail{background:#422006;color:#fbbf24;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bcall-completed{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bcall-failed{background:#450a0a;color:#f87171;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.bcall-noanswer{background:#1e2235;color:#64748b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.empty{text-align:center;color:#475569;padding:40px}
 .expand-row{display:none}
 .expand-row.open{display:table-row}
-.expand-row td{padding:0 12px 20px;background:#f8fafc;border-bottom:2px solid #e2e8f0}
-.msg-full{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;font-size:14px;line-height:1.8;color:#1e293b;white-space:pre-wrap;word-break:break-word}
-.msg-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:10px}
-.expand-indicator{color:#94a3b8;font-size:12px;margin-left:6px;transition:transform .15s;display:inline-block}
+.expand-row td{padding:0 12px 20px;background:#0f1117;border-bottom:2px solid #2d3148}
+.msg-full{background:#1a1d2e;border:1px solid #2d3148;border-radius:10px;padding:20px;font-size:14px;line-height:1.8;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
+.msg-label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;margin-bottom:10px}
+.expand-indicator{color:#475569;font-size:12px;margin-left:6px;transition:transform .15s;display:inline-block}
 .row-open .expand-indicator{transform:rotate(90deg)}
-.conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
-.conv-sidebar{width:300px;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
-.conv-search{padding:12px;border-bottom:1px solid #e2e8f0}
-.conv-search input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b}
-.conv-search input:focus{border-color:#0ea5e9}
+.conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
+.conv-sidebar{width:300px;border-right:1px solid #2d3148;display:flex;flex-direction:column;flex-shrink:0}
+.conv-search{padding:12px;border-bottom:1px solid #2d3148}
+.conv-search input{width:100%;padding:8px 12px;border:1px solid #2d3148;border-radius:8px;font-size:13px;outline:none;color:#e2e8f0;background:#0f1117}
+.conv-search input:focus{border-color:#7c3aed}
 .conv-list{overflow-y:auto;flex:1}
-.conv-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .1s;position:relative;display:flex;flex-direction:column;gap:3px}
-.conv-item:hover{background:#f0f9ff}
-.conv-item.active{background:#e0f2fe;border-left:3px solid #0ea5e9}
-.ci-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ci-name{font-weight:600;font-size:13px;color:#0f172a}
-.ci-preview{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ci-time{font-size:10px;color:#94a3b8;margin-left:auto;flex-shrink:0}
+.conv-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #1e2235;transition:background .1s;position:relative;display:flex;flex-direction:column;gap:3px}
+.conv-item:hover{background:#1e2235}
+.conv-item.active{background:#1e1b3a;border-left:3px solid #7c3aed}
+.ci-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ci-name{font-weight:600;font-size:13px;color:#e2e8f0}
+.ci-preview{font-size:12px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-time{font-size:10px;color:#475569;margin-left:auto;flex-shrink:0}
 .ci-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:600}
-.ci-badge.email{background:#dbeafe;color:#1d4ed8}
-.ci-badge.sms{background:#e0f2fe;color:#0369a1}
-.ci-badge.reply{background:#fee2e2;color:#dc2626}.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:15px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:opacity .15s,color .15s}.conv-item:hover .del-btn{opacity:1}.del-btn:hover{color:#ef4444;background:#fee2e2}
+.ci-badge.email{background:#1e3a5f;color:#60a5fa}
+.ci-badge.sms{background:#3b0764;color:#a78bfa}
+.ci-badge.reply{background:#450a0a;color:#f87171}.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#334155;font-size:15px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:opacity .15s,color .15s}.conv-item:hover .del-btn{opacity:1}.del-btn:hover{color:#ef4444;background:#450a0a}
 .conv-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.conv-header{padding:16px 20px;border-bottom:1px solid #e2e8f0}
-.ch-name{font-weight:700;font-size:15px;color:#0f172a}
+.conv-header{padding:16px 20px;border-bottom:1px solid #2d3148}
+.ch-name{font-weight:700;font-size:15px;color:#e2e8f0}
 .ch-sub{font-size:12px;color:#64748b;margin-top:3px}
 .conv-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
 .msg-bw{display:flex;flex-direction:column}
 .msg-bw.out{align-items:flex-end}
 .msg-bw.in{align-items:flex-start}
 .msg-b{max-width:70%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
-.msg-b.out{background:#0ea5e9;color:#fff;border-bottom-right-radius:3px}
-.msg-b.in{background:#f1f5f9;color:#1e293b;border-bottom-left-radius:3px}
-.msg-meta{font-size:10px;color:#94a3b8;margin-top:3px;padding:0 2px}
-.conv-reply-box{padding:16px;border-top:1px solid #e2e8f0;display:flex;flex-direction:column;gap:8px}
-.conv-reply-box input[type=text]{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b;margin-bottom:4px}
-.conv-reply-box input[type=text]:focus{border-color:#0ea5e9}
-.conv-reply-box textarea{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;min-height:70px;outline:none;font-family:inherit;color:#1e293b}
-.conv-reply-box textarea:focus{border-color:#0ea5e9}
+.msg-b.out{background:#7c3aed;color:#fff;border-bottom-right-radius:3px}
+.msg-b.in{background:#1e2235;color:#e2e8f0;border-bottom-left-radius:3px}
+.msg-meta{font-size:10px;color:#475569;margin-top:3px;padding:0 2px}
+.conv-reply-box{padding:16px;border-top:1px solid #2d3148;display:flex;flex-direction:column;gap:8px}
+.conv-reply-box input[type=text]{width:100%;padding:8px 12px;border:1px solid #2d3148;border-radius:8px;font-size:13px;outline:none;color:#e2e8f0;background:#0f1117;margin-bottom:4px}
+.conv-reply-box input[type=text]:focus{border-color:#7c3aed}
+.conv-reply-box textarea{width:100%;border:1px solid #2d3148;border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;min-height:70px;outline:none;font-family:inherit;color:#e2e8f0;background:#0f1117}
+.conv-reply-box textarea:focus{border-color:#7c3aed}
 .conv-reply-actions{display:flex;align-items:center;gap:8px}
-.btn-send{padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-send:hover{background:#0284c7}
+.btn-send{padding:8px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-send:hover{background:#6d28d9}
 .btn-send:disabled{opacity:.5;cursor:default}
-id="page-conversations">.send-err{font-size:12px;color:#ef4444}
-id="page-conversations">
-  id="page-schedule">.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.rph h2{font-size:20px;font-weight:700;color:#0f172a}
-.rfbtn{padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
-.rfbtn:hover{color:#0284c7;border-color:#0ea5e9}
+.send-err{font-size:12px;color:#f87171}
+.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.rph h2{font-size:20px;font-weight:700;color:#e2e8f0}
+.rfbtn{padding:8px 14px;background:#1a1d2e;border:1px solid #2d3148;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
+.rfbtn:hover{color:#a78bfa;border-color:#7c3aed}
 .call-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 0}
 .call-detail-item{display:flex;flex-direction:column;gap:3px}
-.call-detail-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase}
-.call-detail-val{font-size:13px;color:#1e293b}
-.transcript-box{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:12px;color:#334155;white-space:pre-wrap;word-break:break-word;max-height:180px;overflow-y:auto;margin-top:4px}
+.call-detail-label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase}
+.call-detail-val{font-size:13px;color:#e2e8f0}
+.transcript-box{background:#0f1117;border:1px solid #2d3148;border-radius:8px;padding:14px;font-size:12px;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:180px;overflow-y:auto;margin-top:4px}
+.sched-card{background:linear-gradient(135deg,#1e1b3a,#1a1d2e);border:1px solid #3b2f6e;border-radius:12px;padding:20px;margin-bottom:16px}
+.sched-card h3{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+.run-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.run-box{background:#0f1117;border:1px solid #2d3148;border-radius:8px;padding:12px;text-align:center}
+.run-box .run-time{font-size:16px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
+.run-box .run-utc{font-size:10px;color:#475569}
+.run-box .run-count{font-size:22px;font-weight:700;color:#a78bfa;margin-top:6px}
+.run-box .run-label{font-size:10px;color:#64748b}
+.run-box.next-run{border-color:#7c3aed;box-shadow:0 0 12px rgba(124,58,237,.2)}
+.run-box.next-run .run-time{color:#a78bfa}
+.daily-total{display:flex;align-items:center;gap:16px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2d3148}
+.dt-item{text-align:center;flex:1}
+.dt-num{font-size:24px;font-weight:700;color:#a78bfa}
+.dt-lbl{font-size:11px;color:#64748b;margin-top:2px}
 </style>
 </head><body>
 <div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>
@@ -119,7 +132,8 @@ id="page-conversations">
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
 <button class="nav-btn" data-page="calls">Calls</button>
-<button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button><button class="nav-btn" data-page="schedule">Schedule</button>
+<button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
+<button class="nav-btn" data-page="schedule">Schedule</button>
 </nav>
 <div class="container">
 <div class="page active" id="page-overview">
@@ -132,17 +146,17 @@ id="page-conversations">
 <div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
 </div>
 <div class="section"><h2>30-Day Activity</h2><div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>
-<div class="legend"><div class="li"><div class="ld" style="background:#0ea5e9"></div>Emails</div><div class="li"><div class="ld" style="background:#38bdf8"></div>SMS</div></div>
+<div class="legend"><div class="li"><div class="ld" style="background:#7c3aed"></div>Emails</div><div class="li"><div class="ld" style="background:#4f46e5"></div>SMS</div></div>
 </div>
 </div>
 <div class="page" id="page-emails">
-<div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+<div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2>
 <table><thead><tr><th>To</th><th>Subject</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
 <tbody id="email-tbody"></tbody></table>
 </div>
 </div>
 <div class="page" id="page-sms">
-<div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand</span></h2>
+<div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2>
 <table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
 <tbody id="sms-tbody"></tbody></table>
 </div>
@@ -154,7 +168,7 @@ id="page-conversations">
 <div class="stat-card sc"><div class="label">Voicemail</div><div class="value" id="calls-voicemail">-</div><div class="sub">left message</div></div>
 <div class="stat-card uc"><div class="label">No Answer</div><div class="value" id="calls-noanswer">-</div><div class="sub">not reached</div></div>
 </div>
-<div class="section"><h2>Call Log &mdash; <span style="font-size:12px;color:#94a3b8;font-weight:400">click row to expand for transcript &amp; details</span></h2>
+<div class="section"><h2>Call Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand for transcript &amp; details</span></h2>
 <table><thead><tr><th>Contact</th><th>Phone</th><th>Industry</th><th>Pain Point Targeted</th><th>Duration</th><th>Time</th><th>Outcome</th></tr></thead>
 <tbody id="calls-tbody"></tbody></table>
 </div>
@@ -167,17 +181,43 @@ id="page-conversations">
 <div class="conv-list" id="conv-list"><div class="empty">Loading...</div></div>
 </div>
 <div class="conv-main" id="conv-main">
-<div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>
 </div>
 </div>
 </div>
-<div class="page" id="page-schedule"><div class="section"><h2>Cron Schedule</h2><p style="font-size:13px;color:#64748b;margin-bottom:20px"><p style="font-size:13px;color:#64748b;margin-bottom:20px">All times shown in MDT (Mountain Daylight Time). Runs automatically every day.</p><table><thead><tr><th>Type</th><th>Per Run</th><th>Daily Total</th><th>Run 1 (MDT)</th><th>Run 2 (MDT)</th><th>Run 3 (MDT)</th><th>Run 4 (MDT)</th></tr></thead><tbody><tr><td><span class="bs">SMS</span></td><td>35</td><td>140</td><td>9:00 AM</td><td>12:00 PM</td><td>3:00 PM</td><td>6:00 PM</td></tr><tr><td><span class="bweb">Email</span></td><td>25</td><td>100</td><td>10:00 AM</td><td>1:00 PM</td><td>4:00 PM</td><td>7:00 PM</td></tr><tr><td><span class="bads">Calls</span></td><td>17</td><td>51</td><td>10:00 AM</td><td>1:00 PM</td><td>4:00 PM</td><td style="color:#94a3b8">No 4th run</td></tr></tbody></table></table></div><div class="section" style="margin-top:24px"><h2>Next Upcoming Runs</h2><div id="next-runs" style="font-size:14px;color:#334155">Loading...</div></div></div>
-</div><script>
+<div class="page" id="page-schedule">
+<div class="section" style="margin-bottom:24px">
+<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">Vercel Pro &bull; 4 runs/day &bull; MDT (UTC-6)</span></h2>
+<div id="sched-runs"></div>
+<div style="margin-top:20px">
+<div style="font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Daily Totals</div>
+<div class="daily-total">
+<div class="dt-item"><div class="dt-num">200</div><div class="dt-lbl">SMS / day</div></div>
+<div class="dt-item"><div class="dt-num">100</div><div class="dt-lbl">Emails / day</div></div>
+<div class="dt-item"><div class="dt-num">100</div><div class="dt-lbl">Calls / day</div></div>
+<div class="dt-item"><div class="dt-num">400</div><div class="dt-lbl">Total / day</div></div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2>Next Upcoming Run</h2>
+<div id="next-run-info" style="font-size:14px;color:#cbd5e1;padding:12px 0"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
 (function() {
-var cp = "overview"; (function(){var s=document.getElementById('page-schedule');if(s&&s.parentElement&&s.parentElement.id){s.parentElement.parentElement.appendChild(s);}})();
+var cp = "overview";
 var convData = {};
 var activeKey = null;
 var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
+
+// Schedule config - 4 runs/day at 14,17,20,23 UTC = 8am,11am,2pm,5pm MDT
+var RUNS_UTC = [14, 17, 20, 23];
+var RUNS_MDT = ['8:00 AM', '11:00 AM', '2:00 PM', '5:00 PM'];
+var SMS_PER_RUN = 50, EMAIL_PER_RUN = 25, CALL_PER_RUN = 25;
 
 function normPhone(s) {
 if (!s) return "";
@@ -205,7 +245,8 @@ cp = p;
 if (p === "conversations") lconvs();
 if (p === "emails") le();
 if (p === "sms") ls();
-if (p === "calls") lcalls();if (p === "schedule") lschedule();
+if (p === "calls") lcalls();
+if (p === "schedule") lschedule();
 });
 });
 
@@ -256,6 +297,59 @@ var r = s % 60;
 return m + "m " + r + "s";
 }
 
+function lschedule() {
+var now = new Date();
+var utcH = now.getUTCHours();
+var utcM = now.getUTCMinutes();
+
+// Find next run
+var nextIdx = -1;
+for (var i = 0; i < RUNS_UTC.length; i++) {
+if (RUNS_UTC[i] > utcH || (RUNS_UTC[i] === utcH && utcM < 5)) {
+nextIdx = i; break;
+}
+}
+var isTomorrow = nextIdx === -1;
+if (isTomorrow) nextIdx = 0;
+
+var runsHtml = '<div class="run-grid">';
+for (var i = 0; i < RUNS_MDT.length; i++) {
+var isNext = i === nextIdx;
+runsHtml += '<div class="run-box' + (isNext ? ' next-run' : '') + '">';
+runsHtml += '<div class="run-time">' + RUNS_MDT[i] + '</div>';
+runsHtml += '<div class="run-utc">UTC ' + RUNS_UTC[i] + ':00</div>';
+runsHtml += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">';
+runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">SMS</span><span style="color:#a78bfa;font-weight:600">' + SMS_PER_RUN + '</span></div>';
+runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Email</span><span style="color:#60a5fa;font-weight:600">' + EMAIL_PER_RUN + '</span></div>';
+runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Calls</span><span style="color:#4ade80;font-weight:600">' + CALL_PER_RUN + '</span></div>';
+runsHtml += '</div>';
+if (isNext) runsHtml += '<div style="margin-top:8px;font-size:10px;color:#7c3aed;font-weight:600">&#9654; NEXT RUN' + (isTomorrow ? ' (TOMORROW)' : '') + '</div>';
+runsHtml += '</div>';
+}
+runsHtml += '</div>';
+
+document.getElementById("sched-runs").innerHTML = runsHtml;
+
+var nextTime = RUNS_MDT[nextIdx];
+var msUntil = 0;
+var nextUTC = RUNS_UTC[nextIdx];
+var nowMs = now.getTime();
+var targetMs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (isTomorrow ? 1 : 0), nextUTC, 0, 0)).getTime();
+msUntil = targetMs - nowMs;
+var secsUntil = Math.floor(msUntil / 1000);
+var hUntil = Math.floor(secsUntil / 3600);
+var mUntil = Math.floor((secsUntil % 3600) / 60);
+var timeStr = hUntil > 0 ? hUntil + 'h ' + mUntil + 'm' : mUntil + 'm';
+
+document.getElementById("next-run-info").innerHTML =
+'<div style="display:flex;align-items:center;gap:16px">' +
+'<div style="font-size:28px;font-weight:700;color:#a78bfa">' + nextTime + '</div>' +
+'<div>' +
+'<div style="font-size:14px;color:#e2e8f0">Next automated run' + (isTomorrow ? ' <span style="color:#64748b">(tomorrow)</span>' : '') + '</div>' +
+'<div style="font-size:12px;color:#64748b;margin-top:2px">In approximately ' + timeStr + ' &bull; 50 SMS + 25 emails + 25 calls</div>' +
+'</div></div>';
+}
+
 function lcalls() {
 fetch("/api/logs?type=calls&limit=200").then(function(r){return r.json();}).then(function(calls) {
 if (!Array.isArray(calls)) calls = [];
@@ -297,13 +391,13 @@ if (transcript && transcript.length > 5) {
 rows += '<div class="msg-label" style="margin-top:12px">Call Transcript</div>';
 rows += '<div class="transcript-box">' + esc(transcript) + '</div>';
 } else {
-rows += '<div style="font-size:12px;color:#94a3b8;margin-top:8px">Transcript not yet available — check back after call completes.</div>';
+rows += '<div style="font-size:12px;color:#475569;margin-top:8px">Transcript not yet available.</div>';
 }
 rows += '</td></tr>';
 });
-document.getElementById("calls-tbody").innerHTML = rows || '<tr><td colspan="7" class="empty">No calls made yet. Calls run at 10am, 1pm, and 4pm MDT.</td></tr>';
+document.getElementById("calls-tbody").innerHTML = rows || '<tr><td colspan="7" class="empty">No calls yet.</td></tr>';
 }).catch(function(e) {
-document.getElementById("calls-tbody").innerHTML = '<tr><td colspan="7" class="empty">Error loading calls: ' + e.message + '</td></tr>';
+document.getElementById("calls-tbody").innerHTML = '<tr><td colspan="7" class="empty">Error: ' + e.message + '</td></tr>';
 });
 }
 
@@ -385,7 +479,7 @@ for (var i = cv.msgs.length-1; i >= 0; i--) { if (cv.msgs[i].dir==="in"){lastIn=
 var preview = lastIn ? String(lastIn.body||"").substring(0,50) : "";
 var tb = cv.type==="sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
 var ub = cv.inCount ? '<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?" reply":" replies")+"</span>" : "";
-return '<div class="conv-item'+(cv.key===activeKey?" active":"")+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete conversation">&#128465;</button>'
+return '<div class="conv-item'+(cv.key===activeKey?" active":"")+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#128465;</button>'
 +'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+"</span> "+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+"</span></div>"
 +'<div class="ci-preview">'+esc(preview)+"</div>"
 +"</div>";
@@ -394,7 +488,7 @@ if (activeKey && convData[activeKey]) openConv(activeKey);
 }
 
 function deleteConv(key, contact) {
-if (!confirm("Delete conversation with " + contact + "? This cannot be undone.")) return;
+if (!confirm("Delete conversation with " + contact + "?")) return;
 fetch("/api/delete-conv", {
 method: "POST",
 headers: {"Content-Type": "application/json"},
@@ -404,14 +498,14 @@ if (d.ok) {
 delete convData[key];
 if (activeKey === key) {
 activeKey = null;
-document.getElementById("conv-main").innerHTML = '<div class="conv-empty"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';
+document.getElementById("conv-main").innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';
 }
 renderList();
 var tot = Object.values(convData).filter(function(cv) { return cv.hasReply; }).length;
 var b = document.getElementById("rbadge"); b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
 lstats();
-} else { alert("Delete failed: " + (d.error || "Unknown error")); }
-}).catch(function() { alert("Network error - could not delete."); });
+} else { alert("Delete failed: " + (d.error || "Unknown")); }
+}).catch(function() { alert("Network error"); });
 }
 
 function openConv(key) {
@@ -426,7 +520,7 @@ var main = document.getElementById("conv-main");
 var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
 var mc = cv.msgs.length;
 main.innerHTML = '<div class="conv-header"><div class="ch-name">'+esc(cv.contact)+'</div>'
-+'<div class="ch-sub">'+(isSms?"SMS":"Email")+' Conversation &mdash; '+mc+' message'+(mc!==1?'s':'')+'</div></div>'
++'<div class="ch-sub">'+(isSms?"SMS":"Email")+' &bull; '+mc+' message'+(mc!==1?'s':'')+'</div></div>'
 +'<div class="conv-messages" id="conv-msgs">'
 +cv.msgs.map(function(m) {
 var isOut = m.dir==="out";
@@ -461,7 +555,7 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({type:type, to:to, message:msg, subject:subject, key:REPLY_KEY})
 }).then(function(r){return r.json();}).then(function(d) {
 if (d.ok) {
-status.className="send-ok"; status.textContent="Sent!";
+status.className=""; status.textContent="Sent!";
 msgEl.value = "";
 var msgs = document.getElementById("conv-msgs");
 if (msgs) {
@@ -472,7 +566,6 @@ msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
 if (convData[cv.key]) {
 convData[cv.key].msgs.push({dir:"out", type:type, body:msg, ts:Date.now()});
 convData[cv.key].lastTs = Date.now();
-convData[cv.key].lastMsg = {body:msg, ts:Date.now()};
 renderList();
 }
 setTimeout(function(){if(status)status.textContent="";}, 3000);
@@ -541,12 +634,12 @@ xr.classList.toggle("open"); dr.classList.toggle("row-open");
 }
 });
 
-function lschedule() {  var el=document.getElementById('next-runs');if(!el)return;var now=new Date();var utcH=now.getUTCHours(),utcM=now.getUTCMinutes();var smsH=[9,12,15,18],emailH=[10,13,16,19],callH=[10,13,16];function nextRun(hours){for(var i=0;i<hours.length;i++){if(hours[i]>utcH||(hours[i]===utcH&&utcM===0)){return hours[i]+':00 MDT';}}return hours[0]+':00 MDT (tomorrow)';}var html='<table><tr><th>Type</th><th>Next Run (MDT)</th></tr>'+'<tr><td><span class="bs">SMS</span></td><td>'+nextRun(smsH)+'</td></tr>'+'<tr><td><span class="bweb">Email</span></td><td>'+nextRun(emailH)+'</td></tr>'+'<tr><td><span class="bads">Calls</span></td><td>'+nextRun(callH)+'</td></tr></table>';el.innerHTML=html;
-}
+lstats();
 setInterval(function() {
 lstats();
 if (cp === "conversations") lconvs();
 if (cp === "calls") lcalls();
+if (cp === "schedule") lschedule();
 }, 15000);
 })();
 </script>
