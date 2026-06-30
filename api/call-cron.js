@@ -2,7 +2,7 @@ import twilio from 'twilio';
 import { isSuppressed } from '../lib/store.js';
 import { createClient } from '@vercel/kv';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
 const BLAND_API_KEY = process.env.BLAND_API_KEY;
@@ -10,8 +10,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 const kv = createClient({ url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN });
 
-const CALL_CAP = 17;
-const FETCH_LIMIT = 10;
+const CALL_CAP = 25;
+const FETCH_LIMIT = 15;
 
 const SEARCH_QUERIES = [
 'restaurant','gym fitness yoga','salon barbershop spa','real estate agent',
