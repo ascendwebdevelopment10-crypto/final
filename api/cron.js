@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed } from '../lib/store.js';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
@@ -12,8 +12,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 const EMAIL_CAP = 0;
-const SMS_CAP = 35;
-const FETCH_LIMIT = 10;
+const SMS_CAP = 50;
+const FETCH_LIMIT = 20;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
