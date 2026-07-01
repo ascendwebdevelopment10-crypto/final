@@ -1,29 +1,31 @@
 {
-            "version": 2,
-            "crons": [
-                          { "path": "/api/cron",       "schedule": "0 14 * * *" },
-                          { "path": "/api/email-cron", "schedule": "0 14 * * *" },
-                          { "path": "/api/call-cron",  "schedule": "0 14 * * *" },
-                          { "path": "/api/cron",       "schedule": "0 17 * * *" },
-                          { "path": "/api/email-cron", "schedule": "0 17 * * *" },
-                          { "path": "/api/call-cron",  "schedule": "0 17 * * *" },
-                          { "path": "/api/cron",       "schedule": "0 20 * * *" },
-                          { "path": "/api/email-cron", "schedule": "0 20 * * *" },
-                          { "path": "/api/call-cron",  "schedule": "0 20 * * *" },
-                          { "path": "/api/cron",       "schedule": "0 23 * * *" },
-                          { "path": "/api/email-cron", "schedule": "0 23 * * *" },
-                          { "path": "/api/call-cron",  "schedule": "0 23 * * *" }
-            ],
-            "redirects": [
-                          { "source": "/", "destination": "/dashboard", "permanent": false }
-            ],
-            "rewrites": [
-                          { "source": "/dashboard",    "destination": "/api/dashboard" },
-                          { "source": "/logs",         "destination": "/api/logs" },
-                          { "source": "/suppressed",   "destination": "/api/suppressed" },
-                          { "source": "/unsubscribe",  "destination": "/api/unsubscribe" },
-                          { "source": "/webhook",      "destination": "/api/webhook" },
-                          { "source": "/sms-webhook",  "destination": "/api/sms-webhook" },
-                          { "source": "/call-webhook", "destination": "/api/call-webhook" }
-            ]
+              "version": 2,
+              "crons": [
+                              { "path": "/api/cron",       "schedule": "0 14 * * *" },
+                              { "path": "/api/email-cron", "schedule": "0 14 * * *" },
+                              { "path": "/api/call-cron",  "schedule": "0 14 * * *" },
+                              { "path": "/api/cron",       "schedule": "0 17 * * *" },
+                              { "path": "/api/email-cron", "schedule": "0 17 * * *" },
+                              { "path": "/api/call-cron",  "schedule": "0 17 * * *" },
+                              { "path": "/api/cron",       "schedule": "0 20 * * *" },
+                              { "path": "/api/email-cron", "schedule": "0 20 * * *" },
+                              { "path": "/api/call-cron",  "schedule": "0 20 * * *" },
+                              { "path": "/api/cron",       "schedule": "0 23 * * *" },
+                              { "path": "/api/email-cron", "schedule": "0 23 * * *" },
+                              { "path": "/api/call-cron",  "schedule": "0 23 * * *" }
+              ],
+              "redirects": [
+                              { "source": "/", "destination": "/dashboard", "permanent": false }
+              ],
+              "rewrites": [
+                              { "source": "/dashboard",    "destination": "/api/dashboard" },
+                              { "source": "/logs",         "destination": "/api/logs" },
+                              { "source": "/suppressed",   "destination": "/api/suppressed" },
+                              { "source": "/unsubscribe",  "destination": "/api/unsubscribe" },
+                              { "source": "/webhook",      "destination": "/api/webhook" },
+                              { "source": "/sms-webhook",  "destination": "/api/sms-webhook" },
+                              { "source": "/call-webhook", "destination": "/api/call-webhook" },
+                              { "source": "/call-twiml",   "destination": "/api/call-twiml" },
+                              { "source": "/call-gather",  "destination": "/api/call-gather" }
+              ]
 }
