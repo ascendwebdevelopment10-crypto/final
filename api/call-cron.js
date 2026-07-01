@@ -10,7 +10,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 const kv = createClient({ url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN });
 
-const CALL_CAP = 25;
+const CALL_CAP = 15;
 const FETCH_LIMIT = 15;
 
 const SEARCH_QUERIES = [
