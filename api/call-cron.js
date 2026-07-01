@@ -14,7 +14,7 @@ const kv = createClient({ url: process.env.KV_REST_API_URL, token: process.env.K
 
 const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
-const CALL_CAP = 15;
+const CALL_CAP = 15;                                    
 const FETCH_LIMIT = 15;
 
 const SEARCH_QUERIES = [
