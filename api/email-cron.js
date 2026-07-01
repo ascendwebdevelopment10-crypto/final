@@ -11,7 +11,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 const EMAIL_CAP = 25;
-const FETCH_LIMIT = 15;
+const FETCH_LIMIT = 10;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -63,7 +63,7 @@ return all.filter(p => p.website && p.website.trim() !== '');
 async function scrapeEmail(url) {
 try {
 const controller = new AbortController();
-const timer = setTimeout(() => controller.abort(), 4000);
+const timer = setTimeout(() => controller.abort(), 2000);
 const res = await fetch(url, {
 signal: controller.signal,
 headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
@@ -138,7 +138,7 @@ const q3 = SEARCH_QUERIES[(queryIndex + 2) % SEARCH_QUERIES.length];
 const [batch1, batch2, batch3] = await Promise.all([
 fetchLeadsWithWebsites(q1, FETCH_LIMIT),
 fetchLeadsWithWebsites(q2, FETCH_LIMIT),
-fetchLeadsWithWebsites(q3, FETCH_LIMIT)
+Promise.resolve([])
 ]);
 
 const leads = [...batch1, ...batch2, ...batch3].map(normalizeContact);
