@@ -6,51 +6,75 @@ const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_A
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') { res.status(405).end('Method not allowed'); return; }
+    if (req.method !== 'POST') { res.status(405).end('Method not allowed'); return; }
 
   try {
-    const data = req.body;
-    const callId = data.call_id || data.id;
-    const status = data.status || '';
-    const duration = data.call_length || data.duration || 0;
-    const transcript = data.transcripts ? JSON.stringify(data.transcripts) : '';
-    const meta = data.metadata || {};
-    const contactPhone = meta.contact_phone || data.to || '';
-    const contactName = meta.contact_name || '';
-    const industry = meta.industry || '';
-    const painPoint = meta.pain_point || '';
+        // Twilio sends status callbacks as form-encoded
+      const {
+              CallSid: callSid = '',
+              CallStatus: callStatus = '',
+              Duration: duration = '0',
+              To: contactPhone = '',
+      } = req.body || {};
 
-    await kv.lpush('calls:outcomes', JSON.stringify({
-      callId, status, duration, contactName, contactPhone, industry, painPoint,
-      transcript: transcript.substring(0, 500),
-      timestamp: Date.now()
-    }));
+      // Contact context passed as query params from call-cron.js statusCallbackUrl
+      const contactName  = req.query.contactName  || '';
+        const industry     = req.query.industry     || '';
+        const painPoint    = req.query.painPoint    || '';
+        const businessName = req.query.businessName || '';
 
-    const voicemailStatuses = ['voicemail', 'no-answer', 'busy', 'failed'];
-    const isVoicemail = voicemailStatuses.some(s => status.toLowerCase().includes(s));
+      // Map Twilio statuses to our outcome labels
+      const outcomeMap = {
+              completed:  'completed',
+              'no-answer': 'no-answer',
+              busy:        'busy',
+              failed:      'failed',
+              canceled:    'canceled',
+      };
+        const outcome = outcomeMap[callStatus] || callStatus;
 
-    if (isVoicemail && contactPhone) {
-      const firstName = contactName.split(' ')[0] || 'there';
-      const followupMsg = 'Hey ' + firstName + ', this is Alex from Ascend Web Development. I just tried reaching you — I noticed something on your digital profile that could be costing you leads. Worth a quick look. Reply here or call us back anytime. - Ascend Web Dev';
-      try {
-        await twilioClient.messages.create({
-          body: followupMsg,
-          from: TWILIO_FROM,
-          to: contactPhone
-        });
-        await kv.incr('stats:followup_sms');
-      } catch(e) {
-        console.error('followup SMS error:', e.message);
+      // Log to KV calls:log list
+      const logEntry = {
+              callSid,
+              status:    outcome,
+              duration:  parseInt(duration, 10),
+              phone:     contactPhone,
+              name:      contactName,
+              industry,
+              painPoint,
+              timestamp: new Date().toISOString(),
+      };
+        await kv.lpush('calls:log', JSON.stringify(logEntry));
+        await kv.ltrim('calls:log', 0, 499); // keep last 500
+
+      // Increment stats
+      await kv.incr('stats:calls_made');
+        if (outcome === 'completed') {
+                await kv.incr('stats:calls_answered');
+        }
+
+      // Clean up conversation history from KV
+      if (callSid) {
+              await kv.del(`call:history:${callSid}`);
       }
-    }
 
-    if (status.toLowerCase().includes('completed') && duration > 60) {
-      await kv.incr('stats:calls_answered');
-    }
+      // Send follow-up SMS on no-answer or busy
+      if ((outcome === 'no-answer' || outcome === 'busy') && contactPhone) {
+              const smsBody = `Hi ${contactName || 'there'}, this is Alex from Ascend Web Development. I tried calling but couldn't reach you. We specialize in helping ${industry || 'businesses'} get more clients through modern websites and digital marketing. Would love to connect — reply here or visit our site!`;
+              try {
+                        await twilioClient.messages.create({
+                                    body: smsBody,
+                                    from: TWILIO_FROM,
+                                    to:   contactPhone,
+                        });
+              } catch (smsErr) {
+                        console.error('Follow-up SMS failed:', smsErr.message);
+              }
+      }
 
-    res.status(200).json({ ok: true });
-  } catch(e) {
-    console.error('call-webhook error:', e.message);
-    res.status(200).json({ ok: false, error: e.message });
+      res.status(200).json({ received: true, callSid, outcome });
+  } catch (err) {
+        console.error('call-webhook error:', err);
+        res.status(500).json({ error: err.message });
   }
 }
