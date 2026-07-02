@@ -6,7 +6,7 @@
 <title>Ascend Outreach Dashboard</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-syste,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
 .header{background:#1a1d2e;border-bottom:1px solid #2d3148;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 20px rgba(0,0,0,.3)}
 .header h1{font-size:20px;font-weight:700;color:#7c3aed;letter-spacing:-0.3px}
 .badge-live{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600;letter-spacing:.05em}
@@ -16,18 +16,13 @@ body{font-family:-apple-syste,BlinkMacSystemFont,"Segoe UI",sans-serif;backgroun
 .nav-btn.active{color:#a78bfa;border-bottom-color:#7c3aed}
 .rbadge{display:none;background:#dc2626;color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600}
 .container{max-width:1200px;margin:0 auto;padding:32px}
-.page{display:none}
-.page.active{display:block}
+.page{display:none}.page.active{display:block}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
 .stat-card{background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
 .stat-card .label{font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
 .stat-card .value{font-size:32px;font-weight:700;color:#a78bfa}
 .stat-card .sub{font-size:12px;color:#64748b;margin-top:4px}
-.stat-card.ec{border-top:3px solid #7c3aed}
-.stat-card.sc{border-top:3px solid #4f46e5}
-.stat-card.cc{border-top:3px solid #6366f1}
-.stat-card.rc{border-top:3px solid #22c55e}
-.stat-card.uc{border-top:3px solid #f87171}
+.stat-card.ec{border-top:3px solid #7c3aed}.stat-card.sc{border-top:3px solid #4f46e5}.stat-card.rc{border-top:3px solid #22c55e}.stat-card.uc{border-top:3px solid #f87171}
 .section{background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
 .section h2{font-size:16px;font-weight:600;margin-bottom:20px;color:#e2e8f0}
 .chart{display:flex;align-items:flex-end;gap:4px;height:120px}
@@ -47,22 +42,24 @@ tr.data-row:hover td{background:#1e2235}
 .bs{background:#3b0764;color:#a78bfa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
 .br{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
 .bsm{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bweb{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bads{background:#3b0764;color:#a78bfa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bapp{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-answered{background:#14532d;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-voicemail{background:#422006;color:#fbbf24;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-completed{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-failed{background:#450a0a;color:#f87171;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
-.bcall-noanswer{background:#1e2235;color:#64748b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
 .empty{text-align:center;color:#475569;padding:40px}
-.expand-row{display:none}
-.expand-row.open{display:table-row}
+.expand-row{display:none}.expand-row.open{display:table-row}
 .expand-row td{padding:0 12px 20px;background:#0f1117;border-bottom:2px solid #2d3148}
 .msg-full{background:#1a1d2e;border:1px solid #2d3148;border-radius:10px;padding:20px;font-size:14px;line-height:1.8;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
 .msg-label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;margin-bottom:10px}
 .expand-indicator{color:#475569;font-size:12px;margin-left:6px;transition:transform .15s;display:inline-block}
 .row-open .expand-indicator{transform:rotate(90deg)}
+.ph-bar{display:flex;align-items:stretch;gap:0;margin-bottom:24px;border-radius:12px;overflow:hidden;border:1px solid #2d3148}
+.ph-step{flex:1;padding:12px 8px;text-align:center;background:#1a1d2e;cursor:default;transition:background .15s;position:relative}
+.ph-step:not(:last-child)::after{content:"";position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;border-left:10px solid #2d3148;z-index:2}
+.ph-step .ph-num{font-size:18px;font-weight:700;color:#a78bfa;line-height:1}
+.ph-step .ph-lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.ph-step .ph-cnt{font-size:11px;color:#475569;margin-top:2px}
+.ph-step.active-stage{background:#1e1b3a}
+.stage-pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:none;outline:none}
+.stage-new_lead{background:#1e2235;color:#94a3b8}.stage-contacted{background:#1e3a5f;color:#60a5fa}.stage-replied{background:#3b0764;color:#a78bfa}.stage-interested{background:#1a3a2a;color:#4ade80}.stage-meeting_booked{background:#422006;color:#fb923c}.stage-client{background:#14532d;color:#4ade80}.stage-lost{background:#450a0a;color:#f87171}
+.stage-sel{background:#1a1d2e;border:1px solid #2d3148;color:#e2e8f0;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer}
+.stage-sel option{background:#1a1d2e}
 .conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
 .conv-sidebar{width:300px;border-right:1px solid #2d3148;display:flex;flex-direction:column;flex-shrink:0}
 .conv-search{padding:12px;border-bottom:1px solid #2d3148}
@@ -70,23 +67,20 @@ tr.data-row:hover td{background:#1e2235}
 .conv-search input:focus{border-color:#7c3aed}
 .conv-list{overflow-y:auto;flex:1}
 .conv-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #1e2235;transition:background .1s;position:relative;display:flex;flex-direction:column;gap:3px}
-.conv-item:hover{background:#1e2235}
-.conv-item.active{background:#1e1b3a;border-left:3px solid #7c3aed}
+.conv-item:hover{background:#1e2235}.conv-item.active{background:#1e1b3a;border-left:3px solid #7c3aed}
 .ci-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ci-name{font-weight:600;font-size:13px;color:#e2e8f0}
 .ci-preview{font-size:12px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ci-time{font-size:10px;color:#475569;margin-left:auto;flex-shrink:0}
 .ci-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:600}
-.ci-badge.email{background:#1e3a5f;color:#60a5fa}
-.ci-badge.sms{background:#3b0764;color:#a78bfa}
-.ci-badge.reply{background:#450a0a;color:#f87171}.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#334155;font-size:15px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:opacity .15s,color .15s}.conv-item:hover .del-btn{opacity:1}.del-btn:hover{color:#ef4444;background:#450a0a}
+.ci-badge.email{background:#1e3a5f;color:#60a5fa}.ci-badge.sms{background:#3b0764;color:#a78bfa}.ci-badge.reply{background:#450a0a;color:#f87171}
+.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#334155;font-size:15px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:opacity .15s,color .15s}
+.conv-item:hover .del-btn{opacity:1}.del-btn:hover{color:#ef4444;background:#450a0a}
 .conv-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.conv-header{padding:16px 20px;border-bottom:1px solid #2d3148}
+.conv-header{padding:16px 20px;border-bottom:1px solid #2d3148;display:flex;align-items:center;justify-content:space-between}
 .ch-name{font-weight:700;font-size:15px;color:#e2e8f0}
 .ch-sub{font-size:12px;color:#64748b;margin-top:3px}
 .conv-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
-.msg-bw{display:flex;flex-direction:column}
-.msg-bw.out{align-items:flex-end}
-.msg-bw.in{align-items:flex-start}
+.msg-bw{display:flex;flex-direction:column}.msg-bw.out{align-items:flex-end}.msg-bw.in{align-items:flex-start}
 .msg-b{max-width:70%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
 .msg-b.out{background:#7c3aed;color:#fff;border-bottom-right-radius:3px}
 .msg-b.in{background:#1e2235;color:#e2e8f0;border-bottom-left-radius:3px}
@@ -98,32 +92,33 @@ tr.data-row:hover td{background:#1e2235}
 .conv-reply-box textarea:focus{border-color:#7c3aed}
 .conv-reply-actions{display:flex;align-items:center;gap:8px}
 .btn-send{padding:8px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-send:hover{background:#6d28d9}
-.btn-send:disabled{opacity:.5;cursor:default}
+.btn-send:hover{background:#6d28d9}.btn-send:disabled{opacity:.5;cursor:default}
 .send-err{font-size:12px;color:#f87171}
-.rph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.rph h2{font-size:20px;font-weight:700;color:#e2e8f0}
-.rfbtn{padding:8px 14px;background:#1a1d2e;border:1px solid #2d3148;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
-.rfbtn:hover{color:#a78bfa;border-color:#7c3aed}
-.call-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 0}
-.call-detail-item{display:flex;flex-direction:column;gap:3px}
-.call-detail-label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase}
-.call-detail-val{font-size:13px;color:#e2e8f0}
-.transcript-box{background:#0f1117;border:1px solid #2d3148;border-radius:8px;padding:14px;font-size:12px;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;max-height:180px;overflow-y:auto;margin-top:4px}
+.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.perf-card{background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px}
+.perf-card .p-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.perf-card .p-val{font-size:28px;font-weight:700;color:#a78bfa}
+.perf-card .p-sub{font-size:12px;color:#475569;margin-top:4px}
+.method-bar{margin-top:8px}
+.method-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.method-lbl{font-size:12px;color:#94a3b8;width:50px;flex-shrink:0}
+.method-track{flex:1;background:#1e2235;border-radius:4px;height:6px;overflow:hidden}
+.method-fill{height:100%;border-radius:4px;transition:width .4s}
+.method-pct{font-size:11px;color:#64748b;width:36px;text-align:right;flex-shrink:0}
+.reset-btn{padding:6px 14px;background:#450a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
+.reset-btn:hover{background:#7f1d1d;color:#fca5a5}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.refresh-btn{padding:7px 14px;background:#1a1d2e;border:1px solid #2d3148;border-radius:8px;color:#64748b;cursor:pointer;font-size:12px}
+.refresh-btn:hover{color:#a78bfa;border-color:#7c3aed}
 .sched-card{background:linear-gradient(135deg,#1e1b3a,#1a1d2e);border:1px solid #3b2f6e;border-radius:12px;padding:20px;margin-bottom:16px}
-.sched-card h3{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
 .run-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 .run-box{background:#0f1117;border:1px solid #2d3148;border-radius:8px;padding:12px;text-align:center}
 .run-box .run-time{font-size:16px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
 .run-box .run-utc{font-size:10px;color:#475569}
-.run-box .run-count{font-size:22px;font-weight:700;color:#a78bfa;margin-top:6px}
-.run-box .run-label{font-size:10px;color:#64748b}
 .run-box.next-run{border-color:#7c3aed;box-shadow:0 0 12px rgba(124,58,237,.2)}
 .run-box.next-run .run-time{color:#a78bfa}
 .daily-total{display:flex;align-items:center;gap:16px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2d3148}
-.dt-item{text-align:center;flex:1}
-.dt-num{font-size:24px;font-weight:700;color:#a78bfa}
-.dt-lbl{font-size:11px;color:#64748b;margin-top:2px}
+.dt-item{text-align:center;flex:1}.dt-num{font-size:24px;font-weight:700;color:#a78bfa}.dt-lbl{font-size:11px;color:#64748b;margin-top:2px}
 </style>
 </head><body>
 <div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>
@@ -131,16 +126,17 @@ tr.data-row:hover td{background:#1e2235}
 <button class="nav-btn active" data-page="overview">Overview</button>
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
-<button class="nav-btn" data-page="calls">Calls</button>
+<button class="nav-btn" data-page="pipeline">Pipeline</button>
 <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
+<button class="nav-btn" data-page="performance">Performance</button>
 <button class="nav-btn" data-page="schedule">Schedule</button>
 </nav>
 <div class="container">
+
 <div class="page active" id="page-overview">
 <div class="stats-grid">
 <div class="stat-card ec"><div class="label">Emails Sent</div><div class="value" id="te">-</div><div class="sub" id="tde">Today: -</div></div>
 <div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">-</div><div class="sub" id="tds">Today: -</div></div>
-<div class="stat-card cc"><div class="label">Calls Made</div><div class="value" id="tc">-</div><div class="sub" id="tca">Answered: -</div></div>
 <div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">-</div><div class="sub">received</div></div>
 <div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">-</div><div class="sub">received</div></div>
 <div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
@@ -149,32 +145,36 @@ tr.data-row:hover td{background:#1e2235}
 <div class="legend"><div class="li"><div class="ld" style="background:#7c3aed"></div>Emails</div><div class="li"><div class="ld" style="background:#4f46e5"></div>SMS</div></div>
 </div>
 </div>
+
 <div class="page" id="page-emails">
-<div class="section"><h2>Email Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2>
+<div class="section"><div class="page-header"><h2>Email Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2></div>
 <table><thead><tr><th>To</th><th>Subject</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
 <tbody id="email-tbody"></tbody></table>
 </div>
 </div>
+
 <div class="page" id="page-sms">
-<div class="section"><h2>SMS Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2>
+<div class="section"><div class="page-header"><h2>SMS Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2></div>
 <table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
 <tbody id="sms-tbody"></tbody></table>
 </div>
 </div>
-<div class="page" id="page-calls">
-<div class="stats-grid" style="margin-bottom:24px">
-<div class="stat-card cc"><div class="label">Total Calls</div><div class="value" id="calls-total">-</div><div class="sub">all time</div></div>
-<div class="stat-card rc"><div class="label">Answered</div><div class="value" id="calls-answered">-</div><div class="sub">completed</div></div>
-<div class="stat-card sc"><div class="label">Voicemail</div><div class="value" id="calls-voicemail">-</div><div class="sub">left message</div></div>
-<div class="stat-card uc"><div class="label">No Answer</div><div class="value" id="calls-noanswer">-</div><div class="sub">not reached</div></div>
-</div>
-<div class="section"><h2>Call Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand for transcript &amp; details</span></h2>
-<table><thead><tr><th>Contact</th><th>Phone</th><th>Industry</th><th>Pain Point Targeted</th><th>Duration</th><th>Time</th><th>Outcome</th></tr></thead>
-<tbody id="calls-tbody"></tbody></table>
+
+<div class="page" id="page-pipeline">
+<div class="page-header"><h2 style="font-size:20px;font-weight:700;color:#e2e8f0">Pipeline</h2><button class="refresh-btn" id="pipeline-refresh-btn">&#8635; Refresh</button></div>
+<div class="ph-bar" id="pipeline-bar"></div>
+<div class="section">
+<table><thead><tr><th>Contact</th><th>Type</th><th>Stage</th><th>Note</th><th>Last Update</th><th>Actions</th></tr></thead>
+<tbody id="pipeline-tbody"></tbody></table>
 </div>
 </div>
+
 <div class="page" id="page-conversations">
-<div class="rph"><h2>Conversations</h2><button class="rfbtn" id="conv-refresh-btn">&#8635; Refresh</button></div>
+<div class="page-header"><h2 style="font-size:20px;font-weight:700;color:#e2e8f0">Conversations</h2>
+<div style="display:flex;gap:8px">
+<button class="refresh-btn" id="conv-refresh-btn">&#8635; Refresh</button>
+<button class="reset-btn" id="reset-convs-btn">&#128465; Reset All</button>
+</div></div>
 <div class="conv-wrap">
 <div class="conv-sidebar">
 <div class="conv-search"><input id="conv-search" type="text" placeholder="Search contacts..." /></div>
@@ -185,462 +185,427 @@ tr.data-row:hover td{background:#1e2235}
 </div>
 </div>
 </div>
+
+<div class="page" id="page-performance">
+<div class="page-header"><h2 style="font-size:20px;font-weight:700;color:#e2e8f0">Performance</h2><button class="refresh-btn" id="perf-refresh-btn">&#8635; Refresh</button></div>
+<div class="perf-grid">
+<div class="perf-card"><div class="p-label">Total Messages Sent</div><div class="p-val" id="p-total">-</div><div class="p-sub">Emails + SMS combined</div></div>
+<div class="perf-card"><div class="p-label">Overall Reply Rate</div><div class="p-val" id="p-rrate">-</div><div class="p-sub" id="p-rrate-sub">replies / messages sent</div></div>
+<div class="perf-card"><div class="p-label">Conversion Rate</div><div class="p-val" id="p-conv">-</div><div class="p-sub">Lead → Client (pipeline)</div></div>
+<div class="perf-card"><div class="p-label">Pipeline Progress</div><div class="p-val" id="p-pipe">-</div><div class="p-sub">Interested or further</div></div>
+</div>
+<div class="section"><h2>Best Outreach Method</h2>
+<div class="method-bar" id="method-bar">
+<div class="method-row"><span class="method-lbl">Email</span><div class="method-track"><div class="method-fill" id="mf-email" style="background:#7c3aed;width:0%"></div></div><span class="method-pct" id="mp-email">-</span></div>
+<div class="method-row"><span class="method-lbl">SMS</span><div class="method-track"><div class="method-fill" id="mf-sms" style="background:#4f46e5;width:0%"></div></div><span class="method-pct" id="mp-sms">-</span></div>
+</div>
+<div style="font-size:12px;color:#64748b;margin-top:12px" id="method-winner"></div>
+</div>
+<div class="section"><h2>Pipeline Funnel</h2><div id="funnel-chart"></div></div>
+</div>
+
 <div class="page" id="page-schedule">
 <div class="section" style="margin-bottom:24px">
-<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">Vercel Pro &bull; 4 runs/day &bull; MDT (UTC-6)</span></h2>
+<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">4 runs/day &bull; MDT (UTC-6)</span></h2>
 <div id="sched-runs"></div>
 <div style="margin-top:20px">
 <div style="font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Daily Totals</div>
 <div class="daily-total">
 <div class="dt-item"><div class="dt-num">200</div><div class="dt-lbl">SMS / day</div></div>
 <div class="dt-item"><div class="dt-num">100</div><div class="dt-lbl">Emails / day</div></div>
-<div class="dt-item"><div class="dt-num">60</div><div class="dt-lbl">Calls / day</div></div>
-<div class="dt-item"><div class="dt-num">360</div><div class="dt-lbl">Total / day</div></div>
+<div class="dt-item"><div class="dt-num">300</div><div class="dt-lbl">Total / day</div></div>
 </div>
 </div>
 </div>
-<div class="section">
-<h2>Next Upcoming Run</h2>
-<div id="next-run-info" style="font-size:14px;color:#cbd5e1;padding:12px 0"></div>
+<div class="section"><h2>Next Upcoming Run</h2><div id="next-run-info" style="font-size:14px;color:#cbd5e1;padding:12px 0"></div></div>
 </div>
-</div>
-</div>
-</div>
-</div>
-<script>
-(function() {
-var cp = "overview";
-var convData = {};
-var activeKey = null;
-var REPLY_KEY = "818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718";
 
-// Schedule config - 4 runs/day at 14,17,20,23 UTC = 8am,11am,2pm,5pm MDT
-var RUNS_UTC = [14, 17, 20, 23];
-var RUNS_MDT = ['8:00 AM', '11:00 AM', '2:00 PM', '5:00 PM'];
-var SMS_PER_RUN = 50, EMAIL_PER_RUN = 25, CALL_PER_RUN = 15;
+</div></div><script>
+(function(){
+var cp='overview';
+var convData={};
+var activeKey=null;
+var pipelineData={};
+var REPLY_KEY='818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718';
+var RUNS_UTC=[14,17,20,23];
+var RUNS_MDT=['8:00 AM','11:00 AM','2:00 PM','5:00 PM'];
+var SMS_PER_RUN=50,EMAIL_PER_RUN=25;
+var STAGES=['new_lead','contacted','replied','interested','meeting_booked','client','lost'];
+var STAGE_LABELS={'new_lead':'New Lead','contacted':'Contacted','replied':'Replied','interested':'Interested','meeting_booked':'Meeting Booked','client':'Client','lost':'Lost'};
 
-function normPhone(s) {
-if (!s) return "";
-var d = String(s).replace(/[^0-9]/g, "");
-return d.length >= 10 ? d.slice(-10) : d;
-}
-function isPhone(s) {
-var d = String(s || "").replace(/[^0-9]/g, "");
-return d.length >= 7;
-}
-function getKey(s) {
-if (!s) return "";
-if (isPhone(s)) return normPhone(s);
-return String(s).toLowerCase().trim();
-}
+function normPhone(s){if(!s)return'';var d=String(s).replace(/[^0-9]/g,'');return d.length>=10?d.slice(-10):d;}
+function isPhone(s){return String(s||'').replace(/[^0-9]/g,'').length>=7;}
+function getKey(s){if(!s)return'';if(isPhone(s))return normPhone(s);return String(s).toLowerCase().trim();}
+function fmt(ts){return ts?new Date(ts).toLocaleString():'-';}
+function fmtShort(ts){if(!ts)return'';var d=new Date(ts),now=new Date();if(d.toDateString()===now.toDateString())return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});return d.toLocaleDateString([],{month:'short',day:'numeric'});}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function svcBadge(svc){if(svc==='ads')return'<span class="bs" style="background:#3b0764;color:#a78bfa">Ads</span>';if(svc==='app')return'<span class="bs" style="background:#14532d;color:#4ade80">App</span>';return'<span class="bsm">Website</span>';}
+function stagePill(stage){var s=stage||'new_lead';return'<span class="stage-pill stage-'+s+'">'+esc(STAGE_LABELS[s]||s)+'</span>';}
 
-document.querySelectorAll(".nav-btn").forEach(function(b) {
-b.addEventListener("click", function() {
-var p = b.dataset.page;
-document.querySelectorAll(".page").forEach(function(x) { x.classList.remove("active"); });
-document.querySelectorAll(".nav-btn").forEach(function(x) { x.classList.remove("active"); });
-document.getElementById("page-" + p).classList.add("active");
-b.classList.add("active");
-cp = p;
-if (p === "conversations") lconvs();
-if (p === "emails") le();
-if (p === "sms") ls();
-if (p === "calls") lcalls();
-if (p === "schedule") lschedule();
-});
+document.querySelectorAll('.nav-btn').forEach(function(b){
+  b.addEventListener('click',function(){
+    var p=b.dataset.page;
+    document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active');});
+    document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active');});
+    document.getElementById('page-'+p).classList.add('active');
+    b.classList.add('active');
+    cp=p;
+    if(p==='conversations')lconvs();
+    if(p==='emails')le();
+    if(p==='sms')ls();
+    if(p==='pipeline')lpipeline();
+    if(p==='performance')lperf();
+    if(p==='schedule')lschedule();
+  });
 });
 
-document.getElementById("conv-refresh-btn").addEventListener("click", lconvs);
-document.getElementById("conv-search").addEventListener("input", function() {
-var q = this.value.toLowerCase();
-document.querySelectorAll(".conv-item").forEach(function(el) {
-el.style.display = (el.dataset.contact || "").toLowerCase().includes(q) ? "" : "none";
-});
-});
-
-document.getElementById("conv-list").addEventListener("click", function(e) {
-var delBtn = e.target.closest(".del-btn");
-if (delBtn) { e.stopPropagation(); deleteConv(delBtn.dataset.key, delBtn.dataset.contact); return; }
-var item = e.target.closest(".conv-item");
-if (item) openConv(item.dataset.key);
+document.getElementById('conv-refresh-btn').addEventListener('click',lconvs);
+document.getElementById('pipeline-refresh-btn').addEventListener('click',lpipeline);
+document.getElementById('perf-refresh-btn').addEventListener('click',lperf);
+document.getElementById('conv-search').addEventListener('input',function(){
+  var q=this.value.toLowerCase();
+  document.querySelectorAll('.conv-item').forEach(function(el){
+    el.style.display=(el.dataset.contact||'').toLowerCase().includes(q)?'':'none';
+  });
 });
 
-function fmt(ts) { return ts ? new Date(ts).toLocaleString() : "-"; }
-function fmtShort(ts) {
-if (!ts) return "";
-var d = new Date(ts), now = new Date();
-if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-return d.toLocaleDateString([], {month:"short",day:"numeric"});
-}
-function esc(s) {
-return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-function svcBadge(svc) {
-if (svc === "ads") return '<span class="bads">Ads</span>';
-if (svc === "app") return '<span class="bapp">App</span>';
-return '<span class="bweb">Website</span>';
-}
-function callStatusBadge(status) {
-var s = String(status || "").toLowerCase();
-if (s.includes("completed") || s.includes("answered")) return '<span class="bcall-answered">Answered</span>';
-if (s.includes("voicemail")) return '<span class="bcall-voicemail">Voicemail</span>';
-if (s.includes("no-answer") || s.includes("noanswer") || s.includes("no_answer")) return '<span class="bcall-noanswer">No Answer</span>';
-if (s.includes("busy")) return '<span class="bcall-noanswer">Busy</span>';
-if (s.includes("failed") || s.includes("error")) return '<span class="bcall-failed">Failed</span>';
-return '<span class="bcall-completed">' + esc(status || "Unknown") + '</span>';
-}
-function fmtDuration(secs) {
-if (!secs) return "-";
-var s = parseInt(secs);
-var m = Math.floor(s / 60);
-var r = s % 60;
-return m + "m " + r + "s";
-}
-
-function lschedule() {
-var now = new Date();
-var utcH = now.getUTCHours();
-var utcM = now.getUTCMinutes();
-
-// Find next run
-var nextIdx = -1;
-for (var i = 0; i < RUNS_UTC.length; i++) {
-if (RUNS_UTC[i] > utcH || (RUNS_UTC[i] === utcH && utcM < 5)) {
-nextIdx = i; break;
-}
-}
-var isTomorrow = nextIdx === -1;
-if (isTomorrow) nextIdx = 0;
-
-var runsHtml = '<div class="run-grid">';
-for (var i = 0; i < RUNS_MDT.length; i++) {
-var isNext = i === nextIdx;
-runsHtml += '<div class="run-box' + (isNext ? ' next-run' : '') + '">';
-runsHtml += '<div class="run-time">' + RUNS_MDT[i] + '</div>';
-runsHtml += '<div class="run-utc">UTC ' + RUNS_UTC[i] + ':00</div>';
-runsHtml += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">';
-runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">SMS</span><span style="color:#a78bfa;font-weight:600">' + SMS_PER_RUN + '</span></div>';
-runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Email</span><span style="color:#60a5fa;font-weight:600">' + EMAIL_PER_RUN + '</span></div>';
-runsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Calls</span><span style="color:#4ade80;font-weight:600">' + CALL_PER_RUN + '</span></div>';
-runsHtml += '</div>';
-if (isNext) runsHtml += '<div style="margin-top:8px;font-size:10px;color:#7c3aed;font-weight:600">&#9654; NEXT RUN' + (isTomorrow ? ' (TOMORROW)' : '') + '</div>';
-runsHtml += '</div>';
-}
-runsHtml += '</div>';
-
-document.getElementById("sched-runs").innerHTML = runsHtml;
-
-var nextTime = RUNS_MDT[nextIdx];
-var msUntil = 0;
-var nextUTC = RUNS_UTC[nextIdx];
-var nowMs = now.getTime();
-var targetMs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (isTomorrow ? 1 : 0), nextUTC, 0, 0)).getTime();
-msUntil = targetMs - nowMs;
-var secsUntil = Math.floor(msUntil / 1000);
-var hUntil = Math.floor(secsUntil / 3600);
-var mUntil = Math.floor((secsUntil % 3600) / 60);
-var timeStr = hUntil > 0 ? hUntil + 'h ' + mUntil + 'm' : mUntil + 'm';
-
-document.getElementById("next-run-info").innerHTML =
-'<div style="display:flex;align-items:center;gap:16px">' +
-'<div style="font-size:28px;font-weight:700;color:#a78bfa">' + nextTime + '</div>' +
-'<div>' +
-'<div style="font-size:14px;color:#e2e8f0">Next automated run' + (isTomorrow ? ' <span style="color:#64748b">(tomorrow)</span>' : '') + '</div>' +
-'<div style="font-size:12px;color:#64748b;margin-top:2px">In approximately ' + timeStr + ' &bull; 50 SMS + 25 emails + 15 calls</div>' +
-'</div></div>';
-}
-
-function lcalls() {
-fetch("/api/logs?type=calls&limit=200").then(function(r){return r.json();}).then(function(calls) {
-if (!Array.isArray(calls)) calls = [];
-var total = calls.length;
-var answered = calls.filter(function(c){ return String(c.status||"").toLowerCase().includes("completed"); }).length;
-var voicemail = calls.filter(function(c){ return String(c.status||"").toLowerCase().includes("voicemail"); }).length;
-var noanswer = calls.filter(function(c){
-var s = String(c.status||"").toLowerCase();
-return s.includes("no-answer") || s.includes("noanswer") || s.includes("no_answer") || s.includes("busy");
-}).length;
-document.getElementById("calls-total").textContent = total;
-document.getElementById("calls-answered").textContent = answered;
-document.getElementById("calls-voicemail").textContent = voicemail;
-document.getElementById("calls-noanswer").textContent = noanswer;
-var rows = "";
-calls.forEach(function(c, i) {
-var xid = "xcall" + i;
-var painPoint = String(c.painPoint || c.pain_point || "-");
-var transcript = String(c.transcript || "");
-rows += '<tr class="data-row" data-xid="' + xid + '">';
-rows += '<td>' + esc(c.contactName || c.contact_name || "-") + '<span class="expand-indicator">&#9658;</span></td>';
-rows += '<td>' + esc(c.contactPhone || c.to || "-") + '</td>';
-rows += '<td>' + esc(c.industry || "-") + '</td>';
-rows += '<td style="max-width:200px;white-space:normal;">' + esc(painPoint) + '</td>';
-rows += '<td>' + fmtDuration(c.duration || c.call_length) + '</td>';
-rows += '<td>' + fmt(c.timestamp) + '</td>';
-rows += '<td>' + callStatusBadge(c.status) + '</td>';
-rows += '</tr>';
-rows += '<tr class="expand-row" id="' + xid + '">';
-rows += '<td colspan="7"><div class="call-detail-grid">';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Call ID</div><div class="call-detail-val">' + esc(c.callId || c.call_id || "-") + '</div></div>';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Status</div><div class="call-detail-val">' + esc(c.status || "-") + '</div></div>';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Duration</div><div class="call-detail-val">' + fmtDuration(c.duration || c.call_length) + '</div></div>';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Industry</div><div class="call-detail-val">' + esc(c.industry || "-") + '</div></div>';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Pain Point</div><div class="call-detail-val">' + esc(painPoint) + '</div></div>';
-rows += '<div class="call-detail-item"><div class="call-detail-label">Time</div><div class="call-detail-val">' + fmt(c.timestamp) + '</div></div>';
-rows += '</div>';
-if (transcript && transcript.length > 5) {
-rows += '<div class="msg-label" style="margin-top:12px">Call Transcript</div>';
-rows += '<div class="transcript-box">' + esc(transcript) + '</div>';
-} else {
-rows += '<div style="font-size:12px;color:#475569;margin-top:8px">Transcript not yet available.</div>';
-}
-rows += '</td></tr>';
+document.getElementById('reset-convs-btn').addEventListener('click',function(){
+  if(!confirm('Reset ALL conversations and SMS reply stats? This cannot be undone.'))return;
+  fetch('/api/reset-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:REPLY_KEY})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){convData={};activeKey=null;lconvs();lstats();alert('Reset complete.');}
+      else alert('Reset failed: '+(d.error||'Unknown'));
+    }).catch(function(){alert('Network error');});
 });
-document.getElementById("calls-tbody").innerHTML = rows || '<tr><td colspan="7" class="empty">No calls yet.</td></tr>';
-}).catch(function(e) {
-document.getElementById("calls-tbody").innerHTML = '<tr><td colspan="7" class="empty">Error: ' + e.message + '</td></tr>';
+
+document.getElementById('conv-list').addEventListener('click',function(e){
+  var delBtn=e.target.closest('.del-btn');
+  if(delBtn){e.stopPropagation();deleteConv(delBtn.dataset.key,delBtn.dataset.contact);return;}
+  var item=e.target.closest('.conv-item');
+  if(item)openConv(item.dataset.key);
 });
+
+function lpipeline(){
+  Promise.all([
+    fetch('/api/pipeline?key='+REPLY_KEY).then(function(r){return r.json();}),
+    fetch('/api/logs?type=replies&limit=200').then(function(r){return r.json();}),
+    fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
+    fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();})
+  ]).then(function(res){
+    var saved=res[0]||{};
+    var replies=Array.isArray(res[1])?res[1]:[];
+    var emails=Array.isArray(res[2])?res[2]:[];
+    var sms=Array.isArray(res[3])?res[3]:[];
+
+    // Build set of all known contacts
+    var contacts={};
+    emails.forEach(function(e){
+      if(!e.to)return;
+      var k=getKey(e.to);
+      if(!contacts[k])contacts[k]={key:k,contact:e.to,type:'email',lastTs:0,replied:false};
+      if((e.timestamp||0)>contacts[k].lastTs)contacts[k].lastTs=e.timestamp||0;
+      if(e.replied)contacts[k].replied=true;
+    });
+    sms.forEach(function(e){
+      if(!e.to)return;
+      var k=getKey(e.to);
+      if(!contacts[k])contacts[k]={key:k,contact:e.to,type:'sms',lastTs:0,replied:false};
+      if((e.timestamp||0)>contacts[k].lastTs)contacts[k].lastTs=e.timestamp||0;
+      if(e.replied)contacts[k].replied=true;
+    });
+    replies.forEach(function(r){
+      var from=r.from||r.originalTo||r.to;
+      if(!from)return;
+      var k=getKey(from);
+      if(contacts[k])contacts[k].replied=true;
+    });
+
+    // Merge with saved pipeline stages
+    Object.keys(contacts).forEach(function(k){
+      if(saved[k]){contacts[k].stage=saved[k].stage;contacts[k].note=saved[k].note||'';}
+      else if(contacts[k].replied)contacts[k].stage='replied';
+      else contacts[k].stage='contacted';
+    });
+    pipelineData=contacts;
+
+    // Render stage bar
+    var counts={};
+    STAGES.forEach(function(s){counts[s]=0;});
+    Object.values(contacts).forEach(function(c){counts[c.stage||'contacted']=(counts[c.stage||'contacted']||0)+1;});
+    var barHtml='';
+    STAGES.forEach(function(s){
+      barHtml+='<div class="ph-step"><div class="ph-num">'+counts[s]+'</div><div class="ph-lbl">'+STAGE_LABELS[s]+'</div></div>';
+    });
+    document.getElementById('pipeline-bar').innerHTML=barHtml;
+
+    // Render table
+    var sorted=Object.values(contacts).sort(function(a,b){return b.lastTs-a.lastTs;});
+    var rows='';
+    sorted.forEach(function(c){
+      var stageOpts=STAGES.map(function(s){return'<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+STAGE_LABELS[s]+'</option>';}).join('');
+      rows+='<tr><td>'+esc(c.contact)+'</td><td><span class="ci-badge '+(c.type||'email')+'" style="font-size:11px;padding:2px 6px">'+esc(c.type||'email')+'</span></td>';
+      rows+='<td>'+stagePill(c.stage)+'</td>';
+      rows+='<td style="color:#64748b;font-size:12px">'+esc(c.note||'')+'</td>';
+      rows+='<td style="color:#64748b;font-size:12px">'+fmtShort(c.lastTs)+'</td>';
+      rows+='<td><select class="stage-sel" data-key="'+esc(c.key)+'" data-contact="'+esc(c.contact)+'" onchange="updateStage(this)">'+stageOpts+'</select></td></tr>';
+    });
+    document.getElementById('pipeline-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No contacts yet. Send some outreach first.</td></tr>';
+  }).catch(function(e){
+    document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6" class="empty">Error: '+e.message+'</td></tr>';
+  });
 }
 
-function buildConvs(emails, smsArr, replies) {
-var c = {};
-function getOrCreate(raw, defaultType) {
-if (!raw) return null;
-var k = getKey(raw);
-if (!k) return null;
-if (!c[k]) c[k] = {key:k, contact:String(raw), type:defaultType, msgs:[], lastTs:0, hasReply:false};
-return c[k];
-}
-emails.forEach(function(e) {
-var cv = getOrCreate(e.to, "email"); if (!cv) return;
-cv.msgs.push({dir:"out", type:"email", body:e.body || e.subject || "(email)", ts:e.timestamp || 0});
-if ((e.timestamp||0) > cv.lastTs) cv.lastTs = e.timestamp || 0;
-});
-smsArr.forEach(function(e) {
-var cv = getOrCreate(e.to, "sms"); if (!cv) return;
-cv.type = "sms";
-cv.msgs.push({dir:"out", type:"sms", body:e.body || "", ts:e.timestamp || 0});
-if ((e.timestamp||0) > cv.lastTs) cv.lastTs = e.timestamp || 0;
-});
-replies.forEach(function(r) {
-var isOS = r.type === "sms_reply_out", isOE = r.type === "email_reply_out", isIS = r.type === "sms_reply";
-if (isOS || isOE) {
-var cv = getOrCreate(r.to, isOS ? "sms" : "email"); if (!cv) return;
-cv.msgs.push({dir:"out", type:isOS?"sms":"email", body:r.body||"", ts:r.timestamp||0});
-if ((r.timestamp||0) > cv.lastTs) cv.lastTs = r.timestamp || 0;
-} else if (isIS) {
-var cv = getOrCreate(r.from, "sms"); if (!cv) return;
-cv.type = "sms"; cv.hasReply = true;
-cv.msgs.push({dir:"in", type:"sms", body:r.body||"", ts:r.timestamp||0});
-if ((r.timestamp||0) > cv.lastTs) cv.lastTs = r.timestamp || 0;
-} else {
-var cv = getOrCreate(r.from || r.originalTo, "email"); if (!cv) return;
-cv.hasReply = true;
-cv.msgs.push({dir:"in", type:"email", body:String(r.body||"").replace(/<[^>]+>/g,"").trim(), ts:r.timestamp||0});
-if ((r.timestamp||0) > cv.lastTs) cv.lastTs = r.timestamp || 0;
-}
-});
-Object.values(c).forEach(function(cv) {
-cv.msgs.sort(function(a,b){return a.ts-b.ts;});
-cv.lastMsg = cv.msgs[cv.msgs.length-1];
-cv.inCount = cv.msgs.filter(function(m){return m.dir==="in";}).length;
-});
-return c;
+window.updateStage=function(sel){
+  var key=sel.dataset.key;
+  var contact=sel.dataset.contact;
+  var stage=sel.value;
+  fetch('/api/pipeline',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:REPLY_KEY,contact:contact,stage:stage})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      // Update pill in same row
+      var row=sel.closest('tr');
+      if(row){var pill=row.querySelector('.stage-pill');if(pill){pill.className='stage-pill stage-'+stage;pill.textContent=STAGE_LABELS[stage]||stage;}}
+      // Recount bar
+      if(pipelineData[key])pipelineData[key].stage=stage;
+      var counts={};STAGES.forEach(function(s){counts[s]=0;});
+      Object.values(pipelineData).forEach(function(c){counts[c.stage||'contacted']=(counts[c.stage||'contacted']||0)+1;});
+      var barHtml='';STAGES.forEach(function(s){barHtml+='<div class="ph-step"><div class="ph-num">'+counts[s]+'</div><div class="ph-lbl">'+STAGE_LABELS[s]+'</div></div>';});
+      document.getElementById('pipeline-bar').innerHTML=barHtml;
+    }
+  }).catch(function(){});
+};
+
+function lperf(){
+  Promise.all([
+    fetch('/api/logs?type=stats').then(function(r){return r.json();}),
+    fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
+    fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();}),
+    fetch('/api/pipeline?key='+REPLY_KEY).then(function(r){return r.json();})
+  ]).then(function(res){
+    var s=res[0]||{};
+    var emails=Array.isArray(res[1])?res[1]:[];
+    var sms=Array.isArray(res[2])?res[2]:[];
+    var pipeline=res[3]||{};
+
+    var totalEmails=s.totalEmailSent||0;
+    var totalSms=s.totalSmsSent||0;
+    var total=totalEmails+totalSms;
+    var totalReplies=(s.emailReplies||0)+(s.smsReplies||0);
+    var replyRate=total>0?Math.round((totalReplies/total)*1000)/10:0;
+
+    // Pipeline conversion
+    var pipeArr=Object.values(pipeline);
+    var clients=pipeArr.filter(function(c){return c.stage==='client';}).length;
+    var allLeads=pipeArr.length;
+    var convRate=allLeads>0?Math.round((clients/allLeads)*1000)/10:0;
+    var interested=pipeArr.filter(function(c){return['interested','meeting_booked','client'].includes(c.stage);}).length;
+    var intRate=allLeads>0?Math.round((interested/allLeads)*1000)/10:0;
+
+    document.getElementById('p-total').textContent=total.toLocaleString();
+    document.getElementById('p-rrate').textContent=replyRate+'%';
+    document.getElementById('p-rrate-sub').textContent=totalReplies+' replies / '+total+' sent';
+    document.getElementById('p-conv').textContent=convRate+'%';
+    document.getElementById('p-pipe').textContent=intRate+'%';
+
+    // Best method
+    var emailReplied=emails.filter(function(e){return e.replied;}).length;
+    var smsReplied=sms.filter(function(e){return e.replied;}).length;
+    var emailRate=totalEmails>0?emailReplied/totalEmails:0;
+    var smsRate=totalSms>0?smsReplied/totalSms:0;
+    var maxRate=Math.max(emailRate,smsRate,0.001);
+    document.getElementById('mf-email').style.width=Math.round((emailRate/maxRate)*100)+'%';
+    document.getElementById('mf-sms').style.width=Math.round((smsRate/maxRate)*100)+'%';
+    document.getElementById('mp-email').textContent=totalEmails>0?Math.round(emailRate*1000)/10+'%':'-';
+    document.getElementById('mp-sms').textContent=totalSms>0?Math.round(smsRate*1000)/10+'%':'-';
+    var winner=emailRate>smsRate?'Email is currently driving more replies ('+Math.round(emailRate*1000)/10+'% vs '+Math.round(smsRate*1000)/10+'%)':'SMS is currently driving more replies ('+Math.round(smsRate*1000)/10+'% vs '+Math.round(emailRate*1000)/10+'%)';
+    document.getElementById('method-winner').textContent=winner;
+
+    // Funnel chart
+    var stageCounts={};STAGES.forEach(function(s){stageCounts[s]=0;});
+    pipeArr.forEach(function(c){stageCounts[c.stage||'contacted']=(stageCounts[c.stage||'contacted']||0)+1;});
+    var maxCount=Math.max.apply(null,Object.values(stageCounts))||1;
+    var funnelHtml='';
+    STAGES.forEach(function(s){
+      var cnt=stageCounts[s];
+      var pct=Math.round((cnt/maxCount)*100);
+      var colors={'new_lead':'#475569','contacted':'#60a5fa','replied':'#a78bfa','interested':'#4ade80','meeting_booked':'#fb923c','client':'#22c55e','lost':'#f87171'};
+      funnelHtml+='<div style="margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px">';
+      funnelHtml+='<div style="width:110px;font-size:12px;color:#94a3b8;text-align:right">'+STAGE_LABELS[s]+'</div>';
+      funnelHtml+='<div style="flex:1;background:#1e2235;border-radius:4px;height:20px;overflow:hidden">';
+      funnelHtml+='<div style="width:'+pct+'%;height:100%;background:'+colors[s]+';border-radius:4px;transition:width .4s"></div></div>';
+      funnelHtml+='<div style="width:30px;font-size:12px;color:#64748b">'+cnt+'</div></div></div>';
+    });
+    document.getElementById('funnel-chart').innerHTML=funnelHtml||'<div class="empty">No pipeline data yet.</div>';
+  }).catch(function(e){console.error('perf error',e);});
 }
 
-function lconvs() {
-document.getElementById("conv-list").innerHTML = '<div class="empty">Loading...</div>';
-Promise.all([
-fetch("/api/logs?type=emails&limit=500").then(function(r){return r.json();}),
-fetch("/api/logs?type=sms&limit=500").then(function(r){return r.json();}),
-fetch("/api/logs?type=replies&limit=200").then(function(r){return r.json();})
-]).then(function(res) {
-var emails = Array.isArray(res[0]) ? res[0] : [];
-var smsArr = Array.isArray(res[1]) ? res[1] : [];
-var reps = Array.isArray(res[2]) ? res[2] : [];
-convData = buildConvs(emails, smsArr, reps);
-renderList();
-var tot = Object.values(convData).filter(function(cv){return cv.hasReply;}).length;
-var b = document.getElementById("rbadge");
-b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
-}).catch(function() {
-document.getElementById("conv-list").innerHTML = '<div class="empty">Error loading</div>';
-});
+function lschedule(){
+  var now=new Date();var utcH=now.getUTCHours();var utcM=now.getUTCMinutes();
+  var nextIdx=-1;
+  for(var i=0;i<RUNS_UTC.length;i++){if(RUNS_UTC[i]>utcH||(RUNS_UTC[i]===utcH&&utcM<5)){nextIdx=i;break;}}
+  var isTomorrow=nextIdx===-1;if(isTomorrow)nextIdx=0;
+  var runsHtml='<div class="run-grid">';
+  for(var i=0;i<RUNS_MDT.length;i++){
+    var isNext=i===nextIdx;
+    runsHtml+='<div class="run-box'+(isNext?' next-run':'')+'">';
+    runsHtml+='<div class="run-time">'+RUNS_MDT[i]+'</div>';
+    runsHtml+='<div class="run-utc">UTC '+RUNS_UTC[i]+':00</div>';
+    runsHtml+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">';
+    runsHtml+='<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">SMS</span><span style="color:#a78bfa;font-weight:600">'+SMS_PER_RUN+'</span></div>';
+    runsHtml+='<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Email</span><span style="color:#60a5fa;font-weight:600">'+EMAIL_PER_RUN+'</span></div>';
+    runsHtml+='</div>';
+    if(isNext)runsHtml+='<div style="margin-top:8px;font-size:10px;color:#7c3aed;font-weight:600">&#9654; NEXT RUN'+(isTomorrow?' (TOMORROW)':'')+'</div>';
+    runsHtml+='</div>';
+  }
+  runsHtml+='</div>';
+  document.getElementById('sched-runs').innerHTML=runsHtml;
+  var nextUTC=RUNS_UTC[nextIdx];
+  var targetMs=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+(isTomorrow?1:0),nextUTC,0,0)).getTime();
+  var secsUntil=Math.floor((targetMs-Date.now())/1000);
+  var hUntil=Math.floor(secsUntil/3600);var mUntil=Math.floor((secsUntil%3600)/60);
+  var timeStr=hUntil>0?hUntil+'h '+mUntil+'m':mUntil+'m';
+  document.getElementById('next-run-info').innerHTML='<div style="display:flex;align-items:center;gap:16px"><div style="font-size:28px;font-weight:700;color:#a78bfa">'+RUNS_MDT[nextIdx]+'</div><div><div style="font-size:14px;color:#e2e8f0">Next automated run'+(isTomorrow?' <span style="color:#64748b">(tomorrow)</span>':'')+'</div><div style="font-size:12px;color:#64748b;margin-top:2px">In approximately '+timeStr+' &bull; 50 SMS + 25 emails</div></div></div>';
+}
+function buildConvs(emails,smsArr,replies){
+  var c={};
+  function getOrCreate(raw,defaultType){
+    if(!raw)return null;var k=getKey(raw);if(!k)return null;
+    if(!c[k])c[k]={key:k,contact:String(raw),type:defaultType,msgs:[],lastTs:0,hasReply:false};
+    return c[k];
+  }
+  emails.forEach(function(e){var cv=getOrCreate(e.to,'email');if(!cv)return;cv.msgs.push({dir:'out',type:'email',body:e.body||e.subject||'(email)',ts:e.timestamp||0});if((e.timestamp||0)>cv.lastTs)cv.lastTs=e.timestamp||0;});
+  smsArr.forEach(function(e){var cv=getOrCreate(e.to,'sms');if(!cv)return;cv.type='sms';cv.msgs.push({dir:'out',type:'sms',body:e.body||'',ts:e.timestamp||0});if((e.timestamp||0)>cv.lastTs)cv.lastTs=e.timestamp||0;});
+  replies.forEach(function(r){
+    var isOS=r.type==='sms_reply_out',isOE=r.type==='email_reply_out',isIS=r.type==='sms_reply';
+    if(isOS||isOE){var cv=getOrCreate(r.to,isOS?'sms':'email');if(!cv)return;cv.msgs.push({dir:'out',type:isOS?'sms':'email',body:r.body||'',ts:r.timestamp||0});if((r.timestamp||0)>cv.lastTs)cv.lastTs=r.timestamp||0;}
+    else if(isIS){var cv=getOrCreate(r.from,'sms');if(!cv)return;cv.type='sms';cv.hasReply=true;cv.msgs.push({dir:'in',type:'sms',body:r.body||'',ts:r.timestamp||0});if((r.timestamp||0)>cv.lastTs)cv.lastTs=r.timestamp||0;}
+    else{var cv=getOrCreate(r.from||r.originalTo,'email');if(!cv)return;cv.hasReply=true;cv.msgs.push({dir:'in',type:'email',body:String(r.body||'').replace(/<[^>]+>/g,'').trim(),ts:r.timestamp||0});if((r.timestamp||0)>cv.lastTs)cv.lastTs=r.timestamp||0;}
+  });
+  Object.values(c).forEach(function(cv){cv.msgs.sort(function(a,b){return a.ts-b.ts;});cv.lastMsg=cv.msgs[cv.msgs.length-1];cv.inCount=cv.msgs.filter(function(m){return m.dir==='in';}).length;});
+  return c;
 }
 
-function renderList() {
-var list = document.getElementById("conv-list");
-var items = Object.values(convData)
-.filter(function(cv){return cv.hasReply;})
-.sort(function(a,b){return b.lastTs - a.lastTs;});
-if (!items.length) { list.innerHTML = '<div class="empty">No replies yet</div>'; return; }
-list.innerHTML = items.map(function(cv) {
-var lastIn = null;
-for (var i = cv.msgs.length-1; i >= 0; i--) { if (cv.msgs[i].dir==="in"){lastIn=cv.msgs[i];break;} }
-var preview = lastIn ? String(lastIn.body||"").substring(0,50) : "";
-var tb = cv.type==="sms" ? '<span class="ci-badge sms">SMS</span>' : '<span class="ci-badge email">Email</span>';
-var ub = cv.inCount ? '<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?" reply":" replies")+"</span>" : "";
-return '<div class="conv-item'+(cv.key===activeKey?" active":"")+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#128465;</button>'
-+'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+"</span> "+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+"</span></div>"
-+'<div class="ci-preview">'+esc(preview)+"</div>"
-+"</div>";
-}).join("");
-if (activeKey && convData[activeKey]) openConv(activeKey);
+function lconvs(){
+  document.getElementById('conv-list').innerHTML='<div class="empty">Loading...</div>';
+  Promise.all([
+    fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
+    fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();}),
+    fetch('/api/logs?type=replies&limit=200').then(function(r){return r.json();})
+  ]).then(function(res){
+    var emails=Array.isArray(res[0])?res[0]:[];
+    var smsArr=Array.isArray(res[1])?res[1]:[];
+    var reps=Array.isArray(res[2])?res[2]:[];
+    convData=buildConvs(emails,smsArr,reps);
+    renderList();
+    var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;
+    var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';
+  }).catch(function(){document.getElementById('conv-list').innerHTML='<div class="empty">Error loading</div>';});
 }
 
-function deleteConv(key, contact) {
-if (!confirm("Delete conversation with " + contact + "?")) return;
-fetch("/api/delete-conv", {
-method: "POST",
-headers: {"Content-Type": "application/json"},
-body: JSON.stringify({contact: contact, key: REPLY_KEY})
-}).then(function(r) { return r.json(); }).then(function(d) {
-if (d.ok) {
-delete convData[key];
-if (activeKey === key) {
-activeKey = null;
-document.getElementById("conv-main").innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';
-}
-renderList();
-var tot = Object.values(convData).filter(function(cv) { return cv.hasReply; }).length;
-var b = document.getElementById("rbadge"); b.textContent = tot; b.style.display = tot ? "inline-block" : "none";
-lstats();
-} else { alert("Delete failed: " + (d.error || "Unknown")); }
-}).catch(function() { alert("Network error"); });
+function renderList(){
+  var list=document.getElementById('conv-list');
+  var items=Object.values(convData).filter(function(cv){return cv.hasReply;}).sort(function(a,b){return b.lastTs-a.lastTs;});
+  if(!items.length){list.innerHTML='<div class="empty">No replies yet</div>';return;}
+  list.innerHTML=items.map(function(cv){
+    var lastIn=null;for(var i=cv.msgs.length-1;i>=0;i--){if(cv.msgs[i].dir==='in'){lastIn=cv.msgs[i];break;}}
+    var preview=lastIn?String(lastIn.body||'').substring(0,50):'';
+    var tb=cv.type==='sms'?'<span class="ci-badge sms">SMS</span>':'<span class="ci-badge email">Email</span>';
+    var ub=cv.inCount?'<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?' reply':' replies')+'</span>':'';
+    return'<div class="conv-item'+(cv.key===activeKey?' active':'')+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#128465;</button>'+'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+'</span> '+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+'</span></div>'+'<div class="ci-preview">'+esc(preview)+'</div>'+'</div>';
+  }).join('');
+  if(activeKey&&convData[activeKey])openConv(activeKey);
 }
 
-function openConv(key) {
-if (!key) return;
-activeKey = key;
-document.querySelectorAll(".conv-item").forEach(function(el) {
-el.classList.toggle("active", el.dataset.key === key);
-});
-var cv = convData[key]; if (!cv) return;
-var isSms = cv.type === "sms";
-var main = document.getElementById("conv-main");
-var subjRow = isSms ? "" : '<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />';
-var mc = cv.msgs.length;
-main.innerHTML = '<div class="conv-header"><div class="ch-name">'+esc(cv.contact)+'</div>'
-+'<div class="ch-sub">'+(isSms?"SMS":"Email")+' &bull; '+mc+' message'+(mc!==1?'s':'')+'</div></div>'
-+'<div class="conv-messages" id="conv-msgs">'
-+cv.msgs.map(function(m) {
-var isOut = m.dir==="out";
-var body = String(m.body||"").replace(/<[^>]+>/g,"").trim()||"(empty)";
-return '<div class="msg-bw '+(isOut?"out":"in")+'"><div class="msg-b '+(isOut?"out":"in")+'">'+esc(body)+'</div>'
-+'<div class="msg-meta">'+(isOut?"You":"Them")+' &bull; '+fmt(m.ts)+'</div></div>';
-}).join("")
-+'</div>'
-+'<div class="conv-reply-box">'+subjRow
-+'<textarea id="reply-msg" placeholder="Type your reply..."></textarea>'
-+'<div class="conv-reply-actions"><button class="btn-send" id="send-btn">'+(isSms?"Send SMS":"Send Email")+'</button><span id="send-status"></span></div></div>';
-var msgs = document.getElementById("conv-msgs");
-if (msgs) msgs.scrollTop = msgs.scrollHeight;
-document.getElementById("send-btn").addEventListener("click", function() { doSend(cv, isSms?"sms":"email"); });
+function deleteConv(key,contact){
+  if(!confirm('Delete conversation with '+contact+'?'))return;
+  fetch('/api/delete-conv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact:contact,key:REPLY_KEY})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){delete convData[key];if(activeKey===key){activeKey=null;document.getElementById('conv-main').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';}renderList();var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';lstats();}
+    else alert('Delete failed: '+(d.error||'Unknown'));
+  }).catch(function(){alert('Network error');});
 }
 
-function doSend(cv, type) {
-var msgEl = document.getElementById("reply-msg");
-var msg = String(msgEl.value||"").trim();
-if (!msg) return;
-var subject = "Re: Your inquiry";
-var subEl = document.getElementById("reply-subject");
-if (subEl) subject = subEl.value || subject;
-var btn = document.getElementById("send-btn");
-var status = document.getElementById("send-status");
-btn.disabled = true; status.className = ""; status.textContent = "Sending...";
-var to = cv.contact;
-if (type === "sms" && !to.startsWith("+")) to = "+1" + normPhone(to);
-fetch("/api/reply", {
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({type:type, to:to, message:msg, subject:subject, key:REPLY_KEY})
-}).then(function(r){return r.json();}).then(function(d) {
-if (d.ok) {
-status.className=""; status.textContent="Sent!";
-msgEl.value = "";
-var msgs = document.getElementById("conv-msgs");
-if (msgs) {
-var w = document.createElement("div"); w.className = "msg-bw out";
-w.innerHTML = '<div class="msg-b out">'+esc(msg)+'</div><div class="msg-meta">You &bull; just now</div>';
-msgs.appendChild(w); msgs.scrollTop = msgs.scrollHeight;
-}
-if (convData[cv.key]) {
-convData[cv.key].msgs.push({dir:"out", type:type, body:msg, ts:Date.now()});
-convData[cv.key].lastTs = Date.now();
-renderList();
-}
-setTimeout(function(){if(status)status.textContent="";}, 3000);
-} else { status.className="send-err"; status.textContent=d.error||"Failed"; }
-btn.disabled = false;
-}).catch(function(){status.className="send-err"; status.textContent="Network error"; btn.disabled=false;});
+function openConv(key){
+  if(!key)return;activeKey=key;
+  document.querySelectorAll('.conv-item').forEach(function(el){el.classList.toggle('active',el.dataset.key===key);});
+  var cv=convData[key];if(!cv)return;
+  var isSms=cv.type==='sms';
+  var main=document.getElementById('conv-main');
+  var mc=cv.msgs.length;
+  var stageOpts=STAGES.map(function(s){var saved=pipelineData[key]||{};return'<option value="'+s+'"'+(saved.stage===s?' selected':'')+'>'+STAGE_LABELS[s]+'</option>';}).join('');
+  main.innerHTML='<div class="conv-header"><div><div class="ch-name">'+esc(cv.contact)+'</div><div class="ch-sub">'+(isSms?'SMS':'Email')+' &bull; '+mc+' message'+(mc!==1?'s':'')+'</div></div>'+'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#64748b">Stage:</span><select class="stage-sel" onchange="updateStageFromConv(this,''+esc(key)+'',''+esc(cv.contact)+'')">'+stageOpts+'</select></div></div>'+'<div class="conv-messages" id="conv-msgs">'+cv.msgs.map(function(m){var isOut=m.dir==='out';var body=String(m.body||'').replace(/<[^>]+>/g,'').trim()||'(empty)';return'<div class="msg-bw '+(isOut?'out':'in')+'"><div class="msg-b '+(isOut?'out':'in')+'">'+esc(body)+'</div><div class="msg-meta">'+(isOut?'You':'Them')+' &bull; '+fmt(m.ts)+'</div></div>';}).join('')+'</div>'+'<div class="conv-reply-box">'+(isSms?'':'<input type="text" id="reply-subject" value="Re: Your inquiry" placeholder="Subject" />')+'<textarea id="reply-msg" placeholder="Type your reply..."></textarea><div class="conv-reply-actions"><button class="btn-send" id="send-btn">'+(isSms?'Send SMS':'Send Email')+'</button><span id="send-status"></span></div></div>';
+  var msgs=document.getElementById('conv-msgs');if(msgs)msgs.scrollTop=msgs.scrollHeight;
+  document.getElementById('send-btn').addEventListener('click',function(){doSend(cv,isSms?'sms':'email');});
 }
 
-function lstats() {
-fetch("/api/logs?type=stats").then(function(r){return r.json();}).then(function(s) {
-document.getElementById("te").textContent=(s.totalEmailSent||0).toLocaleString();
-document.getElementById("ts").textContent=(s.totalSmsSent||0).toLocaleString();
-document.getElementById("tde").textContent="Today: "+(s.todayEmailSent||0);
-document.getElementById("tds").textContent="Today: "+(s.todaySmsSent||0);
-document.getElementById("tc").textContent=(s.totalCallsMade||0).toLocaleString();
-document.getElementById("tca").textContent="Answered: "+(s.totalCallsAnswered||0);
-document.getElementById("er").textContent=(s.emailReplies||0).toLocaleString();
-document.getElementById("sr").textContent=(s.smsReplies||0).toLocaleString();
-document.getElementById("un").textContent=(s.unsubscribed||0).toLocaleString();
-var days = s.dailyChart||[];
-var mx = Math.max.apply(null, days.map(function(d){return Math.max(d.emails||0,d.sms||0);})); mx=mx||1;
-var ch=document.getElementById("chart"), cl=document.getElementById("clabels");
-ch.innerHTML=""; cl.innerHTML="";
-days.forEach(function(d) {
-var eH=Math.round(((d.emails||0)/mx)*100), sH=Math.round(((d.sms||0)/mx)*100);
-var g=document.createElement("div"); g.className="bg";
-g.innerHTML='<div class="bar eb" style="height:'+eH+'%"></div><div class="bar sb" style="height:'+sH+'%"></div>';
-ch.appendChild(g);
-var l=document.createElement("div"); l.className="cl"; l.textContent=d.date.slice(5); cl.appendChild(l);
-});
-}).catch(function(e){console.error(e);});
+window.updateStageFromConv=function(sel,key,contact){
+  var stage=sel.value;
+  fetch('/api/pipeline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:REPLY_KEY,contact:contact,stage:stage})})
+    .then(function(r){return r.json();}).then(function(d){if(d.ok&&pipelineData[key])pipelineData[key].stage=stage;}).catch(function(){});
+};
+
+function doSend(cv,type){
+  var msgEl=document.getElementById('reply-msg');var msg=String(msgEl.value||'').trim();if(!msg)return;
+  var subject='Re: Your inquiry';var subEl=document.getElementById('reply-subject');if(subEl)subject=subEl.value||subject;
+  var btn=document.getElementById('send-btn');var status=document.getElementById('send-status');
+  btn.disabled=true;status.className='';status.textContent='Sending...';
+  var to=cv.contact;if(type==='sms'&&!to.startsWith('+'))to='+1'+normPhone(to);
+  fetch('/api/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,to:to,message:msg,subject:subject,key:REPLY_KEY})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){status.className='';status.textContent='Sent!';msgEl.value='';var msgs=document.getElementById('conv-msgs');if(msgs){var w=document.createElement('div');w.className='msg-bw out';w.innerHTML='<div class="msg-b out">'+esc(msg)+'</div><div class="msg-meta">You &bull; just now</div>';msgs.appendChild(w);msgs.scrollTop=msgs.scrollHeight;}if(convData[cv.key]){convData[cv.key].msgs.push({dir:'out',type:type,body:msg,ts:Date.now()});convData[cv.key].lastTs=Date.now();renderList();}setTimeout(function(){if(status)status.textContent='';},3000);}
+    else{status.className='send-err';status.textContent=d.error||'Failed';}
+    btn.disabled=false;
+  }).catch(function(){status.className='send-err';status.textContent='Network error';btn.disabled=false;});
 }
 
-function le() {
-fetch("/api/logs?type=emails&limit=100").then(function(r){return r.json();}).then(function(emails) {
-var rows="";
-emails.forEach(function(e,i) {
-var xid="xem"+i;
-var rawBody=String(e.body||"").replace(/<[^>]+>/g,"").trim();
-rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||"-")+"</td><td>"+esc(e.subject||"(no subject)")+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+"</td><td>"+(e.segment||"-")+"</td><td>"+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?"br":"bs")+'">'+(e.replied?"Replied":"Sent")+"</span></td></tr>";
-rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">'+esc(rawBody||"(not stored)")+"</div></td></tr>";
-});
-document.getElementById("email-tbody").innerHTML=rows||'<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
-}).catch(function(e){console.error(e);});
+function lstats(){
+  fetch('/api/logs?type=stats').then(function(r){return r.json();}).then(function(s){
+    document.getElementById('te').textContent=(s.totalEmailSent||0).toLocaleString();
+    document.getElementById('ts').textContent=(s.totalSmsSent||0).toLocaleString();
+    document.getElementById('tde').textContent='Today: '+(s.todayEmailSent||0);
+    document.getElementById('tds').textContent='Today: '+(s.todaySmsSent||0);
+    document.getElementById('er').textContent=(s.emailReplies||0).toLocaleString();
+    document.getElementById('sr').textContent=(s.smsReplies||0).toLocaleString();
+    document.getElementById('un').textContent=(s.unsubscribed||0).toLocaleString();
+    var days=s.dailyChart||[];
+    var mx=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0);}));mx=mx||1;
+    var ch=document.getElementById('chart'),cl=document.getElementById('clabels');ch.innerHTML='';cl.innerHTML='';
+    days.forEach(function(d){
+      var eH=Math.round(((d.emails||0)/mx)*100),sH=Math.round(((d.sms||0)/mx)*100);
+      var g=document.createElement('div');g.className='bg';g.innerHTML='<div class="bar eb" style="height:'+eH+'%"></div><div class="bar sb" style="height:'+sH+'%"></div>';ch.appendChild(g);
+      var l=document.createElement('div');l.className='cl';l.textContent=d.date.slice(5);cl.appendChild(l);
+    });
+  }).catch(function(e){console.error(e);});
 }
 
-function ls() {
-fetch("/api/logs?type=sms&limit=100").then(function(r){return r.json();}).then(function(sms) {
-var rows="";
-sms.forEach(function(e,i) {
-var xid="xsms"+i;
-var rawBody=String(e.body||"").trim();
-rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||"-")+"</td><td>"+esc(rawBody.substring(0,60))+(rawBody.length>60?"...":"")+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+"</td><td>"+(e.segment||"-")+"</td><td>"+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?"br":"bsm")+'">'+(e.replied?"Replied":"Sent")+"</span></td></tr>";
-rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">'+esc(rawBody||"(empty)")+"</div></td></tr>";
-});
-document.getElementById("sms-tbody").innerHTML=rows||'<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
-}).catch(function(e){console.error(e);});
+function le(){
+  fetch('/api/logs?type=emails&limit=100').then(function(r){return r.json();}).then(function(emails){
+    var rows='';
+    emails.forEach(function(e,i){var xid='xem'+i;var rawBody=String(e.body||'').replace(/<[^>]+>/g,'').trim();
+    rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(e.subject||'(no subject)')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bs')+'">'+(e.replied?'Replied':'Sent')+'</span></td></tr>';
+    rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">'+esc(rawBody||'(not stored)')+'</div></td></tr>';
+    });
+    document.getElementById('email-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
+  }).catch(function(e){console.error(e);});
 }
 
-document.addEventListener("click", function(e) {
-var dr = e.target.closest("tr.data-row");
-if (dr) {
-var xid=dr.dataset.xid; if(!xid)return;
-var xr=document.getElementById(xid); if(!xr)return;
-xr.classList.toggle("open"); dr.classList.toggle("row-open");
+function ls(){
+  fetch('/api/logs?type=sms&limit=100').then(function(r){return r.json();}).then(function(sms){
+    var rows='';
+    sms.forEach(function(e,i){var xid='xsms'+i;var rawBody=String(e.body||'').trim();
+    rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(rawBody.substring(0,60))+(rawBody.length>60?'..':'')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bsm')+'">'+(e.replied?'Replied':'Sent')+'</span></td></tr>';
+    rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">'+esc(rawBody||'(empty)')+'</div></td></tr>';
+    });
+    document.getElementById('sms-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
+  }).catch(function(e){console.error(e);});
 }
+
+document.addEventListener('click',function(e){
+  var dr=e.target.closest('tr.data-row');
+  if(dr){var xid=dr.dataset.xid;if(!xid)return;var xr=document.getElementById(xid);if(!xr)return;xr.classList.toggle('open');dr.classList.toggle('row-open');}
 });
 
 lstats();
-setInterval(function() {
-lstats();
-if (cp === "conversations") lconvs();
-if (cp === "calls") lcalls();
-if (cp === "schedule") lschedule();
-}, 15000);
 })();
 </script>
 </body>
