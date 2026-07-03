@@ -96,8 +96,8 @@ function cleanPlaceholders(text) {
     .replace(/\[your company\]/gi, 'Ascend Web Development')
     .replace(/\[company name\]/gi, 'Ascend Web Development')
     .replace(/\[your (?:phone|number|email|website|link|url)[^\]]*\]/gi, '')
-    .replace(/\[[^\]{1,40}\]/g, '')
-    .trim();
+            .replace(/\[[^\]]{1,40}\]/g, '')
+        .trim();
 }
 
 async function fetchOutscraperLeads(query, limit) {
