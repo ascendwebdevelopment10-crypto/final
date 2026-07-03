@@ -13,7 +13,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
-const EMAIL_CAP = 30;
+const EMAIL_CAP = 6;
 const SMS_CAP = 30;
 const FETCH_LIMIT = 15;
 
