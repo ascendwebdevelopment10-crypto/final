@@ -160,24 +160,10 @@ async function generateEmail(contact, segment) {
 }
 
 async function generateSms(contact, segment) {
-  const service = pickService();
-  const firstName = contact.first_name || 'there';
-  const company = contact.organization_name || 'your business';
-  const industry = contact.industry || 'your industry';
-  const serviceDesc = service === 'website'
-    ? 'websites that rank higher on Google and pull in more local customers'
-    : service === 'ads'
-    ? 'Google and Meta ads that bring paying customers through the door'
-    : 'custom mobile apps with online booking and loyalty features that keep customers coming back';
-  const benefitHint = service === 'website'
-    ? 'more people finding you online'
-    : service === 'ads'
-    ? 'more paying customers'
-    : 'easier bookings and repeat visits';
-  const prompt = `Write a natural, human-sounding cold SMS to ${firstName} at ${company}${segment === 'no_website' ? ' (they have no website)' : ' in the ' + industry + ' industry'}. You are Ty Smith, owner of Ascend Web Development. We build ${serviceDesc}. The message should feel like it came from a real person - not a marketing bot. Mention a specific reason they would benefit (${benefitHint}). Keep the message body under 250 characters. End with a casual soft question like "Worth a quick chat?" or "Would that be useful for you?" or "Open to hearing more?". Do NOT include any sign-off or name — that will be added automatically. No emojis. No brackets or placeholders. Output ONLY the SMS body text.`;
-  const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 200, messages: [{ role: 'user', content: prompt }] });
-  const msgBody = cleanPlaceholders(msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim());
-  return { text: msgBody + SMS_SIGNOFF, service };
+    const company = contact.organization_name || 'your business';
+    const service = pickService();
+    const msgBody = `Hey! is this ${company}?`;
+    return { text: msgBody, service };
 }
 
 async function generateFollowUpSms(contact) {
