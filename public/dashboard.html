@@ -210,14 +210,20 @@ tr.data-row:hover td{background:#1e2235}
 
 <div class="page" id="page-schedule">
 <div class="section" style="margin-bottom:24px">
-<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">4 runs/day &bull; MDT (UTC-6)</span></h2>
+<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">8 runs/day &bull; MDT (UTC-6)</span></h2>
 <div id="sched-runs"></div>
 <div style="margin-top:20px">
-<div style="font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Daily Totals</div>
+<div style="font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Daily Goals (Cap)</div>
 <div class="daily-total">
-<div class="dt-item"><div class="dt-num">200</div><div class="dt-lbl">SMS / day</div></div>
-<div class="dt-item"><div class="dt-num">100</div><div class="dt-lbl">Emails / day</div></div>
-<div class="dt-item"><div class="dt-num">300</div><div class="dt-lbl">Total / day</div></div>
+<div class="dt-item"><div class="dt-num">240</div><div class="dt-lbl">SMS / day</div></div>
+<div class="dt-item"><div class="dt-num">96</div><div class="dt-lbl">Emails / day</div></div>
+<div class="dt-item"><div class="dt-num">336</div><div class="dt-lbl">Total / day</div></div>
+</div>
+<div style="font-size:12px;color:#64748b;margin-top:16px;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Actually Sent Today</div>
+<div class="daily-total">
+<div class="dt-item"><div class="dt-num" id="sched-sms-today">-</div><div class="dt-lbl">SMS sent</div></div>
+<div class="dt-item"><div class="dt-num" id="sched-email-today">-</div><div class="dt-lbl">Emails sent</div></div>
+<div class="dt-item"><div class="dt-num" id="sched-total-today">-</div><div class="dt-lbl">Total sent</div></div>
 </div>
 </div>
 </div>
@@ -231,9 +237,9 @@ var convData={};
 var activeKey=null;
 var pipelineData={};
 var REPLY_KEY='818d2219a6c0933634759420d9879c9a561282f1855378759eedf95f05d91718';
-var RUNS_UTC=[14,17,20,23];
-var RUNS_MDT=['8:00 AM','11:00 AM','2:00 PM','5:00 PM'];
-var SMS_PER_RUN=50,EMAIL_PER_RUN=25;
+var RUNS_UTC=[13,14,15,17,20,21,23,0];
+var RUNS_MDT=['7:00 AM','8:00 AM','9:00 AM','11:00 AM','2:00 PM','3:00 PM','5:00 PM','6:00 PM'];
+var SMS_PER_RUN=30,EMAIL_PER_RUN=12;
 var STAGES=['new_lead','contacted','replied','interested','meeting_booked','client','lost'];
 var STAGE_LABELS={'new_lead':'New Lead','contacted':'Contacted','replied':'Replied','interested':'Interested','meeting_booked':'Meeting Booked','client':'Client','lost':'Lost'};
 
@@ -515,7 +521,13 @@ function lschedule(){
   var secsUntil=Math.floor((targetMs-Date.now())/1000);
   var hUntil=Math.floor(secsUntil/3600);var mUntil=Math.floor((secsUntil%3600)/60);
   var timeStr=hUntil>0?hUntil+'h '+mUntil+'m':mUntil+'m';
-  document.getElementById('next-run-info').innerHTML='<div style="display:flex;align-items:center;gap:16px"><div style="font-size:28px;font-weight:700;color:#a78bfa">'+RUNS_MDT[nextIdx]+'</div><div><div style="font-size:14px;color:#e2e8f0">Next automated run'+(isTomorrow?' <span style="color:#64748b">(tomorrow)</span>':'')+'</div><div style="font-size:12px;color:#64748b;margin-top:2px">In approximately '+timeStr+' &bull; 50 SMS + 25 emails</div></div></div>';
+  fetch('/api/logs?type=stats').then(function(r){return r.json();}).then(function(s){
+var todaySms=s.todaySmsSent||0;var todayEmail=s.todayEmailSent||0;
+document.getElementById('sched-sms-today').textContent=todaySms;
+document.getElementById('sched-email-today').textContent=todayEmail;
+document.getElementById('sched-total-today').textContent=todaySms+todayEmail;
+}).catch(function(){});
+document.getElementById('next-run-info').innerHTML='<div style="display:flex;align-items:center;gap:16px"><div style="font-size:28px;font-weight:700;color:#a78bfa">'+RUNS_MDT[nextIdx]+'</div><div><div style="font-size:14px;color:#e2e8f0">Next automated run'+(isTomorrow?' <span style="color:#64748b">(tomorrow)</span>':'')+'</div><div style="font-size:12px;color:#64748b;margin-top:2px">In approximately '+timeStr+' &bull; 30 SMS + 12 emails</div></div></div>';
 }
 function buildConvs(emails,smsArr,replies){
   var c={};
