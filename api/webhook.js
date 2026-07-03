@@ -22,7 +22,7 @@ export default async function handler(req, res) {
             // 2. Forward to your inbox so you see it directly
             await resend.emails.send({
                       from: 'info@ascendwebdevelopment.com',
-                      to: FORWARD_TO_EMAIL,
+                      to: [FORWARD_TO_EMAIL, 'tysmith327@icloud.com'],
                       subject: 'Reply: ' + subject,
                       html: '<p><strong>From:</strong> ' + from + '</p><p><strong>Subject:</strong> ' + subject + '</p><hr/>' + body,
                       reply_to: from
