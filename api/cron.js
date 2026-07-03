@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed, getSmsLog } from '../lib/store.js';
+import { kv } from '@vercel/kv';
 
 export const config = { maxDuration: 300 };
 
@@ -62,7 +63,7 @@ const HIGH_RESPONSE_QUERIES = [
   'catering company',
 ];
 
-// Rotate cities for geographic spread
+// 55 cities — major metros + high-density secondary markets for max lead volume
 const US_CITIES = [
   'New York NY','Los Angeles CA','Chicago IL','Houston TX','Phoenix AZ',
   'Philadelphia PA','San Antonio TX','San Diego CA','Dallas TX','San Jose CA',
@@ -73,7 +74,9 @@ const US_CITIES = [
   'Tucson AZ','Fresno CA','Sacramento CA','Mesa AZ','Kansas City MO',
   'Atlanta GA','Omaha NE','Colorado Springs CO','Raleigh NC','Miami FL',
   'Minneapolis MN','Tampa FL','New Orleans LA','Cleveland OH','Bakersfield CA',
-  'Aurora CO','Anaheim CA','Corpus Christi TX','Riverside CA','St Louis MO'
+  'Aurora CO','Anaheim CA','Corpus Christi TX','Riverside CA','St Louis MO',
+  // 5 additional high-density secondary metros
+  'Pittsburgh PA','Orlando FL','Scottsdale AZ','Salt Lake City UT','Richmond VA',
 ];
 
 const SERVICES = ['website', 'ads', 'app'];
@@ -186,6 +189,23 @@ async function generateFollowUpSms(contact) {
   return msgBody + SMS_SIGNOFF;
 }
 
+// Mark original SMS entry as followedUp so it won't be picked up again
+async function markFollowedUp(phone) {
+  try {
+    const smsLog = await kv.lrange('sms:log', 0, 999);
+    const parsed = smsLog.map(r => typeof r === 'string' ? JSON.parse(r) : r);
+    const updated = parsed.map(e =>
+      (e.to === phone && e.type === 'sms' && !e.followedUp && e.segment !== 'auto_reply')
+        ? { ...e, followedUp: true }
+        : e
+    );
+    await kv.del('sms:log');
+    for (const e of updated.reverse()) await kv.lpush('sms:log', JSON.stringify(e));
+  } catch (e) {
+    console.error('markFollowedUp error:', e.message);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') { res.status(405).end('Method not allowed'); return; }
   const auth = req.headers['authorization'];
@@ -212,7 +232,10 @@ export default async function handler(req, res) {
           const contactObj = { first_name: (lead.contactName || '').split(' ')[0] || 'there', organization_name: lead.contactName || '' };
           const followUpText = await generateFollowUpSms(contactObj);
           await twilioClient.messages.create({ body: followUpText, from: TWILIO_FROM, to: lead.to });
+          // Log the follow-up as a new SMS entry
           await logSms({ to: lead.to, body: followUpText, contactName: lead.contactName, timestamp: Date.now(), segment: lead.segment || 'followup', service: lead.service || 'website', isFollowUp: true });
+          // CRITICAL: Mark original entry as followedUp so it won't trigger again
+          await markFollowedUp(lead.to);
           followupSent++;
         } catch (e) { errors.push({ type: 'followup_sms', error: e.message }); }
       }
