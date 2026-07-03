@@ -1,6 +1,9 @@
 import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
+import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
+const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
 const FORWARD_TO = '+13854716500';
 const SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
@@ -190,6 +193,14 @@ export default async function handler(req, res) {
 
   // 5. Send push notification to phone (ntfy.sh) — fires for every real reply
   await sendPushNotification(from, body, contactName);
+  try {
+    await resend.emails.send({
+      from: 'info@ascendwebdevelopment.com',
+      to: NOTIFY_EMAIL,
+      subject: `New SMS reply from ${contactName || from}`,
+      html: `<p><strong>From:</strong> ${contactName || from} (${from})</p><hr/><p>${body}</p>`
+    });
+  } catch (e) { console.error('SMS email notify error:', e.message); }
 
   // 6. Send ONE auto-reply only — never again after that
   const replyType = classifyReply(body);
