@@ -570,8 +570,8 @@ function renderList(){
   var items=Object.values(convData).filter(function(cv){return cv.hasReply;}).sort(function(a,b){return b.lastTs-a.lastTs;});
   if(!items.length){list.innerHTML='<div class="empty">No replies yet</div>';return;}
   list.innerHTML=items.map(function(cv){
-    var lastIn=null;for(var i=cv.msgs.length-1;i>=0;i--){if(cv.msgs[i].dir==='in'){lastIn=cv.msgs[i];break;}}
-    var preview=lastIn?String(lastIn.body||'').substring(0,50):'';
+    var lastMsg=cv.msgs[cv.msgs.length-1];
+    var preview=lastMsg?(lastMsg.dir==='out'?'You: ':'')+String(lastMsg.body||'').substring(0,50):'';
     var tb=cv.type==='sms'?'<span class="ci-badge sms">SMS</span>':'<span class="ci-badge email">Email</span>';
     var ub=cv.inCount?'<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?' reply':' replies')+'</span>':'';
     return'<div class="conv-item'+(cv.key===activeKey?' active':'')+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#128465;</button>'+'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+'</span> '+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+'</span></div>'+'<div class="ci-preview">'+esc(preview)+'</div>'+'</div>';
