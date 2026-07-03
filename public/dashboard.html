@@ -60,6 +60,10 @@ tr.data-row:hover td{background:#1e2235}
 .stage-new_lead{background:#1e2235;color:#94a3b8}.stage-contacted{background:#1e3a5f;color:#60a5fa}.stage-replied{background:#3b0764;color:#a78bfa}.stage-interested{background:#1a3a2a;color:#4ade80}.stage-meeting_booked{background:#422006;color:#fb923c}.stage-client{background:#14532d;color:#4ade80}.stage-lost{background:#450a0a;color:#f87171}
 .stage-sel{background:#1a1d2e;border:1px solid #2d3148;color:#e2e8f0;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer}
 .stage-sel option{background:#1a1d2e}
+.reply-link{color:#4ade80;text-decoration:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:#1a3a2a;border:1px solid #166534;cursor:pointer;white-space:nowrap}
+.reply-link:hover{background:#166534;color:#86efac}
+.pipe-row-replied td{background:#0d1f17 !important}
+.pipe-row-replied:hover td{background:#0f2d1e !important}
 .conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
 .conv-sidebar{width:300px;border-right:1px solid #2d3148;display:flex;flex-direction:column;flex-shrink:0}
 .conv-search{padding:12px;border-bottom:1px solid #2d3148}
@@ -343,7 +347,7 @@ function lpipeline(){
     var rows='';
     sorted.forEach(function(c){
       var stageOpts=STAGES.map(function(s){return'<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+STAGE_LABELS[s]+'</option>';}).join('');
-      rows+='<tr><td>'+esc(c.contact)+'</td><td><span class="ci-badge '+(c.type||'email')+'" style="font-size:11px;padding:2px 6px">'+esc(c.type||'email')+'</span></td>';
+      rows+='<tr'+(c.replied?' class="pipe-row-replied"':'')+' ><td>'+esc(c.contact)+'</td><td><span class="ci-badge '+(c.type||'email')+'" style="font-size:11px;padding:2px 6px">'+esc(c.type||'email')+'</span></td>';
       rows+='<td>'+stagePill(c.stage)+'</td>';
       rows+='<td style="color:#64748b;font-size:12px">'+esc(c.note||'')+'</td>';
       rows+='<td style="color:#64748b;font-size:12px">'+fmtShort(c.lastTs)+'</td>';
@@ -355,6 +359,51 @@ function lpipeline(){
   });
 }
 
+window.goToConv=function(contact){
+// Switch to conversations tab and open this contact
+document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active');});
+document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active');});
+document.getElementById('page-conversations').classList.add('active');
+var btn=document.querySelector('.nav-btn[data-page="conversations"]');if(btn)btn.classList.add('active');
+// Load convs if not already loaded, then open
+if(Object.keys(convData).length===0){
+  lconvs_then(contact);
+} else {
+  openConvByContact(contact);
+}
+};
+function lconvs_then(target){
+Promise.all([
+fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
+fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();}),
+fetch('/api/logs?type=replies&limit=200').then(function(r){return r.json();})
+]).then(function(res){
+var emails=Array.isArray(res[0])?res[0]:[];
+var smsArr=Array.isArray(res[1])?res[1]:[];
+var reps=Array.isArray(res[2])?res[2]:[];
+convData=buildConvs(emails,smsArr,reps);
+renderList();
+var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;
+var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';
+if(target)openConvByContact(target);
+}).catch(function(){document.getElementById('conv-list').innerHTML='<div class="empty">Error loading</div>';});
+}
+function openConvByContact(contact){
+var k=getKey(contact);
+// Try exact key first, then fuzzy match
+var cv=convData[k];
+if(!cv){
+  // Try finding by contact string
+  var found=Object.values(convData).find(function(c){return c.contact===contact||getKey(c.contact)===k;});
+  if(found)cv=found;
+}
+if(cv){openConv(cv.key);}
+else{
+  // Show message that no conversation found yet
+  var main=document.getElementById('conv-main');
+  if(main)main.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569;gap:12px"><div style="font-size:48px">&#128172;</div><p>No conversation found for '+esc(contact)+'</p><p style="font-size:12px">They may have replied by email — check your inbox.</p></div>';
+}
+}
 window.updateStage=function(sel){
   var key=sel.dataset.key;
   var contact=sel.dataset.contact;
