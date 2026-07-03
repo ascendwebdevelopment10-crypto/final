@@ -166,13 +166,19 @@ async function generateSms(contact, segment) {
     return { text: msgBody, service };
 }
 
-async function generateFollowUpSms(contact) {
-  const firstName = contact.first_name || 'there';
-  const company = contact.organization_name || 'your business';
-  const prompt = `Write a very short, casual follow-up SMS body (under 150 characters) to ${firstName} at ${company}. You are Ty Smith, owner of Ascend Web Development. We reached out a few days ago about web/digital services and never heard back. Keep it light - just checking in, no pressure, don't repeat the pitch. End with one easy soft question. Do NOT include any sign-off or name — that will be added automatically. No emojis. Output ONLY the body text.`;
-  const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 100, messages: [{ role: 'user', content: prompt }] });
-  const msgBody = cleanPlaceholders(msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim());
-  return msgBody + SMS_SIGNOFF;
+async function generateFollowUpSms(contact, service) {
+    const firstName = contact.first_name || 'there';
+    const company = contact.organization_name || 'your business';
+    const svc = service || pickService();
+    const serviceDesc = svc === 'website'
+      ? 'a website built to rank on Google and turn visitors into paying customers'
+          : svc === 'ads'
+      ? 'targeted Google and Meta ad campaigns that bring paying customers straight to you'
+          : 'a custom mobile app with online booking and loyalty rewards that keeps customers coming back';
+    const prompt = `Write a short, casual follow-up SMS (under 200 characters) to ${firstName} at ${company}. You are Ty Smith, owner of Ascend Web Development. We reached out a few days ago and never heard back. Do NOT ask for a call, meeting, or chat of any kind. Instead, briefly and convincingly describe the specific outcome we'd help them get: ${serviceDesc}. Be concrete and specific, not vague "grow your business" language. End with one low-pressure question inviting them to see an example or learn more - never "hop on a call" or "quick call". Do NOT include any sign-off or name — that will be added automatically. No emojis. Output ONLY the body text.`;
+    const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 120, messages: [{ role: 'user', content: prompt }] });
+    const msgBody = cleanPlaceholders(msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim());
+    return msgBody + SMS_SIGNOFF;
 }
 
 // Mark original SMS entry as followedUp so it won't be picked up again
@@ -216,7 +222,7 @@ export default async function handler(req, res) {
       for (const lead of followupCandidates) {
         try {
           const contactObj = { first_name: (lead.contactName || '').split(' ')[0] || 'there', organization_name: lead.contactName || '' };
-          const followUpText = await generateFollowUpSms(contactObj);
+          const followUpText = await generateFollowUpSms(contactObj, lead.service);
           await twilioClient.messages.create({ body: followUpText, from: TWILIO_FROM, to: lead.to });
           // Log the follow-up as a new SMS entry
           await logSms({ to: lead.to, body: followUpText, contactName: lead.contactName, timestamp: Date.now(), segment: lead.segment || 'followup', service: lead.service || 'website', isFollowUp: true });
