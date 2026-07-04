@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Ascend Outreach Dashboard</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh}
 .header{background:#1a1d2e;border-bottom:1px solid #2d3148;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 20px rgba(0,0,0,.3)}
-.header h1{font-size:20px;font-weight:700;color:#7c3aed;letter-spacing:-0.3px}
+.header h1{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;letter-spacing:-0.3px;background:linear-gradient(120deg,#a78bfa,#f5b95d);-webkit-background-clip:text;background-clip:text;color:transparent}
 .badge-live{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600;letter-spacing:.05em}
 .nav{background:#1a1d2e;border-bottom:1px solid #2d3148;padding:0 32px;display:flex;gap:4px}
 .nav-btn{padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#64748b;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}
@@ -123,11 +124,25 @@ tr.data-row:hover td{background:#1e2235}
 .run-box.next-run .run-time{color:#a78bfa}
 .daily-total{display:flex;align-items:center;gap:16px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2d3148}
 .dt-item{text-align:center;flex:1}.dt-num{font-size:24px;font-weight:700;color:#a78bfa}.dt-lbl{font-size:11px;color:#64748b;margin-top:2px}
+.header{position:relative}
+.header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,#7c3aed,#f5b95d,#7c3aed);opacity:.8}
+.page{opacity:0;transform:translateY(6px);transition:opacity .25s ease,transform .25s ease;pointer-events:none}
+.page.active{display:block;opacity:1;transform:translateY(0);pointer-events:auto}
+.stat-card,.run-box,.sched-card,.conv-item{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.stat-card:hover,.run-box:hover{transform:translateY(-3px);border-color:#7c3aed;box-shadow:0 8px 24px rgba(124,58,237,.18)}
+.nav-btn{transition:color .15s ease,border-color .15s ease}
+  .loading-wrap{display:flex;align-items:center;justify-content:center;padding:48px 0;gap:12px;color:#64748b;font-size:13px}
+  .spinner{width:22px;height:22px;border-radius:50%;border:3px solid #2d3148;border-top-color:#7c3aed;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-state{display:flex;align-items:center;gap:10px;background:#2a1416;border:1px solid #7f1d1d;color:#fca5a5;padding:14px 16px;border-radius:8px;font-size:13px}
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 0;color:#475569;font-size:13px;text-align:center}
+  .empty .empty-icon{font-size:26px;opacity:.5}
+  
 </style>
 </head><body>
 <div class="header"><h1>&#128640; Ascend Outreach</h1><span class="badge-live">LIVE</span></div>
 <nav class="nav">
-<button class="nav-btn active" data-page="overview">Overview</button>
+  <button class="nav-btn active" data-page="overview">Overview</button>
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
 <button class="nav-btn" data-page="pipeline">Pipeline</button>
