@@ -512,10 +512,10 @@ function lperf(){
 }
 
 function lschedule(){
-  var now=new Date();var utcH=now.getUTCHours();var utcM=now.getUTCMinutes();
-  var nextIdx=-1;
-  for(var i=0;i<RUNS_UTC.length;i++){if(RUNS_UTC[i]>utcH||(RUNS_UTC[i]===utcH&&utcM<5)){nextIdx=i;break;}}
-  var isTomorrow=nextIdx===-1;if(isTomorrow)nextIdx=0;
+    var now=new Date();var graceMs=5*60*1000;var best=null,bestIdx=-1;
+    for(var d=0;d<=1;d++){for(var i=0;i<RUNS_UTC.length;i++){var cand=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+d,RUNS_UTC[i],0,0));if(cand.getTime()>=now.getTime()-graceMs){if(best===null||cand.getTime()<best.getTime()){best=cand;bestIdx=i;}}}}
+    var nextIdx=bestIdx;
+    var isTomorrow=(best.getUTCDate()!==now.getUTCDate()||best.getUTCMonth()!==now.getUTCMonth());
   var runsHtml='<div class="run-grid">';
   for(var i=0;i<RUNS_MDT.length;i++){
     var isNext=i===nextIdx;
@@ -531,8 +531,7 @@ function lschedule(){
   }
   runsHtml+='</div>';
   document.getElementById('sched-runs').innerHTML=runsHtml;
-  var nextUTC=RUNS_UTC[nextIdx];
-  var targetMs=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+(isTomorrow?1:0),nextUTC,0,0)).getTime();
+      var targetMs=best.getTime();
   var secsUntil=Math.floor((targetMs-Date.now())/1000);
   var hUntil=Math.floor(secsUntil/3600);var mUntil=Math.floor((secsUntil%3600)/60);
   var timeStr=hUntil>0?hUntil+'h '+mUntil+'m':mUntil+'m';
