@@ -305,10 +305,10 @@ document.getElementById('conv-search').addEventListener('input',function(){
 });
 
 document.getElementById('reset-convs-btn').addEventListener('click',function(){
-  if(!confirm('Reset ALL conversations and SMS reply stats? This cannot be undone.'))return;
-  fetch('/api/reset-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:REPLY_KEY})})
+  if(!confirm('Reset all conversations? Reply counts will not be affected. This cannot be undone.'))return;
+  fetch('/api/reset-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:REPLY_KEY,target:'conversations'})})
     .then(function(r){return r.json();}).then(function(d){
-      if(d.ok){convData={};activeKey=null;lconvs();lstats();alert('Reset complete.');}
+      if(d.ok){convData={};activeKey=null;lconvs();lstats();alert('Conversations reset.');}
       else alert('Reset failed: '+(d.error||'Unknown'));
     }).catch(function(){alert('Network error');});
 });
