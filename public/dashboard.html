@@ -149,7 +149,7 @@ tr.data-row:hover td{background:#1e2235}
 <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
 <button class="nav-btn" data-page="performance">Performance</button>
 <button class="nav-btn" data-page="schedule">Schedule</button>
-  <button class="nav-btn" data-page="analytics">Analytics</button>
+  
 </nav>
 <div class="container">
 
@@ -222,13 +222,9 @@ tr.data-row:hover td{background:#1e2235}
 <div style="font-size:12px;color:#64748b;margin-top:12px" id="method-winner"></div>
 </div>
 <div class="section"><h2>Pipeline Funnel</h2><div id="funnel-chart"></div></div>
-</div>
-
-<div class="page" id="page-analytics">
-  <div class="stats-grid" style="margin-bottom:24px">
+<div class="stats-grid" style="margin-bottom:24px">
     <div class="stat-card"><div class="label">Open Rate</div><div class="value" id="an-open">-</div><div class="sub" id="an-open-sub">-</div></div>
     <div class="stat-card"><div class="label">Reply Rate</div><div class="value" id="an-reply">-</div><div class="sub" id="an-reply-sub">-</div></div>
-    <div class="stat-card"><div class="label">Conversion Rate</div><div class="value" id="an-conv">-</div><div class="sub">leads to clients</div></div>
     <div class="stat-card"><div class="label">Best Campaign</div><div class="value" id="an-best" style="font-size:18px">-</div><div class="sub" id="an-best-sub">-</div></div>
   </div>
   <div class="section" style="margin-bottom:24px"><h2>Emails Sent Per Day</h2><div class="chart" id="an-chart"></div><div class="chart-labels" id="an-clabels"></div></div>
@@ -293,15 +289,14 @@ document.querySelectorAll('.nav-btn').forEach(function(b){
     if(p==='emails')le();
     if(p==='sms')ls();
     if(p==='pipeline')lpipeline();
-    if(p==='performance')lperf();
+    if(p==='performance'){lperf();lanalytics();}
     if(p==='schedule')lschedule();
-    if(p==='analytics')lanalytics();
-  });
+    });
 });
 
 document.getElementById('conv-refresh-btn').addEventListener('click',lconvs);
 document.getElementById('pipeline-refresh-btn').addEventListener('click',lpipeline);
-document.getElementById('perf-refresh-btn').addEventListener('click',lperf);
+document.getElementById('perf-refresh-btn').addEventListener('click',function(){lperf();lanalytics();});
 document.getElementById('conv-search').addEventListener('input',function(){
   var q=this.value.toLowerCase();
   document.querySelectorAll('.conv-item').forEach(function(el){
@@ -730,7 +725,6 @@ function lanalytics(){
           document.getElementById('an-open-sub').textContent=openedCount+' opened / '+trackable.length+' tracked';
           document.getElementById('an-reply').textContent=replyRate+'%';
           document.getElementById('an-reply-sub').textContent=totalReplies+' replies / '+total+' sent';
-          document.getElementById('an-conv').textContent=convRate+'%';
           var svcStats={};
           emails.concat(sms).forEach(function(e){
                   var svc=e.service||'website';
