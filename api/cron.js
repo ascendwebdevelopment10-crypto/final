@@ -277,11 +277,15 @@ export default async function handler(req, res) {
         const suppressed = await isSuppressed(contact.email);
         if (suppressed) return null;
         const { subject, body, service } = content;
-        const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
-        const sendOptions = { from: FROM_EMAIL, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>'), reply_to: FROM_EMAIL };
-        if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
-        await resend.emails.send(sendOptions);
-        await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service });
+        const emailId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+                const trackBase = 'https://final-phi-swart.vercel.app';
+                const ctaUrl = trackBase + '/api/track-click?id=' + emailId + '&url=' + encodeURIComponent('https://ascendwebdevelopment.com');
+                const pixel = '<img src="' + trackBase + '/api/track-open?id=' + emailId + '" width="1" height="1" style="display:none" alt="" />';
+                const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="' + ctaUrl + '">See examples of our work</a> | <a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
+                const sendOptions = { from: FROM_EMAIL, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>') + pixel, reply_to: FROM_EMAIL };
+                if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
+                await resend.emails.send(sendOptions);
+                await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service, id: emailId });
         return 'ok';
       } catch (e) { return { error: e.message }; }
     }));
