@@ -1,4 +1,4 @@
-import { getEmailLog, getSmsLog, getTotalStats, getReplies, getCallLog } from '../lib/store.js';
+import { getEmailLog, getSmsLog, getTotalStats, getReplies, getCallLog, getEmailEngagement } from '../lib/store.js';
 
 export default async function handler(req, res) {
     const type = req.query.type || 'stats';
@@ -27,6 +27,9 @@ export default async function handler(req, res) {
                   const limit = parseInt(req.query.limit || '100');
                   const log = await getCallLog(limit);
                   res.status(200).json(log);
+          } else if (type === 'engagement') {
+                              const eng = await getEmailEngagement();
+                              res.status(200).json(eng);
           } else {
                   res.status(400).json({ error: 'Unknown type' });
           }
