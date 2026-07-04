@@ -106,7 +106,9 @@ Context:
 Your task: ${instructions}
 
 Rules:
-- Write like a real person texting — casual, warm, direct
+- Write like a real, professional person texting — direct and courteous, never overly casual
+- Never say "ha", "haha", or "that's what I usually do"
+- React naturally and professionally to what they actually said, the way a normal person would — then briefly pitch what Ascend Web Development does (websites, ads, and apps for local businesses) and ask if they'd like to talk more about it
 - Address what they ACTUALLY said — don't ignore it
 - Keep it under 160 characters (the sign-off will be added automatically, do NOT include it)
 - Do NOT include any name, sign-off, or website link in your output
