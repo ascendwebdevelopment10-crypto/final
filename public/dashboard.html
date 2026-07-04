@@ -326,6 +326,7 @@ document.getElementById('conv-list').addEventListener('click',function(e){
 });
 
 function lpipeline(){
+    document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div>Loading pipeline...</div></td></tr>';
   Promise.all([
     fetch('/api/pipeline?key='+REPLY_KEY).then(function(r){return r.json();}),
     fetch('/api/logs?type=replies&limit=200').then(function(r){return r.json();}),
@@ -391,7 +392,7 @@ function lpipeline(){
     });
     document.getElementById('pipeline-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No contacts yet. Send some outreach first.</td></tr>';
   }).catch(function(e){
-    document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6" class="empty">Error: '+e.message+'</td></tr>';
+        document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6"><div class="error-state">\u26a0 Failed to load pipeline: '+esc(e.message||'unknown error')+'</div></td></tr>';
   });
 }
 
@@ -463,6 +464,7 @@ window.updateStage=function(sel){
 };
 
 function lperf(){
+    var fc0=document.getElementById('funnel-chart');if(fc0)fc0.innerHTML='<div class="loading-wrap"><div class="spinner"></div>Loading performance...</div>';
   Promise.all([
     fetch('/api/logs?type=stats').then(function(r){return r.json();}),
     fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
@@ -523,7 +525,7 @@ function lperf(){
       funnelHtml+='<div style="width:30px;font-size:12px;color:#64748b">'+cnt+'</div></div></div>';
     });
     document.getElementById('funnel-chart').innerHTML=funnelHtml||'<div class="empty">No pipeline data yet.</div>';
-  }).catch(function(e){console.error('perf error',e);});
+  }).catch(function(e){console.error('perf error',e);var fc1=document.getElementById('funnel-chart');if(fc1)fc1.innerHTML='<div class="error-state">\u26a0 Failed to load performance data. Refresh to try again.</div>';});
 }
 
 function lschedule(){
@@ -578,7 +580,7 @@ function buildConvs(emails,smsArr,replies){
 }
 
 function lconvs(){
-  document.getElementById('conv-list').innerHTML='<div class="empty">Loading...</div>';
+      document.getElementById('conv-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div>Loading conversations...</div>';
   Promise.all([
     fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
     fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();}),
@@ -591,7 +593,7 @@ function lconvs(){
     renderList();
     var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;
     var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';
-  }).catch(function(){document.getElementById('conv-list').innerHTML='<div class="empty">Error loading</div>';});
+  }).catch(function(e){console.error(e);document.getElementById('conv-list').innerHTML='<div class="error-state">\u26a0 Failed to load conversations. Refresh to try again.</div>';});
 }
 
 function renderList(){
@@ -665,10 +667,11 @@ function lstats(){
       var g=document.createElement('div');g.className='bg';g.innerHTML='<div class="bar eb" style="height:'+eH+'%"></div><div class="bar sb" style="height:'+sH+'%"></div>';ch.appendChild(g);
       var l=document.createElement('div');l.className='cl';l.textContent=d.date.slice(5);cl.appendChild(l);
     });
-  }).catch(function(e){console.error(e);});
+  }).catch(function(e){console.error(e);var ch=document.getElementById('chart');if(ch)ch.innerHTML='<div class="error-state">\u26a0 Failed to load stats. Refresh to try again.</div>';});
 }
 
 function le(){
+    document.getElementById('email-tbody').innerHTML='<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div>Loading emails...</div></td></tr>';
   fetch('/api/logs?type=emails&limit=100').then(function(r){return r.json();}).then(function(emails){
     var rows='';
     emails.forEach(function(e,i){var xid='xem'+i;var rawBody=String(e.body||'').replace(/<[^>]+>/g,'').trim();
@@ -676,10 +679,11 @@ function le(){
     rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">'+esc(rawBody||'(not stored)')+'</div></td></tr>';
     });
     document.getElementById('email-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
-  }).catch(function(e){console.error(e);});
+  }).catch(function(e){console.error(e);document.getElementById('email-tbody').innerHTML='<tr><td colspan="6"><div class="error-state">\u26a0 Failed to load emails. Refresh to try again.</div></td></tr>';});
 }
 
 function ls(){
+    document.getElementById('sms-tbody').innerHTML='<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div>Loading SMS...</div></td></tr>';
   fetch('/api/logs?type=sms&limit=100').then(function(r){return r.json();}).then(function(sms){
     var rows='';
     sms.forEach(function(e,i){var xid='xsms'+i;var rawBody=String(e.body||'').trim();
@@ -687,7 +691,7 @@ function ls(){
     rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">'+esc(rawBody||'(empty)')+'</div></td></tr>';
     });
     document.getElementById('sms-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
-  }).catch(function(e){console.error(e);});
+  }).catch(function(e){console.error(e);document.getElementById('sms-tbody').innerHTML='<tr><td colspan="6"><div class="error-state">\u26a0 Failed to load SMS. Refresh to try again.</div></td></tr>';});
 }
 
 document.addEventListener('click',function(e){
@@ -697,6 +701,7 @@ document.addEventListener('click',function(e){
 
 lstats();
 function lanalytics(){
+      var hl0=document.getElementById('hotleads-tbody');if(hl0)hl0.innerHTML='<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div>Loading analytics...</div></td></tr>';
     Promise.all([
           fetch('/api/logs?type=stats').then(function(r){return r.json();}),
           fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
@@ -760,7 +765,7 @@ function lanalytics(){
                   return '<tr><td>'+esc(l.contact)+'</td><td>'+esc(l.service)+'</td><td>'+l.opens+'</td><td>'+l.clicks+'</td><td>'+(l.replied?'Yes':'No')+'</td><td>'+l.score+'</td></tr>';
           }).join('');
           document.getElementById('hotleads-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No engagement data yet.</td></tr>';
-    }).catch(function(e){console.error(e);});
+    }).catch(function(e){console.error(e);var hl1=document.getElementById('hotleads-tbody');if(hl1)hl1.innerHTML='<tr><td colspan="6"><div class="error-state">\u26a0 Failed to load analytics. Refresh to try again.</div></td></tr>';});
 }
 
   
