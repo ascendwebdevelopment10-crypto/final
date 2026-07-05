@@ -16,7 +16,8 @@
     { "path": "/api/cron",       "schedule": "0 23 * * *" },
     { "path": "/api/email-cron", "schedule": "0 23 * * *" },
     { "path": "/api/cron",       "schedule": "0 0 * * *" },
-    { "path": "/api/email-cron", "schedule": "0 0 * * *" }
+    { "path": "/api/email-cron", "schedule": "0 0 * * *" },
+        { "path": "/api/send-pending-replies", "schedule": "*/1 * * * *" }
   ],
   "redirects": [
     { "source": "/", "destination": "/dashboard", "permanent": false }
