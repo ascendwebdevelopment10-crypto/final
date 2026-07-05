@@ -263,7 +263,7 @@ export default async function handler(req, res) {
 
     const leads = [...noWebLeads, ...hasWebLeads];
     const emailLeads = leads.filter(c => c.email).slice(0, EMAIL_CAP);
-    const smsLeads = leads.slice(0, SMS_CAP);
+    const smsLeads = leads.slice(0, Math.max(0, SMS_CAP - followupSent));
 
     const [emailContents, smsContents] = await Promise.all([
       Promise.all(emailLeads.map(c => generateEmail(c, hasNoWebsite(c) ? 'no_website' : 'needs_upgrade').catch(e => ({ error: e.message })))),
