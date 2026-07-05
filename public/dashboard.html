@@ -235,7 +235,7 @@ tr.data-row:hover td{background:#1e2235}
 </div>
   <div class="page" id="page-schedule">
 <div class="section" style="margin-bottom:24px">
-<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">8 runs/day &bull; MDT (UTC-6)</span></h2>
+<h2>Daily Run Schedule &mdash; <span style="font-size:12px;color:#475569;font-weight:400">8 runs/day &bull; Mountain Time</span></h2>
 <div id="sched-runs"></div>
 <div style="margin-top:20px">
 <div style="font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Daily Goals (Cap)</div>
@@ -533,7 +533,7 @@ function lschedule(){
     var isNext=i===nextIdx;
     runsHtml+='<div class="run-box'+(isNext?' next-run':'')+'">';
     runsHtml+='<div class="run-time">'+RUNS_MDT[i]+'</div>';
-    runsHtml+='<div class="run-utc">UTC '+RUNS_UTC[i]+':00</div>';
+    
     runsHtml+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">';
     runsHtml+='<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">SMS</span><span style="color:#a78bfa;font-weight:600">'+SMS_PER_RUN+'</span></div>';
     runsHtml+='<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#64748b">Email</span><span style="color:#60a5fa;font-weight:600">'+EMAIL_PER_RUN+'</span></div>';
