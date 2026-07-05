@@ -65,7 +65,7 @@ tr.data-row:hover td{background:#1e2235}
 .reply-link:hover{background:#166534;color:#86efac}
 .pipe-row-replied td{background:#0d1f17 !important}
 .pipe-row-replied:hover td{background:#0f2d1e !important}
-.conv-wrap{display:flex;height:calc(100vh - 220px);min-height:500px;background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
+.conv-wrap{display:flex;height:calc(100vh - 220px);height:calc(100dvh - 220px);min-height:500px;background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
 .conv-sidebar{width:300px;border-right:1px solid #2d3148;display:flex;flex-direction:column;flex-shrink:0}
 .conv-search{padding:12px;border-bottom:1px solid #2d3148}
 .conv-search input{width:100%;padding:8px 12px;border:1px solid #2d3148;border-radius:8px;font-size:13px;outline:none;color:#e2e8f0;background:#0f1117}
@@ -136,7 +136,7 @@ tr.data-row:hover td{background:#1e2235}
   @keyframes spin{to{transform:rotate(360deg)}}
   .error-state{display:flex;align-items:center;gap:10px;background:#2a1416;border:1px solid #7f1d1d;color:#fca5a5;padding:14px 16px;border-radius:8px;font-size:13px}
   .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 0;color:#475569;font-size:13px;text-align:center}
-  .empty .empty-icon{font-size:26px;opacity:.5}.conv-back-btn{display:none}.page-header{flex-wrap:wrap;gap:10px}@media (max-width:768px){.header{padding:12px 16px}.header h1{font-size:16px}.badge-live{font-size:9px;padding:2px 7px}.nav{padding:0 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}.nav-btn{padding:12px 14px;font-size:12.5px;white-space:nowrap;flex-shrink:0}.container{padding:14px}.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}.perf-grid{grid-template-columns:1fr}.section{padding:16px;overflow-x:auto}table{min-width:560px}.ph-bar{flex-wrap:wrap}.ph-step{flex:1 1 33%}.run-grid{grid-template-columns:repeat(2,1fr)}.daily-total{flex-wrap:wrap;gap:10px}.conv-wrap{height:calc(100vh - 160px);border-radius:8px}.conv-sidebar{width:100%}#conv-wrap[data-mobile-view="chat"] .conv-sidebar{display:none}#conv-wrap[data-mobile-view="list"] .conv-main{display:none}.conv-back-btn{display:inline-flex;align-items:center;gap:4px;background:#1e2235;border:1px solid #2d3148;color:#a78bfa;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-right:10px;flex-shrink:0}.conv-header{flex-wrap:wrap;gap:8px}.msg-b{max-width:85%}}
+  .empty .empty-icon{font-size:26px;opacity:.5}.conv-back-btn{display:none}.page-header{flex-wrap:wrap;gap:10px}@media (max-width:768px){.header{padding:12px 16px}.header h1{font-size:16px}.badge-live{font-size:9px;padding:2px 7px}.nav{padding:6px 10px;flex-wrap:wrap;gap:4px 6px}.nav-btn{padding:9px 12px;font-size:12px;white-space:nowrap;flex:0 1 auto}.container{padding:14px}.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}.perf-grid{grid-template-columns:1fr}.section{padding:16px;overflow-x:auto}table{min-width:560px}.ph-bar{flex-wrap:wrap}.ph-step{flex:1 1 33%}.run-grid{grid-template-columns:repeat(2,1fr)}.daily-total{flex-wrap:wrap;gap:10px}.conv-wrap{height:calc(100vh - 160px);height:calc(100dvh - 160px);border-radius:8px}.conv-sidebar{width:100%}#conv-wrap[data-mobile-view="chat"] .conv-sidebar{display:none}#conv-wrap[data-mobile-view="list"] .conv-main{display:none}.conv-back-btn{display:inline-flex;align-items:center;gap:4px;background:#1e2235;border:1px solid #2d3148;color:#a78bfa;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-right:10px;flex-shrink:0}.conv-header{flex-wrap:wrap;gap:8px}.msg-b{max-width:85%;font-size:12.5px}.conv-messages{padding:14px}.conv-reply-box{padding:12px}.conv-item{padding:10px 12px}.ci-name{font-size:12.5px}.ci-time{font-size:9px}}
   
 </style>
 </head><body>
@@ -145,7 +145,6 @@ tr.data-row:hover td{background:#1e2235}
   <button class="nav-btn active" data-page="overview">Overview</button>
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
-<button class="nav-btn" data-page="pipeline">Pipeline</button>
 <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
 <button class="nav-btn" data-page="performance">Performance</button>
 <button class="nav-btn" data-page="schedule">Schedule</button>
@@ -159,7 +158,6 @@ tr.data-row:hover td{background:#1e2235}
 <div class="stat-card sc"><div class="label">SMS Sent</div><div class="value" id="ts">-</div><div class="sub" id="tds">Today: -</div></div>
 <div class="stat-card rc"><div class="label">Email Replies</div><div class="value" id="er">-</div><div class="sub">received</div></div>
 <div class="stat-card rc"><div class="label">SMS Replies</div><div class="value" id="sr">-</div><div class="sub">received</div></div>
-<div class="stat-card uc"><div class="label">Unsubscribed</div><div class="value" id="un">-</div><div class="sub">removed</div></div>
 </div>
 <div class="section"><h2>30-Day Activity</h2><div class="chart" id="chart"></div><div class="chart-labels" id="clabels"></div>
 <div class="legend"><div class="li"><div class="ld" style="background:#7c3aed"></div>Emails</div><div class="li"><div class="ld" style="background:#4f46e5"></div>SMS</div></div>
@@ -177,15 +175,6 @@ tr.data-row:hover td{background:#1e2235}
 <div class="section"><div class="page-header"><h2>SMS Log &mdash; <span style="font-size:12px;color:#475569;font-weight:400">click row to expand</span></h2></div>
 <table><thead><tr><th>To</th><th>Preview</th><th>Service</th><th>Segment</th><th>Time</th><th>Status</th></tr></thead>
 <tbody id="sms-tbody"></tbody></table>
-</div>
-</div>
-
-<div class="page" id="page-pipeline">
-<div class="page-header"><h2 style="font-size:20px;font-weight:700;color:#e2e8f0">Pipeline</h2><button class="refresh-btn" id="pipeline-refresh-btn">&#8635; Refresh</button></div>
-<div class="ph-bar" id="pipeline-bar"></div>
-<div class="section">
-<table><thead><tr><th>Contact</th><th>Type</th><th>Stage</th><th>Note</th><th>Last Update</th><th>Actions</th></tr></thead>
-<tbody id="pipeline-tbody"></tbody></table>
 </div>
 </div>
 
@@ -288,14 +277,11 @@ document.querySelectorAll('.nav-btn').forEach(function(b){
     if(p==='conversations')lconvs();
     if(p==='emails')le();
     if(p==='sms')ls();
-    if(p==='pipeline')lpipeline();
     if(p==='performance'){lperf();lanalytics();}
     if(p==='schedule')lschedule();
     });
-});
 
 document.getElementById('conv-refresh-btn').addEventListener('click',lconvs);
-document.getElementById('pipeline-refresh-btn').addEventListener('click',lpipeline);
 document.getElementById('perf-refresh-btn').addEventListener('click',function(){lperf();lanalytics();});
 document.getElementById('conv-search').addEventListener('input',function(){
   var q=this.value.toLowerCase();
@@ -320,76 +306,6 @@ document.getElementById('conv-list').addEventListener('click',function(e){
   if(item)openConv(item.dataset.key);
 });
 
-function lpipeline(){
-    document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div>Loading pipeline...</div></td></tr>';
-  Promise.all([
-    fetch('/api/pipeline?key='+REPLY_KEY).then(function(r){return r.json();}),
-    fetch('/api/logs?type=replies&limit=200').then(function(r){return r.json();}),
-    fetch('/api/logs?type=emails&limit=500').then(function(r){return r.json();}),
-    fetch('/api/logs?type=sms&limit=500').then(function(r){return r.json();})
-  ]).then(function(res){
-    var saved=res[0]||{};
-    var replies=Array.isArray(res[1])?res[1]:[];
-    var emails=Array.isArray(res[2])?res[2]:[];
-    var sms=Array.isArray(res[3])?res[3]:[];
-
-    // Build set of all known contacts
-    var contacts={};
-    emails.forEach(function(e){
-      if(!e.to)return;
-      var k=getKey(e.to);
-      if(!contacts[k])contacts[k]={key:k,contact:e.to,type:'email',lastTs:0,replied:false};
-      if((e.timestamp||0)>contacts[k].lastTs)contacts[k].lastTs=e.timestamp||0;
-      if(e.replied)contacts[k].replied=true;
-    });
-    sms.forEach(function(e){
-      if(!e.to)return;
-      var k=getKey(e.to);
-      if(!contacts[k])contacts[k]={key:k,contact:e.to,type:'sms',lastTs:0,replied:false};
-      if((e.timestamp||0)>contacts[k].lastTs)contacts[k].lastTs=e.timestamp||0;
-      if(e.replied)contacts[k].replied=true;
-    });
-    replies.forEach(function(r){
-      var from=r.from||r.originalTo||r.to;
-      if(!from)return;
-      var k=getKey(from);
-      if(contacts[k])contacts[k].replied=true;
-    });
-
-    // Merge with saved pipeline stages
-    Object.keys(contacts).forEach(function(k){
-      if(saved[k]){contacts[k].stage=saved[k].stage;contacts[k].note=saved[k].note||'';}
-      else if(contacts[k].replied)contacts[k].stage='replied';
-      else contacts[k].stage='contacted';
-    });
-    pipelineData=contacts;
-
-    // Render stage bar
-    var counts={};
-    STAGES.forEach(function(s){counts[s]=0;});
-    Object.values(contacts).forEach(function(c){counts[c.stage||'contacted']=(counts[c.stage||'contacted']||0)+1;});
-    var barHtml='';
-    STAGES.forEach(function(s){
-      barHtml+='<div class="ph-step"><div class="ph-num">'+counts[s]+'</div><div class="ph-lbl">'+STAGE_LABELS[s]+'</div></div>';
-    });
-    document.getElementById('pipeline-bar').innerHTML=barHtml;
-
-    // Render table
-    var sorted=Object.values(contacts).sort(function(a,b){return b.lastTs-a.lastTs;});
-    var rows='';
-    sorted.forEach(function(c){
-      var stageOpts=STAGES.map(function(s){return'<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+STAGE_LABELS[s]+'</option>';}).join('');
-      rows+='<tr'+(c.replied?' class="pipe-row-replied"':'')+' ><td>'+esc(c.contact)+'</td><td><span class="ci-badge '+(c.type||'email')+'" style="font-size:11px;padding:2px 6px">'+esc(c.type||'email')+'</span></td>';
-      rows+='<td>'+stagePill(c.stage)+'</td>';
-      rows+='<td style="color:#64748b;font-size:12px">'+esc(c.note||'')+'</td>';
-      rows+='<td style="color:#64748b;font-size:12px">'+fmtShort(c.lastTs)+'</td>';
-      rows+='<td><select class="stage-sel" data-key="'+esc(c.key)+'" data-contact="'+esc(c.contact)+'" onchange="updateStage(this)">'+stageOpts+'</select></td></tr>';
-    });
-    document.getElementById('pipeline-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No contacts yet. Send some outreach first.</td></tr>';
-  }).catch(function(e){
-        document.getElementById('pipeline-tbody').innerHTML='<tr><td colspan="6"><div class="error-state">\u26a0 Failed to load pipeline: '+esc(e.message||'unknown error')+'</div></td></tr>';
-  });
-}
 
 window.goToConv=function(contact){
 // Switch to conversations tab and open this contact
@@ -436,28 +352,6 @@ else{
   if(main)main.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#475569;gap:12px"><div style="font-size:48px">&#128172;</div><p>No conversation found for '+esc(contact)+'</p><p style="font-size:12px">They may have replied by email — check your inbox.</p></div>';
 }
 }
-window.updateStage=function(sel){
-  var key=sel.dataset.key;
-  var contact=sel.dataset.contact;
-  var stage=sel.value;
-  fetch('/api/pipeline',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({key:REPLY_KEY,contact:contact,stage:stage})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){
-      // Update pill in same row
-      var row=sel.closest('tr');
-      if(row){var pill=row.querySelector('.stage-pill');if(pill){pill.className='stage-pill stage-'+stage;pill.textContent=STAGE_LABELS[stage]||stage;}}
-      // Recount bar
-      if(pipelineData[key])pipelineData[key].stage=stage;
-      var counts={};STAGES.forEach(function(s){counts[s]=0;});
-      Object.values(pipelineData).forEach(function(c){counts[c.stage||'contacted']=(counts[c.stage||'contacted']||0)+1;});
-      var barHtml='';STAGES.forEach(function(s){barHtml+='<div class="ph-step"><div class="ph-num">'+counts[s]+'</div><div class="ph-lbl">'+STAGE_LABELS[s]+'</div></div>';});
-      document.getElementById('pipeline-bar').innerHTML=barHtml;
-    }
-  }).catch(function(){});
-};
-
 function lperf(){
     var fc0=document.getElementById('funnel-chart');if(fc0)fc0.innerHTML='<div class="loading-wrap"><div class="spinner"></div>Loading performance...</div>';
   Promise.all([
@@ -655,7 +549,6 @@ function lstats(){
     document.getElementById('tds').textContent='Today: '+(s.todaySmsSent||0);
     document.getElementById('er').textContent=(s.emailReplies||0).toLocaleString();
     document.getElementById('sr').textContent=(s.smsReplies||0).toLocaleString();
-    document.getElementById('un').textContent=(s.unsubscribed||0).toLocaleString();
     var days=s.dailyChart||[];
     var mx=Math.max.apply(null,days.map(function(d){return Math.max(d.emails||0,d.sms||0);}));mx=mx||1;
     var ch=document.getElementById('chart'),cl=document.getElementById('clabels');ch.innerHTML='';cl.innerHTML='';
