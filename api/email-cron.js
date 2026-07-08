@@ -10,7 +10,7 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 6;
+const EMAIL_CAP = 8;
 const FETCH_LIMIT = 15;
 const OUTSCRAPER_TIMEOUT_MS = 45000;
 
