@@ -1,4 +1,4 @@
-mport Anthropic from '@anthropic-ai/sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
 import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed, getSmsLog } from '../lib/store.js';
@@ -13,7 +13,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
-const EMAIL_CAP = 6;
+const EMAIL_CAP = 8;
 const SMS_CAP = 20;
 const FETCH_LIMIT = 15;
 
