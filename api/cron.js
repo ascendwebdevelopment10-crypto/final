@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
 import twilio from 'twilio';
-import { logEmail, logSms, isSuppressed, getSmsLog } from '../lib/store.js';
+import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone } from '../lib/store.js';
 import { kv } from '@vercel/kv';
 
 export const config = { maxDuration: 300 };
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
                               s.segment !== 'auto_reply' &&
                               s.timestamp >= threeDaysAgo - (12 * 60 * 60 * 1000) &&
                               s.timestamp <= twoDaysAgo &&
-                              s.to && !isTollFree(s.to)
+                              s.to && !isTollFree(s.to) && !isExcludedBusiness(s.contactName) && !isExcludedPhone(s.to)
                                                                  ).slice(0, 10);
                   for (const lead of followupCandidates) {
                               try {
@@ -257,6 +257,7 @@ export default async function handler(req, res) {
             .map(normalizeContact)
             .filter(c => {
                         if (isExcludedBusiness(c.organization_name)) return false;
+                        if (isExcludedPhone(c.phone)) return false;
                         if (!c.phone) return false;
                         const normalized = c.phone.replace(/\D/g, '');
                         if (seenPhones.has(normalized)) return false;
