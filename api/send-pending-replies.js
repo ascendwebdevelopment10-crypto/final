@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { kv } from '@vercel/kv';
+import { isExcludedPhone, isExcludedBusiness } from '../lib/store.js';
 
 export const config = { maxDuration: 60 };
 
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
                                       remaining = notYetDue.length;
 
                                           for (const p of due) {
+      if (isExcludedPhone(p.to) || isExcludedBusiness(p.contactName)) { continue; }
                                                 try {
                                                         await twilioClient.messages.create({ body: p.body, from: TWILIO_FROM, to: p.to });
                                                                 await kv.lpush('sms:log', JSON.stringify({
