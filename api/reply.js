@@ -1,6 +1,7 @@
 import twilio from 'twilio';
 import { sendEmail, FROM_EMAIL } from '../lib/mailer.js';
 import { kv } from '@vercel/kv';
+import { isExcludedPhone } from '../lib/store.js';
 
 export default async function handler(req, res) {
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,6 +23,7 @@ export default async function handler(req, res) {
 
     try {
                   if (type === 'sms') {
+                    if (isExcludedPhone(to)) { res.status(200).json({ ok: false, skipped: 'excluded_contact' }); return; }
                                         const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
                                         const sent = await client.messages.create({
                                                                         body: message,
