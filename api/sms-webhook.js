@@ -2,6 +2,7 @@ import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
 import { sendEmail, FROM_EMAIL } from '../lib/mailer.js';
+import { isExcludedBusiness, isExcludedPhone } from '../lib/store.js';
 const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
 const FORWARD_TO = '+13854716500';
@@ -181,7 +182,7 @@ export default async function handler(req, res) {
             } catch (e) { console.error('SMS email notify error:', e.message); }
 
   // 6. Schedule ONE reply only, to be sent ~3 minutes from now — never again after that
-  if (!alreadyAutoReplied && !isNotInterested(body)) {
+  if (!alreadyAutoReplied && !isNotInterested(body) && !isExcludedPhone(from) && !isExcludedBusiness(contactName)) {
                   try {
                                             let replyBody;
                                             if (isAutomatedReply(body)) {
