@@ -14,7 +14,7 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
 const EMAIL_CAP = 8;
-const SMS_CAP = 20;
+const SMS_CAP = 10;
 const FETCH_LIMIT = 15;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
