@@ -228,7 +228,7 @@ export default async function handler(req, res) {
                               s.timestamp >= threeDaysAgo - (12 * 60 * 60 * 1000) &&
                               s.timestamp <= twoDaysAgo &&
                               s.to && !isTollFree(s.to) && !isExcludedBusiness(s.contactName) && !isExcludedPhone(s.to)
-                                                                 ).slice(0, 10);
+                                                                 ).slice(0, 0);
                   for (const lead of followupCandidates) {
                               try {
                                             const contactObj = { first_name: (lead.contactName || '').split(' ')[0] || 'there', organization_name: lead.contactName || '' };
