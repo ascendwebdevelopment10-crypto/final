@@ -19,7 +19,7 @@
     },
     {
       "path": "/api/send-pending-replies",
-      "schedule": "*/1 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ],
   "redirects": [
