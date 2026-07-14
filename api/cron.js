@@ -213,6 +213,10 @@ export default async function handler(req, res) {
       const auth = req.headers['authorization'];
       if (CRON_SECRET && auth !== 'Bearer ' + CRON_SECRET) { res.status(401).end('Unauthorized'); return; }
 
+      // Pause outbound outreach on Sundays (Mountain Time). Inbound auto-replies still run.
+      const mtDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/Denver', weekday: 'short' });
+      if (mtDay === 'Sun') { res.status(200).json({ skipped: 'sunday', timestamp: new Date().toISOString() }); return; }
+
   const errors = [];
       let followupSent = 0;
 
