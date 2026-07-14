@@ -1,8 +1,8 @@
 import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
-import { sendEmail, FROM_EMAIL } from '../lib/mailer.js';
-import { isExcludedBusiness, isExcludedPhone } from '../lib/store.js';
+import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
 const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
 const FORWARD_TO = '+13854716500';
@@ -14,200 +14,208 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 // Fixed reply sent when the incoming text looks like an automated / auto-responder message
 const AUTOMATED_REPLY_TEXT = 'No problem, get back to me when you can - I have a question for you guys.' + SIGNOFF;
 
+// Hard cap every outbound auto-reply at one SMS segment (160 chars). Trims at a word boundary.
+function capSegment(text) {
+      const t = (text || '').trim();
+      if (t.length <= 160) return t;
+      return t.slice(0, 160).replace(/\s+\S*$/, '').trim();
+}
+
 function serviceDescription(service) {
-            if (service === 'ads') return 'targeted ad campaigns';
-            if (service === 'app') return 'a custom mobile app';
-            return 'a professional website';
+      if (service === 'ads') return 'targeted ad campaigns';
+      if (service === 'app') return 'a custom mobile app';
+      return 'a professional website';
 }
 
-// Fixed pitch text (used as a fallback if the AI call fails)
+// Fixed pitch text (used as a fallback if the AI call fails) — kept under 160 chars (1 segment)
 function fallbackPitchMessage(service) {
-            return "Hey! I'm Ty Smith, the owner of Ascend Web Development. I'm personally reaching out to companies I think would benefit from our services - looks like you guys would benefit a lot from " + serviceDescription(service) + " and we'd love to help with that. Would you be interested in talking about it?";
+      return "Hey, it's Ty, owner of Ascend Web Development. We build " + serviceDescription(service) + " for local businesses & I think we could really help. Want to hear more?";
 }
 
-// Real person replied — first acknowledge/answer what they actually said, then flow into the pitch
+// Real person replied — briefly answer what they said, then a short pitch. Whole thing under 160 chars.
 async function generatePitchReply(incomingBody, service) {
-            const serviceDesc = serviceDescription(service);
-            const prompt = `You are Ty Smith, owner of Ascend Web Development, replying by text to someone who just replied to our cold outreach SMS.
+      const serviceDesc = serviceDescription(service);
+      const prompt = `You are Ty Smith, owner of Ascend Web Development, replying by text to someone who just replied to our cold outreach SMS.
 
-                  Their reply was: "${incomingBody}"
+      Their reply was: "${incomingBody}"
 
-                        Write ONE short, natural SMS reply that does two things, in this order, blended into one flowing message (not two disconnected sentences):
-                              1. Directly acknowledge or answer what they actually said. If they asked a question, briefly answer it (if it's about price/cost, say it depends on what they need and it's easy to figure out - never give a specific number). If they said something affirmative like "yes", "sure", "how can we help", or asked who this is, respond to that naturally and specifically.
-                                    2. Then introduce the pitch, keeping this part close to this exact wording: "I'm Ty Smith, the owner of Ascend Web Development. I'm personally reaching out to companies I think would benefit from our services - looks like you guys would benefit a lot from ${serviceDesc} and we'd love to help with that. Would you be interested in talking about it?"
+      Write ONE very short SMS reply that does two things in one flowing message:
+      1. In just a few words, acknowledge or answer what they actually said. If they asked about price/cost, say it depends on what they need - never give a specific number. If they said "yes"/"sure"/"who is this", respond naturally.
+      2. Then a short pitch, close to this wording: "It's Ty, owner of Ascend Web Development - we build ${serviceDesc} for local businesses & I think we could really help. Want to hear more?"
 
-                                          Rules:
-                                                - Sound like a real, professional person texting - direct and warm, never salesy or robotic
-                                                      - Never say "ha", "haha"
-                                                            - No emojis
-                                                                  - Keep the whole message under 320 characters
-                                                                        - Do NOT include a sign-off or extra name at the end (the message already introduces Ty Smith by name)
-                                                                              - Output ONLY the message text, nothing else`;
+      Rules:
+      - Sound like a real, professional person texting - direct and warm, never salesy or robotic
+      - Never say "ha" or "haha". No emojis.
+      - CRITICAL: the ENTIRE message (acknowledgment + pitch) MUST be under 155 characters total. Keep it tight.
+      - Do NOT include a sign-off or extra name at the end (the message already says Ty Smith)
+      - Output ONLY the message text, nothing else`;
 
   const msg = await anthropic.messages.create({
-                  model: ANTHROPIC_MODEL,
-                  max_tokens: 200,
-                  messages: [{ role: 'user', content: prompt }]
+          model: ANTHROPIC_MODEL,
+          max_tokens: 120,
+          messages: [{ role: 'user', content: prompt }]
   });
-            return msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim();
+      const out = msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim();
+      return capSegment(out);
 }
 
 // Push notification via ntfy.sh — instant alert on your phone when someone replies
 async function sendPushNotification(from, body, contactName) {
-            try {
-                                const topic = process.env.NTFY_TOPIC || 'ascend-replies';
-                                const title = contactName ? `Reply from ${contactName}` : `New SMS Reply`;
-                                const message = `${from}: ${body.slice(0, 200)}`;
-                                await fetch(`https://ntfy.sh/${topic}`, {
-                                                              method: 'POST',
-                                                              headers: {
-                                                                                                        'Title': title,
-                                                                                                        'Priority': 'high',
-                                                                                                        'Tags': 'speech_balloon,phone',
-                                                                                                        'Content-Type': 'text/plain'
-                                                              },
-                                                              body: message
-                                });
-            } catch (e) {
-                                console.error('ntfy push error:', e.message);
-            }
+      try {
+              const topic = process.env.NTFY_TOPIC || 'ascend-replies';
+              const title = contactName ? `Reply from ${contactName}` : `New SMS Reply`;
+              const message = `${from}: ${body.slice(0, 200)}`;
+              await fetch(`https://ntfy.sh/${topic}`, {
+                        method: 'POST',
+                        headers: {
+                                    'Title': title,
+                                    'Priority': 'high',
+                                    'Tags': 'speech_balloon,phone',
+                                    'Content-Type': 'text/plain'
+                        },
+                        body: message
+              });
+      } catch (e) {
+              console.error('ntfy push error:', e.message);
+      }
 }
 
 // Carrier auto-responses to ignore entirely (no log, no reply)
 function isAutoResponse(body) {
-            const b = (body || '').toLowerCase().trim();
-            return (
-                                b.startsWith('[sys-msg]') ||
-                                b.startsWith('[sys_msg]') ||
-                                /^(stop|unstop|help|info|cancel|end|quit|unsubscribe)$/.test(b) ||
-                                b.includes('message & data rates may apply') ||
-                                b.includes('msg&data rates may apply') ||
-                                b.includes('reply stop to') ||
-                                b.includes('text stop to') ||
-                                b.includes('to opt out') ||
-                                b.includes('this number does not accept') ||
-                                b.includes('your message has been received') ||
-                                b.includes('you have been unsubscribed')
-                              );
+      const b = (body || '').toLowerCase().trim();
+      return (
+              b.startsWith('[sys-msg]') ||
+              b.startsWith('[sys_msg]') ||
+              /^(stop|unstop|help|info|cancel|end|quit|unsubscribe)$/.test(b) ||
+              b.includes('message & data rates may apply') ||
+              b.includes('msg&data rates may apply') ||
+              b.includes('reply stop to') ||
+              b.includes('text stop to') ||
+              b.includes('to opt out') ||
+              b.includes('this number does not accept') ||
+              b.includes('your message has been received') ||
+              b.includes('you have been unsubscribed')
+            );
 }
 
 // Detect an out-of-office / auto-responder style text (not a real person replying)
 function isAutomatedReply(body) {
-            const b = (body || '').toLowerCase();
-            return /this is an automated|automated (reply|message|response|text)|auto[- ]?reply|auto[- ]?text|do not reply to this|cannot reply to this|not monitored|out of (the )?office|away from my phone|away message|currently unavailable|currently away|automatic reply/.test(b);
+      const b = (body || '').toLowerCase();
+      return /this is an automated|automated (reply|message|response|text)|auto[- ]?reply|auto[- ]?text|do not reply to this|cannot reply to this|not monitored|out of (the )?office|away from my phone|away message|currently unavailable|currently away|automatic reply/.test(b);
 }
 
 // Someone explicitly opting out / not interested — never reply to these
 function isNotInterested(body) {
-            const b = (body || '').toLowerCase();
-            return /not interested|no thanks|no thank you|don't contact|do not contact|remove me|leave me alone|stop texting|wrong number|unsubscribe/.test(b);
+      const b = (body || '').toLowerCase();
+      return /not interested|no thanks|no thank you|don't contact|do not contact|remove me|leave me alone|stop texting|wrong number|unsubscribe/.test(b);
 }
 
 export default async function handler(req, res) {
-            if (req.method !== 'POST') { res.status(405).end(); return; }
+      if (req.method !== 'POST') { res.status(405).end(); return; }
 
   const from = req.body?.From || '';
-            const body = req.body?.Body || '';
-            const to = req.body?.To || '';
+      const body = req.body?.Body || '';
+      const to = req.body?.To || '';
 
-  // 1. Always forward the raw reply to your phone first
-  try {
-                  const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-                  await client.messages.create({
-                                            body: 'Reply from ' + from + ':\n' + body,
-                                            from: process.env.TWILIO_PHONE_NUMBER,
-                                            to: FORWARD_TO
-                  });
-  } catch (e) {
-                  console.error('Twilio forward error:', e.message);
-  }
-
-  // 2. If it's a carrier auto-response, stop here — no logging, no reply
+  // 1. If it's a carrier auto-response, stop here — no notify, no logging, no reply
   if (isAutoResponse(body)) {
-                  res.setHeader('Content-Type', 'text/xml');
-                  res.status(200).send('<Response></Response>');
-                  return;
+          res.setHeader('Content-Type', 'text/xml');
+          res.status(200).send('<Response></Response>');
+          return;
   }
 
-  // 3. Check if we already scheduled/sent a reply to this number before.
+  // 2. Check if we already scheduled/sent a reply to this number before.
   // ONLY ever send ONE reply per person, ever — never text them again after that.
   let alreadyAutoReplied = false;
-            let originalService = 'website';
-            let contactName = '';
-            try {
-                                const alreadyInSet = await kv.sismember('sms:auto_replied_numbers', from);
-                                const smsLog = await kv.lrange('sms:log', 0, 499);
-                                const parsed = smsLog.map(r => typeof r === 'string' ? JSON.parse(r) : r);
-                                const alreadyInLog = parsed.some(e => e.to === from && e.segment === 'auto_reply');
-                                alreadyAutoReplied = alreadyInSet || alreadyInLog;
-                                const original = parsed.find(e => e.to === from && e.type === 'sms' && e.segment !== 'auto_reply');
-                                if (original) {
-                                                              originalService = original.service || 'website';
-                                                              contactName = original.contactName || '';
-                                }
-            } catch (e) {
-                                console.error('KV lookup error:', e.message);
-            }
-
-  // 4. Log as a real reply (single incr — no duplicates)
-  try {
-                  const entry = {
-                                            type: 'sms_reply', from, body, to,
-                                            contactName,
-                                            timestamp: Date.now(),
-                                            id: Date.now() + '-' + Math.random().toString(36).slice(2, 8)
-                  };
-                  await kv.lpush('replies:log', JSON.stringify(entry));
-                  await kv.incr('stats:sms_replies');
-
-              // Mark original outbound SMS as replied
+      let originalService = 'website';
+      let contactName = '';
+      try {
+              const alreadyInSet = await kv.sismember('sms:auto_replied_numbers', from);
               const smsLog = await kv.lrange('sms:log', 0, 499);
-                  const parsed = smsLog.map(r => typeof r === 'string' ? JSON.parse(r) : r);
-                  const updated = parsed.map(e => e.to === from ? { ...e, replied: true } : e);
-                  await kv.del('sms:log');
-                  for (const e of updated.reverse()) await kv.lpush('sms:log', JSON.stringify(e));
+              const parsed = smsLog.map(r => typeof r === 'string' ? JSON.parse(r) : r);
+              const alreadyInLog = parsed.some(e => e.to === from && e.segment === 'auto_reply');
+              alreadyAutoReplied = alreadyInSet || alreadyInLog;
+              const original = parsed.find(e => e.to === from && e.type === 'sms' && e.segment !== 'auto_reply');
+              if (original) {
+                        originalService = original.service || 'website';
+                        contactName = original.contactName || '';
+              }
+      } catch (e) {
+              console.error('KV lookup error:', e.message);
+      }
+
+  // 3. Log as a real reply (single incr — no duplicates)
+  try {
+          const entry = {
+                    type: 'sms_reply', from, body, to,
+                    contactName,
+                    timestamp: Date.now(),
+                    id: Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+          };
+          await kv.lpush('replies:log', JSON.stringify(entry));
+          await kv.incr('stats:sms_replies');
+
+        // Mark original outbound SMS as replied
+        const smsLog = await kv.lrange('sms:log', 0, 499);
+          const parsed = smsLog.map(r => typeof r === 'string' ? JSON.parse(r) : r);
+          const updated = parsed.map(e => e.to === from ? { ...e, replied: true } : e);
+          await kv.del('sms:log');
+          for (const e of updated.reverse()) await kv.lpush('sms:log', JSON.stringify(e));
   } catch (e) {
-                  console.error('KV log error:', e.message);
+          console.error('KV log error:', e.message);
   }
 
-  // 5. Send push notification to phone (ntfy.sh) — fires for every real reply
+  // 4. Notify Ty's phone by text — fires for every real reply
+  try {
+          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await client.messages.create({
+                    body: 'You got a reply on Ascend Outreach!\nFrom: ' + (contactName || from) + ' (' + from + ')\n\n' + body,
+                    from: process.env.TWILIO_PHONE_NUMBER,
+                    to: FORWARD_TO
+          });
+  } catch (e) {
+          console.error('Twilio notify error:', e.message);
+  }
+
+  // 5. Also send push + email notification
   await sendPushNotification(from, body, contactName);
-            try {
-                                await sendEmail({
-                                                              from: FROM_EMAIL,
-                                                              to: NOTIFY_EMAIL,
-                                                              subject: `New SMS reply from ${contactName || from}`,
-                                                              html: `<p><strong>From:</strong> ${contactName || from} (${from})</p><hr/><p>${body}</p>`
-                                });
-            } catch (e) { console.error('SMS email notify error:', e.message); }
+      try {
+              await resend.emails.send({
+                        from: 'info@ascendwebdevelopment.com',
+                        to: NOTIFY_EMAIL,
+                        subject: `New SMS reply from ${contactName || from}`,
+                        html: `<p><strong>From:</strong> ${contactName || from} (${from})</p><hr/><p>${body}</p>`
+              });
+      } catch (e) { console.error('SMS email notify error:', e.message); }
 
   // 6. Schedule ONE reply only, to be sent ~3 minutes from now — never again after that
-  if (!alreadyAutoReplied && !isNotInterested(body) && !isExcludedPhone(from) && !isExcludedBusiness(contactName)) {
-                  try {
-                                            let replyBody;
-                                            if (isAutomatedReply(body)) {
-                                                                                  replyBody = AUTOMATED_REPLY_TEXT;
-                                            } else {
-                                                                                  try {
-                                                                                                                                      replyBody = await generatePitchReply(body, originalService);
-                                                                                        } catch (e) {
-                                                                                                                                      console.error('AI reply generation error:', e.message);
-                                                                                                                                      replyBody = fallbackPitchMessage(originalService);
-                                                                                        }
-                                            }
-                                            await kv.sadd('sms:auto_replied_numbers', from);
-                                            await kv.rpush('sms:pending_replies', JSON.stringify({
-                                                                                  to: from,
-                                                                                  body: replyBody,
-                                                                                  contactName,
-                                                                                  sendAt: Date.now() + REPLY_DELAY_MS,
-                                                                                  createdAt: Date.now()
-                                            }));
-                  } catch (e) {
-                                            console.error('Schedule reply error:', e.message);
-                  }
+  if (!alreadyAutoReplied && !isNotInterested(body)) {
+          try {
+                    let replyBody;
+                    if (isAutomatedReply(body)) {
+                                replyBody = AUTOMATED_REPLY_TEXT;
+                    } else {
+                                try {
+                                              replyBody = await generatePitchReply(body, originalService);
+                                } catch (e) {
+                                              console.error('AI reply generation error:', e.message);
+                                              replyBody = fallbackPitchMessage(originalService);
+                                }
+                    }
+                    replyBody = capSegment(replyBody);
+                    await kv.sadd('sms:auto_replied_numbers', from);
+                    await kv.rpush('sms:pending_replies', JSON.stringify({
+                                to: from,
+                                body: replyBody,
+                                contactName,
+                                sendAt: Date.now() + REPLY_DELAY_MS,
+                                createdAt: Date.now()
+                    }));
+          } catch (e) {
+                    console.error('Schedule reply error:', e.message);
+          }
   }
 
   res.setHeader('Content-Type', 'text/xml');
-            res.status(200).send('<Response></Response>');
+      res.status(200).send('<Response></Response>');
 }
