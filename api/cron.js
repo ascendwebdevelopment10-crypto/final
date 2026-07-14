@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { sendEmail } from '../lib/mailer.js';
+import { Resend } from 'resend';
 import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone } from '../lib/store.js';
 import { kv } from '@vercel/kv';
@@ -7,13 +7,14 @@ import { kv } from '@vercel/kv';
 export const config = { maxDuration: 300 };
 
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
+const resend = new Resend(process.env.RESEND_API_KEY);
 const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
-const EMAIL_CAP = 8;
+const EMAIL_CAP = 4;
 const SMS_CAP = 10;
 const FETCH_LIMIT = 15;
 
@@ -311,7 +312,7 @@ export default async function handler(req, res) {
                                       const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="' + ctaUrl + '">See examples of our work</a> | <a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
                                       const sendOptions = { from: FROM_EMAIL, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>') + pixel, reply_to: FROM_EMAIL };
                                       if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
-                                      await sendEmail(sendOptions);
+                                      await resend.emails.send(sendOptions);
                                       await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service, id: emailId });
                               return 'ok';
                   } catch (e) { return { error: e.message }; }
