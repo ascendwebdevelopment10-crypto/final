@@ -1,3 +1,4 @@
+import { isAuthorized } from '../lib/auth.js';
 import { kv } from '@vercel/kv';
 
 // Manual stat adjustments — e.g. backfilling sends that Resend delivered but
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   const { key, emails, sms } = req.body || {};
-  if (key !== process.env.CRON_SECRET && key !== process.env.SUPPRESS_API_SECRET) {
+  if (!isAuthorized(req)) {
     res.status(401).json({ error: 'Unauthorized' }); return;
   }
 

@@ -1,3 +1,4 @@
+import { isAuthorized } from '../lib/auth.js';
 import { kv } from '@vercel/kv';
 
 const VALID_STAGES = ['new_lead','contacted','replied','interested','meeting_booked','client','lost'];
@@ -8,8 +9,7 @@ export default async function handler(req, res) {
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-          const authKey = req.body?.key || req.query?.key;
-            if (authKey !== process.env.CRON_SECRET && authKey !== process.env.SUPPRESS_API_SECRET) {
+          if (!isAuthorized(req)) {
                 res.status(401).json({ error: 'Unauthorized' }); return;
                   }
 

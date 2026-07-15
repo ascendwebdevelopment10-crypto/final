@@ -1,3 +1,4 @@
+import { isAuthorized } from '../lib/auth.js';
 import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
@@ -9,7 +10,7 @@ export default async function handler(req, res) {
 
   const { contact, key } = req.body || {};
 
-  if (key !== process.env.CRON_SECRET && key !== process.env.SUPPRESS_API_SECRET) {
+  if (!isAuthorized(req)) {
     res.status(401).json({ error: 'Unauthorized' }); return;
   }
   if (!contact) { res.status(400).json({ error: 'Missing contact' }); return; }

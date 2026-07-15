@@ -1,3 +1,4 @@
+import { isAuthorized } from '../lib/auth.js';
 import twilio from 'twilio';
 import { sendEmail, FROM_EMAIL } from '../lib/mailer.js';
 import { kv } from '@vercel/kv';
@@ -13,7 +14,7 @@ export default async function handler(req, res) {
     const { type, to, message, subject, key } = req.body || {};
 
     // Auth check
-    if (key !== process.env.CRON_SECRET && key !== process.env.SUPPRESS_API_SECRET) {
+    if (!isAuthorized(req)) {
                   res.status(401).json({ error: 'Unauthorized' }); return;
     }
 

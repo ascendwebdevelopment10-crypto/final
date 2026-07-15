@@ -1,8 +1,10 @@
+import { isAuthorized } from '../lib/auth.js';
 import { getEmailLog, getSmsLog, getTotalStats, getReplies, getCallLog, getEmailEngagement } from '../lib/store.js';
 
 export default async function handler(req, res) {
     const type = req.query.type || 'stats';
     res.setHeader('Access-Control-Allow-Origin', '*');
+    if (!isAuthorized(req)) { res.status(401).json({ error: 'Unauthorized' }); return; }
     try {
           if (type === 'stats') {
                   const stats = await getTotalStats();
