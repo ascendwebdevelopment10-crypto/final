@@ -46,7 +46,7 @@ async function generatePitchReply(incomingBody, service) {
       Rules:
       - Sound like a real, professional person texting - direct and warm, never salesy or robotic
       - Never say "ha" or "haha". No emojis.
-      - CRITICAL: the ENTIRE message (acknowledgment + pitch) MUST be under 155 characters total. Keep it tight.
+      - CRITICAL: the ENTIRE message (acknowledgment + pitch) MUST be under 140 characters total. Keep it tight.
       - Do NOT include a sign-off or extra name at the end (the message already says Ty Smith)
       - Output ONLY the message text, nothing else`;
 
@@ -56,7 +56,7 @@ async function generatePitchReply(incomingBody, service) {
           messages: [{ role: 'user', content: prompt }]
   });
       const out = msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim();
-      return capSegment(out);
+      return out.length <= 160 ? out : fallbackPitchMessage(service);
 }
 
 // Push notification via ntfy.sh — instant alert on your phone when someone replies
@@ -202,7 +202,7 @@ export default async function handler(req, res) {
                                               replyBody = fallbackPitchMessage(originalService);
                                 }
                     }
-                    replyBody = capSegment(replyBody);
+                    if (replyBody.length > 160) replyBody = fallbackPitchMessage(originalService);
                     await kv.sadd('sms:auto_replied_numbers', from);
                     await kv.rpush('sms:pending_replies', JSON.stringify({
                                 to: from,
