@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
 import { logEmail, isSuppressed } from '../lib/store.js';
+import { isLikelyRealEmail } from '../lib/email-validate.js';
 
 export const config = { maxDuration: 300 };
 
@@ -143,8 +144,8 @@ async function scrapeEmail(url) {
                   const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
                   const matches = [...new Set(html.match(emailRegex) || [])];
                   const junk = ['example.','sentry.','w3.org','schema.','wix','squarespace','shopify',
-                                      'google.','facebook.','twitter.','instagram.','youtube.','.png','.jpg','.svg','.gif','.css','.js'];
-                  const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j)));
+                                      'google.','facebook.','twitter.','instagram.','youtube.','.png','.jpg','.jpeg','.svg','.gif','.webp','.avif','.ico','.woff','.css','.js'];
+                  const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j))).filter(isLikelyRealEmail);
                   const preferred = clean.find(e => /^(info|contact|hello|sales|office|admin|support|team|booking)@/i.test(e));
                   return preferred || clean[0] || null;
         } catch {

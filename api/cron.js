@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { Resend } from 'resend';
 import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone } from '../lib/store.js';
@@ -133,8 +134,8 @@ async function scrapeEmail(url) {
               if (!res.ok) return null;
               const html = await res.text();
               const matches = [...new Set((html.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || []))];
-              const junk = ['example.','sentry.','w3.org','schema.','wix','squarespace','shopify','google.','facebook.','twitter.','instagram.','.png','.jpg','.svg','.gif','.css','.js'];
-              const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j)));
+              const junk = ['example.','sentry.','w3.org','schema.','wix','squarespace','shopify','google.','facebook.','twitter.','instagram.','.png','.jpg','.jpeg','.svg','.gif','.webp','.avif','.ico','.woff','.css','.js'];
+              const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j))).filter(isLikelyRealEmail);
               return clean.find(e => /^(info|contact|hello|sales|office|admin|support|booking)@/i.test(e)) || clean[0] || null;
       } catch { return null; }
 }
