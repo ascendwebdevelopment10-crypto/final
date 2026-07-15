@@ -62,7 +62,7 @@ async function generatePitchReply(incomingBody, service) {
 // Push notification via ntfy.sh — instant alert on your phone when someone replies
 async function sendPushNotification(from, body, contactName) {
       try {
-              const topic = process.env.NTFY_TOPIC || 'ascend-replies';
+              const topic = process.env.NTFY_TOPIC || 'ascend-replies-8fk3q7wz';
               const title = contactName ? `Reply from ${contactName}` : `New SMS Reply`;
               const message = `${from}: ${body.slice(0, 200)}`;
               await fetch(`https://ntfy.sh/${topic}`, {
