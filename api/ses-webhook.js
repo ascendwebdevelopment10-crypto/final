@@ -29,6 +29,7 @@ export default async function handler(req, res) {
       for (const e of recipients) {
         if (e) await kv.sadd('suppression:emails', e.toLowerCase());
       }
+      if (recipients.length) await kv.incrby('stats:bounced', recipients.length);
       res.status(200).json({ ok: true, suppressed: recipients.length });
       return;
     }

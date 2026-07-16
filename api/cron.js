@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import twilio from 'twilio';
-import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone } from '../lib/store.js';
+import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone, logNotSent } from '../lib/store.js';
 import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
 
@@ -14,7 +14,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
-const EMAIL_CAP = 4;
+const EMAIL_CAP = 5;
 const SMS_CAP = 10;
 const FETCH_LIMIT = 15;
 
@@ -274,7 +274,7 @@ export default async function handler(req, res) {
         const noWebLeads = allLeads.filter(c => hasNoWebsite(c));
           const hasWebLeads = allLeads.filter(c => !hasNoWebsite(c));
 
-        const toScrape = hasWebLeads.slice(0, 10);
+        const toScrape = hasWebLeads.slice(0, 16);
           const scraped = await Promise.all(toScrape.map(c => scrapeEmail(c.website_url)));
           toScrape.forEach((c, i) => { c.email = scraped[i] || null; });
 
@@ -303,7 +303,7 @@ export default async function handler(req, res) {
                   if (content.error) return { error: content.error };
                   try {
                               const suppressed = await isSuppressed(contact.email);
-                              if (suppressed) return null;
+                              if (suppressed) { await logNotSent(1); return null; }
                               const { subject, body, service } = content;
                               const emailId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
                                       const trackBase = 'https://final-phi-swart.vercel.app';
@@ -315,7 +315,7 @@ export default async function handler(req, res) {
                                       await sendEmail(sendOptions);
                                       await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service, id: emailId });
                               return 'ok';
-                  } catch (e) { return { error: e.message }; }
+                  } catch (e) { await logNotSent(1); return { error: e.message }; }
         }));
 
         const smsResults = await Promise.all(smsLeads.map(async (contact, i) => {

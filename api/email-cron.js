@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
-import { logEmail, isSuppressed } from '../lib/store.js';
+import { logEmail, isSuppressed, logNotSent } from '../lib/store.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 
 export const config = { maxDuration: 300 };
@@ -12,8 +12,8 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 3;
-const FETCH_LIMIT = 15;
+const EMAIL_CAP = 5;
+const FETCH_LIMIT = 20;
 const OUTSCRAPER_TIMEOUT_MS = 45000;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -243,7 +243,7 @@ export default async function handler(req, res) {
                       if (content.error) return { error: content.error };
                       try {
                                     const suppressed = await isSuppressed(contact.email);
-                                    if (suppressed) return null;
+                                    if (suppressed) { await logNotSent(1); return null; }
                                     const { subject, body, service } = content;
                                     const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
                                     const sendOptions = {
@@ -256,6 +256,7 @@ export default async function handler(req, res) {
                                     await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
                                     return 'ok';
                       } catch (e) {
+                                    await logNotSent(1);
                                     return { error: e.message };
                       }
           }));

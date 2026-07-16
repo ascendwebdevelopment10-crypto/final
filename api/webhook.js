@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { logReply } from '../lib/store.js';
+import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
 
 const FORWARD_TO_EMAIL = 'info@ascendwebdevelopment.com';
@@ -11,6 +12,15 @@ export default async function handler(req, res) {
           const event = req.body;
           const type = event?.type;
 
+      if (type === 'email.bounced' || type === 'email.complained' || type === 'email.delivery_delayed') {
+              const addr = event?.data?.to?.[0] || event?.data?.email || event?.to || '';
+              if (addr) {
+                        await kv.sadd('suppression:emails', String(addr).toLowerCase());
+                        if (type !== 'email.delivery_delayed') await kv.incr('stats:bounced');
+              }
+              res.status(200).json({ ok: true, suppressed: addr || null });
+              return;
+      }
       if (type === 'email.replied' || type === 'inbound.email' || type === 'email.received') {
               const from = event?.data?.from || event?.from || '';
               const subject = event?.data?.subject || event?.subject || '';
