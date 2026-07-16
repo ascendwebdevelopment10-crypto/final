@@ -7,6 +7,7 @@ export const config = { maxDuration: 300 };
 
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER;
+const REPLY_TO = process.env.REPLY_TO || FROM_EMAIL;
 const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
@@ -248,7 +249,7 @@ export default async function handler(req, res) {
                                     const sendOptions = {
                                                     from: FROM_EMAIL, to: contact.email, subject,
                                                     html: (body + footer).replace(/\n/g, '<br>'),
-                                                    reply_to: FROM_EMAIL
+                                                    reply_to: REPLY_TO
                                     };
                                     if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
                                     await sendEmail(sendOptions);

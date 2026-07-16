@@ -12,7 +12,7 @@ export default async function handler(req, res) {
           const event = req.body;
           const type = event?.type;
 
-      if (type === 'email.replied' || type === 'inbound.email') {
+      if (type === 'email.replied' || type === 'inbound.email' || type === 'email.received') {
               const from = event?.data?.from || event?.from || '';
               const subject = event?.data?.subject || event?.subject || '';
               const body = event?.data?.text || event?.data?.html || event?.text || event?.html || '';
