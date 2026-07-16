@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { logReply } from '../lib/store.js';
+import { checkWebhookToken } from '../lib/auth.js';
 import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
 
@@ -8,6 +9,7 @@ const NOTIFY_PHONE = '+13854716500';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') { res.status(405).end(); return; }
+    if (!checkWebhookToken(req)) { res.status(401).json({ error: 'Unauthorized' }); return; }
     try {
           const event = req.body;
           const type = event?.type;

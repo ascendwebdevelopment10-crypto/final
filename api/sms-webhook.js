@@ -109,8 +109,33 @@ function isNotInterested(body) {
       return /not interested|no thanks|no thank you|don't contact|do not contact|remove me|leave me alone|stop texting|wrong number|unsubscribe/.test(b);
 }
 
+// Verify inbound requests actually came from Twilio (X-Twilio-Signature).
+// Safety valve: set SMS_SIG_CHECK=off in Vercel to disable instantly without a
+// redeploy if anything misbehaves. If TWILIO_AUTH_TOKEN is unset we can't
+// validate, so we allow (never block on missing config).
+function fromTwilio(req) {
+      if (process.env.SMS_SIG_CHECK === 'off') return true;
+      const token = process.env.TWILIO_AUTH_TOKEN;
+      if (!token) return true;
+      const sig = req.headers['x-twilio-signature'];
+      if (!sig) return false;
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const params = req.body || {};
+      const urls = [
+                  proto + '://' + host + '/sms-webhook',
+                  proto + '://' + host + '/api/sms-webhook',
+                  'https://final-phi-swart.vercel.app/sms-webhook',
+                  'https://final-phi-swart.vercel.app/api/sms-webhook',
+      ];
+      return urls.some(function (u) {
+                  try { return twilio.validateRequest(token, sig, u, params); } catch (e) { return false; }
+      });
+}
+
 export default async function handler(req, res) {
       if (req.method !== 'POST') { res.status(405).end(); return; }
+      if (!fromTwilio(req)) { res.setHeader('Content-Type','text/xml'); res.status(403).send('<Response></Response>'); return; }
 
   const from = req.body?.From || '';
       const body = req.body?.Body || '';

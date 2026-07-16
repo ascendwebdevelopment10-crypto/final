@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
-import { logEmail, isSuppressed, logNotSent } from '../lib/store.js';
+import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed } from '../lib/store.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 
 export const config = { maxDuration: 300 };
@@ -238,7 +238,13 @@ export default async function handler(req, res) {
           const emailResults2 = await Promise.all(leads.map(c => scrapeEmail(c.website_url)));
             leads.forEach((c, i) => { c.email = emailResults2[i] || null; });
 
-          const emailableLeads = leads.filter(c => c.email).slice(0, EMAIL_CAP);
+          const emailCandidates = leads.filter(c => c.email);
+          const emailableLeads = [];
+          for (const c of emailCandidates) {
+            if (emailableLeads.length >= EMAIL_CAP) break;
+            if (await wasEmailed(c.email)) continue;   // never email the same business twice
+            emailableLeads.push(c);
+          }
 
           const emailContents = await Promise.all(
                       emailableLeads.map(c => generateEmail(c).catch(e => ({ error: e.message })))
@@ -260,6 +266,7 @@ export default async function handler(req, res) {
                                     if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
                                     await sendEmail(sendOptions);
                                     await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
+                                    await markEmailed(contact.email);
                                     return 'ok';
                       } catch (e) {
                                     await logNotSent(1);

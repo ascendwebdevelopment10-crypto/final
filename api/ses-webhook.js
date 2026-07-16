@@ -1,4 +1,5 @@
 import { kv } from '@vercel/kv';
+import { checkWebhookToken } from '../lib/auth.js';
 
 // Receives AWS SNS notifications for SES bounces and complaints and adds the
 // affected addresses to the suppression list so we never email them again.
@@ -7,6 +8,7 @@ import { kv } from '@vercel/kv';
 // subscription pointing at: https://final-phi-swart.vercel.app/api/ses-webhook
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).end(); return; }
+  if (!checkWebhookToken(req)) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
     const raw = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 

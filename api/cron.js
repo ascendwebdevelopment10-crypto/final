@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import twilio from 'twilio';
-import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone, logNotSent } from '../lib/store.js';
+import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone, logNotSent, wasEmailed, markEmailed } from '../lib/store.js';
 import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
 
@@ -279,7 +279,13 @@ export default async function handler(req, res) {
           toScrape.forEach((c, i) => { c.email = scraped[i] || null; });
 
         const leads = [...noWebLeads, ...hasWebLeads];
-          const emailLeads = leads.filter(c => c.email).slice(0, EMAIL_CAP);
+          const emailCandidates2 = leads.filter(c => c.email);
+          const emailLeads = [];
+          for (const c of emailCandidates2) {
+            if (emailLeads.length >= EMAIL_CAP) break;
+            if (await wasEmailed(c.email)) continue;   // skip businesses already emailed
+            emailLeads.push(c);
+          }
 
         // Never text a number we've already texted before, across any prior run.
         const smsCandidates = leads.slice(0, Math.max(0, SMS_CAP - followupSent) * 3);
@@ -314,6 +320,7 @@ export default async function handler(req, res) {
                                       if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
                                       await sendEmail(sendOptions);
                                       await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service, id: emailId });
+                              await markEmailed(contact.email);
                               return 'ok';
                   } catch (e) { await logNotSent(1); return { error: e.message }; }
         }));
