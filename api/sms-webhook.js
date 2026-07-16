@@ -1,8 +1,7 @@
 import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
-import { Resend } from 'resend';
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendEmail } from '../lib/mailer.js';
 const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
 const FORWARD_TO = '+13854716500';
@@ -180,7 +179,7 @@ export default async function handler(req, res) {
   // 5. Also send push + email notification
   await sendPushNotification(from, body, contactName);
       try {
-              await resend.emails.send({
+              await sendEmail({
                         from: 'info@ascendwebdevelopment.com',
                         to: NOTIFY_EMAIL,
                         subject: `New SMS reply from ${contactName || from}`,

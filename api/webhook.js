@@ -1,8 +1,7 @@
-import { Resend } from 'resend';
 import twilio from 'twilio';
 import { logReply } from '../lib/store.js';
+import { sendEmail } from '../lib/mailer.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FORWARD_TO_EMAIL = 'info@ascendwebdevelopment.com';
 const NOTIFY_PHONE = '+13854716500';
 
@@ -33,7 +32,7 @@ export default async function handler(req, res) {
             } catch (e) { console.error('Email->SMS notify error:', e.message); }
 
             // 3. Forward to your inbox so you see it directly
-            await resend.emails.send({
+            await sendEmail({
                       from: 'info@ascendwebdevelopment.com',
                       to: [FORWARD_TO_EMAIL, 'tysmith327@icloud.com'],
                       subject: 'Reply: ' + subject,
