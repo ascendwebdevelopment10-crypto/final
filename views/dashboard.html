@@ -210,6 +210,9 @@ tr.data-row:hover td{background:#152021}
 <div class="perf-card"><div class="p-label">Overall Reply Rate</div><div class="p-val" id="p-rrate">-</div><div class="p-sub" id="p-rrate-sub">replies / messages sent</div></div>
 <div class="perf-card"><div class="p-label">Conversion Rate</div><div class="p-val" id="p-conv">-</div><div class="p-sub">Lead → Client (pipeline)</div></div>
 <div class="perf-card"><div class="p-label">Pipeline Progress</div><div class="p-val" id="p-pipe">-</div><div class="p-sub">Interested or further</div></div>
+<div class="perf-card"><div class="p-label">Delivery Rate</div><div class="p-val" id="p-delivrate">-</div><div class="p-sub" id="p-delivrate-sub">delivered / attempted</div></div>
+<div class="perf-card"><div class="p-label">Bounced</div><div class="p-val" id="p-bounced">-</div><div class="p-sub">hard bounces + complaints</div></div>
+<div class="perf-card"><div class="p-label">Not Sent</div><div class="p-val" id="p-notsent">-</div><div class="p-sub">suppressed or failed</div></div>
 </div>
 <div class="section"><h2>Best Outreach Method</h2>
 <div class="method-bar" id="method-bar">
@@ -398,6 +401,12 @@ document.getElementById('p-rrate').textContent=replyRate+'%';
 document.getElementById('p-rrate-sub').textContent=totalReplies+' replies / '+total+' sent';
 document.getElementById('p-conv').textContent=convRate+'%';
 document.getElementById('p-pipe').textContent=intRate+'%';
+var bounced=s.bounced||0;var notSent=s.notSent||0;var delivered=Math.max(0,totalEmails-bounced);var attempted=delivered+bounced;
+var delivRate=attempted>0?Math.round((delivered/attempted)*1000)/10:100;
+document.getElementById('p-delivrate').textContent=delivRate+'%';
+document.getElementById('p-delivrate-sub').textContent=delivered.toLocaleString()+' / '+attempted.toLocaleString()+' attempted';
+document.getElementById('p-bounced').textContent=bounced.toLocaleString();
+document.getElementById('p-notsent').textContent=notSent.toLocaleString();
 
 // Best method
 var emailReplied=emails.filter(function(e){return e.replied;}).length;
