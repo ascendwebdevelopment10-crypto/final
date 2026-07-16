@@ -134,7 +134,7 @@ async function fetchLeadsWithWebsites(query, limit) {
 async function scrapeEmail(url) {
         try {
                   const controller = new AbortController();
-                  const timer = setTimeout(() => controller.abort(), 2000);
+                  const timer = setTimeout(() => controller.abort(), 7000);
                   const res = await fetch(url, {
                               signal: controller.signal,
                               headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
@@ -209,25 +209,31 @@ export default async function handler(req, res) {
             const queryIndex = Math.floor(hour / 2) % HIGH_RESPONSE_QUERIES.length;
             const q1 = HIGH_RESPONSE_QUERIES[queryIndex];
             const q2 = HIGH_RESPONSE_QUERIES[(queryIndex + 1) % HIGH_RESPONSE_QUERIES.length];
+            const q3 = HIGH_RESPONSE_QUERIES[(queryIndex + 2) % HIGH_RESPONSE_QUERIES.length];
 
           // BUGFIX: was Promise.all, so one slow/hanging Outscraper query took the whole
           // run down with it and no emails ever got sent. Promise.allSettled lets a failed
           // or timed-out batch degrade gracefully instead of killing the other batch.
-          const [batch1Result, batch2Result] = await Promise.allSettled([
+          const [batch1Result, batch2Result, batch3Result] = await Promise.allSettled([
                       fetchLeadsWithWebsites(q1, FETCH_LIMIT),
-                      fetchLeadsWithWebsites(q2, FETCH_LIMIT)
+                      fetchLeadsWithWebsites(q2, FETCH_LIMIT),
+                      fetchLeadsWithWebsites(q3, FETCH_LIMIT)
                     ]);
 
           const batch1 = batch1Result.status === 'fulfilled' ? batch1Result.value : [];
             const batch2 = batch2Result.status === 'fulfilled' ? batch2Result.value : [];
+            const batch3 = batch3Result.status === 'fulfilled' ? batch3Result.value : [];
             if (batch1Result.status === 'rejected') {
                         errors.push({ type: 'fetch_leads', query: q1, error: batch1Result.reason?.message || String(batch1Result.reason) });
             }
             if (batch2Result.status === 'rejected') {
                         errors.push({ type: 'fetch_leads', query: q2, error: batch2Result.reason?.message || String(batch2Result.reason) });
             }
+            if (batch3Result.status === 'rejected') {
+                        errors.push({ type: 'fetch_leads', query: q3, error: batch3Result.reason?.message || String(batch3Result.reason) });
+            }
 
-          const leads = [...batch1, ...batch2].map(normalizeContact);
+          const leads = [...batch1, ...batch2, ...batch3].map(normalizeContact);
 
           const emailResults2 = await Promise.all(leads.map(c => scrapeEmail(c.website_url)));
             leads.forEach((c, i) => { c.email = emailResults2[i] || null; });

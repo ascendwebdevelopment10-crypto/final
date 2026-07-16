@@ -128,7 +128,7 @@ async function fetchOutscraperLeads(query, limit) {
 async function scrapeEmail(url) {
       try {
               const controller = new AbortController();
-              setTimeout(() => controller.abort(), 3000);
+              setTimeout(() => controller.abort(), 7000);
               const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
               if (!res.ok) return null;
               const html = await res.text();
@@ -274,7 +274,7 @@ export default async function handler(req, res) {
         const noWebLeads = allLeads.filter(c => hasNoWebsite(c));
           const hasWebLeads = allLeads.filter(c => !hasNoWebsite(c));
 
-        const toScrape = hasWebLeads.slice(0, 16);
+        const toScrape = hasWebLeads.slice(0, 24);
           const scraped = await Promise.all(toScrape.map(c => scrapeEmail(c.website_url)));
           toScrape.forEach((c, i) => { c.email = scraped[i] || null; });
 
