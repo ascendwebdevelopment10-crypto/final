@@ -150,6 +150,31 @@ tr.data-row:hover td{background:#152021}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 0;color:#475569;font-size:13px;text-align:center}
 .empty .empty-icon{font-size:26px;opacity:.5}.conv-back-btn{display:none}.page-header{flex-wrap:wrap;gap:10px}@media (max-width:768px){.header{padding:12px 16px}.header h1{font-size:14px}.badge-live{font-size:9px;padding:2px 7px}.last-upd{display:none}.nav{padding:6px 10px;flex-wrap:wrap;gap:4px 6px}.nav-btn{padding:9px 12px;font-size:12px;white-space:nowrap;flex:0 1 auto}.container{padding:14px}.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}.perf-grid{grid-template-columns:1fr}.section{padding:16px;overflow-x:auto}table{min-width:560px}.ph-bar{flex-wrap:wrap}.ph-step{flex:1 1 33%}.run-grid{grid-template-columns:repeat(2,1fr)}.daily-total{flex-wrap:wrap;gap:10px}.conv-wrap{height:calc(100vh - 160px);height:calc(100dvh - 160px);border-radius:8px}.conv-sidebar{width:100%}#conv-wrap[data-mobile-view="chat"] .conv-sidebar{display:none}#conv-wrap[data-mobile-view="list"] .conv-main{display:none}.conv-back-btn{display:inline-flex;align-items:center;gap:4px;background:#152021;border:1px solid #1e2b2c;color:#12fbfd;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-right:10px;flex-shrink:0}.conv-header{flex-wrap:wrap;gap:8px}.msg-b{max-width:85%;font-size:12.5px}.conv-messages{padding:14px}.conv-reply-box{padding:12px}.conv-item{padding:10px 12px}.ci-name{font-size:12.5px}.ci-time{font-size:9px}}
 
+
+/* --- mobile polish pass --- */
+@media(max-width:768px){
+  .container{padding:14px 12px calc(78px + env(safe-area-inset-bottom))}
+  .overview-intro h2{font-size:20px;line-height:1.15}
+  .overview-eyebrow{font-size:8.5px}
+  .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .stat-card{padding:14px 13px 15px;border-radius:14px}
+  .stat-card .value{font-size:clamp(22px,7vw,27px);line-height:1}
+  .stat-card .stat-label,.stat-card .label{font-size:9.5px;letter-spacing:.1em}
+  .perf-grid{grid-template-columns:1fr;gap:10px}
+  .perf-card{padding:16px}
+  .section{padding:15px 14px;border-radius:14px;-webkit-overflow-scrolling:touch}
+  .section h2{font-size:15px}
+  .nav-btn{min-height:52px}
+  table{font-size:12px}
+  th,td{padding:8px 10px}
+  /* let the 7-day chart and any wide block scroll smoothly instead of squashing */
+  .chart-wrap,.bars,.section{overflow-x:auto}
+}
+@media(max-width:380px){
+  .stats-grid{grid-template-columns:1fr}
+  .stat-card .value{font-size:30px}
+  .header h1{font-size:12.5px}
+}
 </style>
 <style>
 /* Olivine-inspired workspace shell */
@@ -284,7 +309,7 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 <div class="perf-card"><div class="p-label">Pipeline Progress</div><div class="p-val" id="p-pipe">-</div><div class="p-sub">Interested or further</div></div>
 <div class="perf-card"><div class="p-label">Delivery Rate</div><div class="p-val" id="p-delivrate">-</div><div class="p-sub" id="p-delivrate-sub">delivered / attempted</div></div>
 <div class="perf-card"><div class="p-label">Bounced</div><div class="p-val" id="p-bounced">-</div><div class="p-sub">hard bounces + complaints</div></div>
-<div class="perf-card"><div class="p-label">Not Sent</div><div class="p-val" id="p-notsent">-</div><div class="p-sub">suppressed or failed</div></div>
+<div class="perf-card"><div class="p-label">Skipped</div><div class="p-val" id="p-notsent">-</div><div class="p-sub">opted out or retrying</div></div>
 </div>
 <div class="section"><h2>Best Outreach Method</h2>
 <div class="method-bar" id="method-bar">
