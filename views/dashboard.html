@@ -258,6 +258,17 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 .cat-card{margin-bottom:14px}
 .cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;padding-bottom:11px;border-bottom:1px solid rgba(200,255,222,.08)}
 .cat-title{font-size:15px;font-weight:600;color:#e9f4ec}
+
+/* === robust mobile bottom-nav fix (11 tabs, no overlap) === */
+@media(max-width:768px){
+  .nav{flex-wrap:wrap!important;height:auto!important;overflow:visible!important;align-content:flex-end}
+  .nav-btn,.nav-more{order:2;flex:1 1 20%!important;min-width:0}
+  .nav-btn:nth-child(3),.nav-btn:nth-child(5),.nav-btn:nth-child(6),.nav-btn:nth-child(7),.nav-btn:nth-child(9),.nav-btn:nth-child(10),.nav-btn:nth-child(11){display:none!important}
+  .nav.expanded .nav-btn:nth-child(3),.nav.expanded .nav-btn:nth-child(5),.nav.expanded .nav-btn:nth-child(6),.nav.expanded .nav-btn:nth-child(7),.nav.expanded .nav-btn:nth-child(9),.nav.expanded .nav-btn:nth-child(10),.nav.expanded .nav-btn:nth-child(11){display:flex!important;order:1;flex:1 1 25%!important}
+  /* full-width spacer forces the primary tabs onto their own clean bottom row when expanded */
+  .nav.expanded::after{content:'';display:block!important;order:1;flex:0 0 100%!important;width:100%;height:1px;margin:5px 0 3px;background:rgba(210,255,224,.09)}
+  .nav:before{display:none!important}
+}
 </style>
 </head><body>
 <div class="liquid-scene" aria-hidden="true"><div class="liquid-object one"></div><div class="liquid-object two"></div><div class="liquid-object three"></div></div>
