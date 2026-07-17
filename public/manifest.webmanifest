@@ -18,7 +18,6 @@
   "shortcuts": [
     {"name": "Dashboard", "short_name": "Overview", "url": "/dashboard?source=pwa"},
     {"name": "Conversations", "short_name": "Replies", "url": "/dashboard?source=pwa#conversations"},
-    {"name": "AI Agent Center", "short_name": "AI Agents", "url": "/dashboard?source=pwa#agents"},
-    {"name": "Outreach Approvals", "short_name": "Approvals", "url": "/dashboard?source=pwa#approvals"}
+    {"name": "AI Agent Center", "short_name": "AI Agents", "url": "/dashboard?source=pwa#agents"}
   ]
 }
