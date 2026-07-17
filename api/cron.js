@@ -16,7 +16,7 @@ const SMS_SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
 
 const EMAIL_CAP = 5;
 const SMS_CAP = 10;
-const FETCH_LIMIT = 15;
+const FETCH_LIMIT = 20;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -250,15 +250,16 @@ export default async function handler(req, res) {
 
         // MAIN OUTREACH — rotate through high-response industries
         const hour = new Date().getUTCHours();
-          const qi = Math.floor(hour / 2) % HIGH_RESPONSE_QUERIES.length;
-          const [b1, b2, b3] = await Promise.all([
+          const qi = Math.floor(Math.random() * HIGH_RESPONSE_QUERIES.length);  // random industries each run -> keeps finding fresh numbers
+          const [b1, b2, b3, b4] = await Promise.all([
                     fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[qi], FETCH_LIMIT),
                     fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 1) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT),
-                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 2) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT)
+                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 2) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT),
+                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 3) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT)
                   ]);
 
         const seenPhones = new Set();
-          const allLeads = [...b1, ...b2, ...b3]
+          const allLeads = [...b1, ...b2, ...b3, ...b4]
             .map(normalizeContact)
             .filter(c => {
                         if (isExcludedBusiness(c.organization_name)) return false;
@@ -288,7 +289,7 @@ export default async function handler(req, res) {
           }
 
         // Never text a number we've already texted before, across any prior run.
-        const smsCandidates = leads.slice(0, Math.max(0, SMS_CAP - followupSent) * 3);
+        const smsCandidates = leads;  // scan every fetched lead for a fresh, not-yet-texted number
           const smsLeads = [];
           for (const c of smsCandidates) {
                     if (smsLeads.length >= Math.max(0, SMS_CAP - followupSent)) break;
