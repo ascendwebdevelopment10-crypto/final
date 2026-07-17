@@ -8,7 +8,8 @@ const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name=
 *{box-sizing:border-box}
 body{margin:0;font-family:'DM Sans',sans-serif;background:#050807;color:#f0f4f1;display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
 body:before{content:'';position:fixed;inset:-30%;background:radial-gradient(circle at 35% 45%,rgba(60,208,126,.11),transparent 30%),radial-gradient(circle at 70% 20%,rgba(31,92,59,.09),transparent 26%);pointer-events:none}
-.card{position:relative;background:rgba(11,13,12,.94);border:1px solid #252a27;border-top-color:#53d98b;border-radius:14px;padding:38px 34px 30px;width:min(390px,calc(100vw - 32px));text-align:left;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.card{position:relative;background:linear-gradient(145deg,rgba(22,28,24,.72),rgba(8,11,9,.62));border:1px solid rgba(174,255,204,.14);border-top-color:rgba(111,234,157,.72);border-radius:16px;padding:38px 34px 30px;width:min(390px,calc(100vw - 32px));text-align:left;box-shadow:0 28px 90px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.055);backdrop-filter:blur(22px) saturate(135%);-webkit-backdrop-filter:blur(22px) saturate(135%)}
+.card:before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.045),transparent 36%);pointer-events:none}
 h1{font-size:17px;letter-spacing:-.01em;margin:0 0 8px;color:#f4f7f5;font-weight:700;text-transform:none}
 h1:first-letter{color:#58dc8f}
 p{margin:0 0 28px;font-size:13px;color:#777f7a}
