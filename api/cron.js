@@ -22,7 +22,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
-const BCC_PREVIEW_LIMIT = 5;
+const BCC_PREVIEW_LIMIT = 0;  // BCC preview copies disabled to conserve Resend quota; sent mail is visible in the dashboard
 
 // Business names/brands we never contact, regardless of what query surfaces them.
 // The Joint Chiropractic is a large nationwide franchise - Outscraper's chiropractor

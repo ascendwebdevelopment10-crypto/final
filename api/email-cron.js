@@ -18,7 +18,7 @@ const OUTSCRAPER_TIMEOUT_MS = 45000;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
-const BCC_PREVIEW_LIMIT = 5;
+const BCC_PREVIEW_LIMIT = 0;  // BCC preview copies disabled to conserve Resend quota; sent mail is visible in the dashboard
 
 // Business names/brands we never contact, regardless of what query surfaces them.
 // The Joint Chiropractic is a large nationwide franchise - Outscraper's chiropractor

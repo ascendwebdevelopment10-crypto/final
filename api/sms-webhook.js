@@ -201,16 +201,9 @@ export default async function handler(req, res) {
           console.error('Twilio notify error:', e.message);
   }
 
-  // 5. Also send push + email notification
+  // 5. Push notification only. (Email alert removed to conserve Resend daily quota —
+  // you already get a text to your phone + the dashboard entry for every reply.)
   await sendPushNotification(from, body, contactName);
-      try {
-              await sendEmail({
-                        from: 'info@ascendwebdevelopment.com',
-                        to: NOTIFY_EMAIL,
-                        subject: `New SMS reply from ${contactName || from}`,
-                        html: `<p><strong>From:</strong> ${contactName || from} (${from})</p><hr/><p>${body}</p>`
-              });
-      } catch (e) { console.error('SMS email notify error:', e.message); }
 
   // 6. Schedule ONE reply only, to be sent ~3 minutes from now — never again after that
   if (!alreadyAutoReplied && !isNotInterested(body)) {

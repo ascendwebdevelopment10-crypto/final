@@ -46,7 +46,7 @@ export default async function handler(req, res) {
             // 3. Forward to your inbox so you see it directly
             await sendEmail({
                       from: 'info@ascendwebdevelopment.com',
-                      to: [FORWARD_TO_EMAIL, 'tysmith327@icloud.com'],
+                      to: [FORWARD_TO_EMAIL],
                       subject: 'Reply: ' + subject,
                       html: '<p><strong>From:</strong> ' + from + '</p><p><strong>Subject:</strong> ' + subject + '</p><hr/>' + body,
                       reply_to: from
