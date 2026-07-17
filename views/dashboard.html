@@ -245,6 +245,14 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
   /* reply badge as a small dot on the Conversations tab */
   .rbadge{position:absolute;top:2px;right:8px;min-width:15px;height:15px;padding:0 4px;font-size:8.5px;line-height:15px;text-align:center;border-radius:99px}
 }
+
+.agent-filters{display:flex;gap:5px;margin-bottom:11px;flex-wrap:wrap}
+.agent-filter{padding:4px 11px;border:1px solid rgba(200,255,222,.12);border-radius:99px;background:transparent;color:#7a857d;font:600 10px 'DM Sans',sans-serif;cursor:pointer}
+.agent-filter.active{background:linear-gradient(120deg,rgba(57,137,82,.34),rgba(37,113,115,.22));border-color:rgba(153,255,195,.28);color:#caffda}
+.agent-run{display:flex;align-items:center;gap:8px}
+.agent-run .agent-run-btn{flex:1 1 auto;min-width:0}
+.agent-run-del{flex:0 0 auto;width:25px;height:25px;border:1px solid rgba(248,113,113,.2);border-radius:7px;background:rgba(60,20,20,.32);color:#f99393;font-size:11px;line-height:1;cursor:pointer}
+.agent-run-del:hover{background:rgba(92,26,26,.55)}
 </style>
 </head><body>
 <div class="liquid-scene" aria-hidden="true"><div class="liquid-object one"></div><div class="liquid-object two"></div><div class="liquid-object three"></div></div>
@@ -444,6 +452,7 @@ if(p==='sms')ls();
 if(p==='performance'){lperf();lanalytics();}
 if(p==='schedule')lschedule();
 if(p==='email-replies')lemailreplies();
+if(p!=='agents'){if(typeof resetAgentForms==='function')resetAgentForms();}
 if(p==='agents')loadAgentActivity();
 });
 });
@@ -469,8 +478,12 @@ document.getElementById('proposal-run-btn').addEventListener('click',function(){
 document.getElementById('content-run-btn').addEventListener('click',function(){runAgent('content',{platformName:document.getElementById('content-name').value,audience:document.getElementById('content-audience').value,offer:document.getElementById('content-offer').value,channels:document.getElementById('content-channels').value,tone:document.getElementById('content-tone').value,goal:document.getElementById('content-goal').value},'Creating your platform content pack...');});
 document.getElementById('agent-output').addEventListener('click',function(e){if(!e.target.closest('#audit-to-proposal')||!currentAgentResult)return;var issueText=(currentAgentResult.issues||[]).map(function(x){return x.category+': '+x.finding+' — '+x.recommendation;}).join('\n');document.getElementById('proposal-client').value=currentAgentResult.siteName||'';document.getElementById('proposal-project').value=(currentAgentResult.recommendedProject||{}).name||'Website improvement project';document.getElementById('proposal-audit').value=(currentAgentResult.executiveSummary||'')+'\n\n'+issueText;switchAgentMode('proposal');});
 document.getElementById('agent-copy-output').addEventListener('click',function(){var text=document.getElementById('agent-output').innerText;if(!text||!navigator.clipboard)return;navigator.clipboard.writeText(text).then(function(){var b=document.getElementById('agent-copy-output');b.textContent='Copied';setTimeout(function(){b.textContent='Copy Result';},1500);});});
-function loadAgentActivity(){fetch('/api/agents').then(function(r){return r.json();}).then(function(data){agentRuns=data.runs||[];var el=document.getElementById('agent-activity');if(!el)return;el.innerHTML=agentRuns.length?agentRuns.map(function(x,i){return'<button class="agent-run agent-run-btn" data-agent-run="'+i+'"><div class="agent-run-title">'+esc(x.summary||x.type)+'</div><div class="agent-run-meta">'+esc(String(x.type||'agent').toUpperCase())+' · '+fmt(x.timestamp)+'</div></button>';}).join(''):'<div class="empty">No agent runs yet.</div>';}).catch(function(){});}
-document.getElementById('agent-activity').addEventListener('click',function(e){var b=e.target.closest('[data-agent-run]');if(!b)return;var run=agentRuns[Number(b.dataset.agentRun)];if(!run)return;switchAgentMode(run.type);renderAgentResult(run.type,run.result||{});});
+var agentRunFilter='all';
+function renderAgentActivity(){var el=document.getElementById('agent-activity');if(!el)return;var chips=[['all','All'],['audit','Audits'],['proposal','Proposals'],['content','Content']].map(function(f){return'<button class="agent-filter'+(agentRunFilter===f[0]?' active':'')+'" data-run-filter="'+f[0]+'">'+f[1]+'</button>';}).join('');var list=agentRuns.filter(function(x){return agentRunFilter==='all'||x.type===agentRunFilter;});var body=list.length?list.map(function(x){var i=agentRuns.indexOf(x);return'<div class="agent-run"><button class="agent-run-btn" data-agent-run="'+i+'"><div class="agent-run-title">'+esc(x.summary||x.type)+'</div><div class="agent-run-meta">'+esc(String(x.type||'agent').toUpperCase())+' \u00b7 '+fmt(x.timestamp)+'</div></button><button class="agent-run-del" data-del-run="'+esc(x.id)+'" title="Delete">\u2715</button></div>';}).join(''):'<div class="empty">Nothing here yet.</div>';el.innerHTML='<div class="agent-filters">'+chips+'</div>'+body;}
+function loadAgentActivity(){fetch('/api/agents').then(function(r){return r.json();}).then(function(data){agentRuns=data.runs||[];renderAgentActivity();}).catch(function(){});}
+var agentFormSnapshot=[];document.querySelectorAll('[data-agent-panel] input,[data-agent-panel] textarea').forEach(function(el){agentFormSnapshot.push([el,el.value]);});
+function resetAgentForms(){agentFormSnapshot.forEach(function(p){p[0].value=p[1];});var out=document.getElementById('agent-output');if(out)out.innerHTML='<div class="empty"><span class="empty-icon">\u2726</span>Choose an agent and complete its brief.</div>';}
+document.getElementById('agent-activity').addEventListener('click',function(e){var del=e.target.closest('[data-del-run]');if(del){e.stopPropagation();fetch('/api/agents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:del.dataset.delRun})}).then(function(){loadAgentActivity();});return;}var filt=e.target.closest('[data-run-filter]');if(filt){agentRunFilter=filt.dataset.runFilter;renderAgentActivity();return;}var b=e.target.closest('[data-agent-run]');if(!b)return;var run=agentRuns[Number(b.dataset.agentRun)];if(!run)return;switchAgentMode(run.type);renderAgentResult(run.type,run.result||{});});
 
 document.getElementById('conv-refresh-btn').addEventListener('click',lconvs);
 document.getElementById('perf-refresh-btn').addEventListener('click',function(){lperf();lanalytics();});
