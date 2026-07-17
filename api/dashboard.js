@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { hasValidSession } from '../lib/auth.js';
 
-const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ascend Outreach — Login</title>
+const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ascend Outreach — Login</title>
+<meta name="theme-color" content="#07100b"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Ascend"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
@@ -29,13 +30,14 @@ fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},bo
 .then(function(x){if(x.ok){location.reload();}else{b.disabled=false;document.getElementById('err').textContent=x.d.error||'Login failed';}})
 .catch(function(){b.disabled=false;document.getElementById('err').textContent='Network error';});
 });
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
 </script></body></html>`;
 
 export default function handler(req, res) {
   res.setHeader('Content-Type', 'text/html');
   res.setHeader('Cache-Control', 'no-store');
   if (!hasValidSession(req)) {
-    res.status(401).send(LOGIN_PAGE);
+    res.status(200).send(LOGIN_PAGE);
     return;
   }
   const file = path.join(process.cwd(), 'views', 'dashboard.html');
