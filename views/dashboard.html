@@ -187,7 +187,7 @@ body:before,body:after{content:'';position:fixed;z-index:-1;width:620px;height:6
 .nav:after{content:'OUTREACH WORKSPACE';position:absolute;left:26px;bottom:24px;color:#4f5751;font-size:9px;font-weight:700;letter-spacing:.16em}
 .nav-btn{width:100%;padding:10px 12px;border:1px solid transparent;border-radius:8px;text-align:left;color:#747d76;font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px;transition:all .15s}
 .nav-btn:before{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;color:#5e6961;font-size:14px}
-.nav-btn:nth-child(1):before{content:'🏠'}.nav-btn:nth-child(2):before{content:'💬'}.nav-btn:nth-child(3):before{content:'📥'}.nav-btn:nth-child(4):before{content:'📈'}.nav-btn:nth-child(5):before{content:'📅'}.nav-btn:nth-child(6):before{content:'📧'}.nav-btn:nth-child(7):before{content:'📱'}.nav-btn:nth-child(8):before{content:'🤖'}
+.nav-btn:nth-child(1):before{content:'🏠'}.nav-btn:nth-child(2):before{content:'💬'}.nav-btn:nth-child(3):before{content:'📥'}.nav-btn:nth-child(4):before{content:'📈'}.nav-btn:nth-child(5):before{content:'📅'}.nav-btn:nth-child(6):before{content:'📧'}.nav-btn:nth-child(7):before{content:'📱'}.nav-btn:nth-child(8):before{content:'🤖'}.nav-btn:nth-child(9):before{content:'📄'}.nav-btn:nth-child(10):before{content:'🔍'}.nav-btn:nth-child(11):before{content:'🎨'}
 .nav-btn:hover{color:#d7ded9;background:rgba(37,58,45,.34);border-color:rgba(170,255,202,.055)}.nav-btn.active{color:#f2fff6;background:linear-gradient(115deg,rgba(61,131,83,.28),rgba(40,105,102,.13));border-color:rgba(128,244,169,.19);border-bottom-color:rgba(128,244,169,.19);box-shadow:inset 3px 0 0 var(--green),inset 0 1px 0 rgba(255,255,255,.055),0 9px 24px rgba(0,0,0,.12)}
 .nav-btn.active:before{color:var(--green)}
 .header{height:66px;padding:0 30px;background:rgba(10,14,11,.62);backdrop-filter:blur(20px) saturate(135%);-webkit-backdrop-filter:blur(20px) saturate(135%);border-bottom:1px solid rgba(210,255,224,.075);box-shadow:0 10px 35px rgba(0,0,0,.11),inset 0 1px 0 rgba(255,255,255,.025);position:sticky;top:0;z-index:40}
@@ -232,9 +232,9 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
            padding:8px 3px;font-size:9.5px;line-height:1.15;gap:3px;letter-spacing:.01em}
   .nav-btn:before{font-size:17px;height:19px}
   /* secondary tabs live inside the More sheet */
-  .nav-btn:nth-child(3),.nav-btn:nth-child(5),.nav-btn:nth-child(6),.nav-btn:nth-child(7){display:none;order:1;flex:1 1 25%;min-width:25%}
+  .nav-btn:nth-child(3),.nav-btn:nth-child(5),.nav-btn:nth-child(6),.nav-btn:nth-child(7),.nav-btn:nth-child(9),.nav-btn:nth-child(10),.nav-btn:nth-child(11){display:none;order:1;flex:1 1 25%;min-width:25%}
   .nav.expanded{padding-top:10px}
-  .nav.expanded .nav-btn:nth-child(3),.nav.expanded .nav-btn:nth-child(5),.nav.expanded .nav-btn:nth-child(6),.nav.expanded .nav-btn:nth-child(7){display:flex}
+  .nav.expanded .nav-btn:nth-child(3),.nav.expanded .nav-btn:nth-child(5),.nav.expanded .nav-btn:nth-child(6),.nav.expanded .nav-btn:nth-child(7),.nav.expanded .nav-btn:nth-child(9),.nav.expanded .nav-btn:nth-child(10),.nav.expanded .nav-btn:nth-child(11){display:flex}
   /* More button */
   .nav-more{display:flex;order:2;flex:1 1 0;min-width:0;flex-direction:column;align-items:center;justify-content:center;
             gap:3px;padding:8px 3px;border:1px solid transparent;border-radius:13px;background:transparent;
@@ -253,6 +253,10 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 .agent-run .agent-run-btn{flex:1 1 auto;min-width:0}
 .agent-run-del{flex:0 0 auto;width:25px;height:25px;border:1px solid rgba(248,113,113,.2);border-radius:7px;background:rgba(60,20,20,.32);color:#f99393;font-size:11px;line-height:1;cursor:pointer}
 .agent-run-del:hover{background:rgba(92,26,26,.55)}
+
+.cat-card{margin-bottom:14px}
+.cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;padding-bottom:11px;border-bottom:1px solid rgba(200,255,222,.08)}
+.cat-title{font-size:15px;font-weight:600;color:#e9f4ec}
 </style>
 </head><body>
 <div class="liquid-scene" aria-hidden="true"><div class="liquid-object one"></div><div class="liquid-object two"></div><div class="liquid-object three"></div></div>
@@ -266,6 +270,9 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 <button class="nav-btn" data-page="emails">Emails</button>
 <button class="nav-btn" data-page="sms">SMS</button>
 <button class="nav-btn" data-page="agents">AI Agents</button>
+<button class="nav-btn" data-page="proposals">Proposals</button>
+<button class="nav-btn" data-page="audits">Website Audits</button>
+<button class="nav-btn" data-page="content">Content</button>
 <button class="nav-more" id="nav-more" type="button">More</button>
 </nav>
 <div class="container">
@@ -402,7 +409,7 @@ th{color:#69726b;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 <div class="section"><h2>Next Upcoming Run</h2><div id="next-run-info" style="font-size:14px;color:#cbd5e1;padding:12px 0"></div></div>
 </div>
 
-<div class="page" id="page-email-replies"><div class="section"><h2>Email Replies <span style="font-size:12px;color:#475569;font-weight:400">&mdash; <span id="er-count">0</span> from prospects</span></h2><div id="er-list" style="margin-top:12px"><div class="empty">Loading&hellip;</div></div></div></div></div></div><script>
+<div class="page" id="page-proposals"><div class="overview-intro"><div><span class="overview-eyebrow">AI PRODUCT STUDIO</span><h2>Proposals</h2></div></div><div id="cat-proposal"><div class="empty">Loading&hellip;</div></div></div><div class="page" id="page-audits"><div class="overview-intro"><div><span class="overview-eyebrow">AI PRODUCT STUDIO</span><h2>Website Audits</h2></div></div><div id="cat-audit"><div class="empty">Loading&hellip;</div></div></div><div class="page" id="page-content"><div class="overview-intro"><div><span class="overview-eyebrow">AI PRODUCT STUDIO</span><h2>Content</h2></div></div><div id="cat-content"><div class="empty">Loading&hellip;</div></div></div><div class="page" id="page-email-replies"><div class="section"><h2>Email Replies <span style="font-size:12px;color:#475569;font-weight:400">&mdash; <span id="er-count">0</span> from prospects</span></h2><div id="er-list" style="margin-top:12px"><div class="empty">Loading&hellip;</div></div></div></div></div></div><script>
 (function(){
 var cp='overview';
 var convData={};
@@ -454,6 +461,9 @@ if(p==='schedule')lschedule();
 if(p==='email-replies')lemailreplies();
 if(p!=='agents'){if(typeof resetAgentForms==='function')resetAgentForms();}
 if(p==='agents')loadAgentActivity();
+if(p==='proposals')loadCategory('proposal','cat-proposal');
+if(p==='audits')loadCategory('audit','cat-audit');
+if(p==='content')loadCategory('content','cat-content');
 });
 });
 var initialPage=location.hash.replace('#','');
@@ -478,12 +488,14 @@ document.getElementById('proposal-run-btn').addEventListener('click',function(){
 document.getElementById('content-run-btn').addEventListener('click',function(){runAgent('content',{platformName:document.getElementById('content-name').value,audience:document.getElementById('content-audience').value,offer:document.getElementById('content-offer').value,channels:document.getElementById('content-channels').value,tone:document.getElementById('content-tone').value,goal:document.getElementById('content-goal').value},'Creating your platform content pack...');});
 document.getElementById('agent-output').addEventListener('click',function(e){if(!e.target.closest('#audit-to-proposal')||!currentAgentResult)return;var issueText=(currentAgentResult.issues||[]).map(function(x){return x.category+': '+x.finding+' — '+x.recommendation;}).join('\n');document.getElementById('proposal-client').value=currentAgentResult.siteName||'';document.getElementById('proposal-project').value=(currentAgentResult.recommendedProject||{}).name||'Website improvement project';document.getElementById('proposal-audit').value=(currentAgentResult.executiveSummary||'')+'\n\n'+issueText;switchAgentMode('proposal');});
 document.getElementById('agent-copy-output').addEventListener('click',function(){var text=document.getElementById('agent-output').innerText;if(!text||!navigator.clipboard)return;navigator.clipboard.writeText(text).then(function(){var b=document.getElementById('agent-copy-output');b.textContent='Copied';setTimeout(function(){b.textContent='Copy Result';},1500);});});
-var agentRunFilter='all';
-function renderAgentActivity(){var el=document.getElementById('agent-activity');if(!el)return;var chips=[['all','All'],['audit','Audits'],['proposal','Proposals'],['content','Content']].map(function(f){return'<button class="agent-filter'+(agentRunFilter===f[0]?' active':'')+'" data-run-filter="'+f[0]+'">'+f[1]+'</button>';}).join('');var list=agentRuns.filter(function(x){return agentRunFilter==='all'||x.type===agentRunFilter;});var body=list.length?list.map(function(x){var i=agentRuns.indexOf(x);return'<div class="agent-run"><button class="agent-run-btn" data-agent-run="'+i+'"><div class="agent-run-title">'+esc(x.summary||x.type)+'</div><div class="agent-run-meta">'+esc(String(x.type||'agent').toUpperCase())+' \u00b7 '+fmt(x.timestamp)+'</div></button><button class="agent-run-del" data-del-run="'+esc(x.id)+'" title="Delete">\u2715</button></div>';}).join(''):'<div class="empty">Nothing here yet.</div>';el.innerHTML='<div class="agent-filters">'+chips+'</div>'+body;}
+function renderAgentActivity(){var el=document.getElementById('agent-activity');if(!el)return;el.innerHTML=agentRuns.length?agentRuns.map(function(x,i){return'<div class="agent-run"><button class="agent-run-btn" data-agent-run="'+i+'"><div class="agent-run-title">'+esc(x.summary||x.type)+'</div><div class="agent-run-meta">'+esc(String(x.type||'agent').toUpperCase())+' \u00b7 '+fmt(x.timestamp)+'</div></button><button class="agent-run-del" data-del-run="'+esc(x.id)+'" title="Delete">\u2715</button></div>';}).join(''):'<div class="empty">No agent runs yet.</div>';}
+function renderResultHTML(type,result){return type==='audit'?renderAudit(result||{}):type==='proposal'?renderProposal(result||{}):renderContent(result||{});}
+function loadCategory(type,cid){var el=document.getElementById(cid);if(!el)return;el.innerHTML='<div class="empty">Loading\u2026</div>';fetch('/api/agents').then(function(r){return r.json();}).then(function(data){var runs=(data.runs||[]).filter(function(x){return x.type===type;});if(!runs.length){el.innerHTML='<div class="empty"><span class="empty-icon">\u2726</span>Nothing here yet \u2014 generate one in AI Agents.</div>';return;}el.innerHTML=runs.map(function(x){return'<div class="section cat-card"><div class="cat-head"><div><div class="cat-title">'+esc(x.summary||x.type)+'</div><div class="agent-run-meta">'+fmt(x.timestamp)+'</div></div><button class="agent-run-del" data-cat-del="'+esc(x.id)+'" title="Delete">\u2715</button></div><div class="cat-body">'+renderResultHTML(type,x.result)+'</div></div>';}).join('');}).catch(function(){el.innerHTML='<div class="empty">Could not load.</div>';});}
 function loadAgentActivity(){fetch('/api/agents').then(function(r){return r.json();}).then(function(data){agentRuns=data.runs||[];renderAgentActivity();}).catch(function(){});}
 var agentFormSnapshot=[];document.querySelectorAll('[data-agent-panel] input,[data-agent-panel] textarea').forEach(function(el){agentFormSnapshot.push([el,el.value]);});
 function resetAgentForms(){agentFormSnapshot.forEach(function(p){p[0].value=p[1];});var out=document.getElementById('agent-output');if(out)out.innerHTML='<div class="empty"><span class="empty-icon">\u2726</span>Choose an agent and complete its brief.</div>';}
-document.getElementById('agent-activity').addEventListener('click',function(e){var del=e.target.closest('[data-del-run]');if(del){e.stopPropagation();fetch('/api/agents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:del.dataset.delRun})}).then(function(){loadAgentActivity();});return;}var filt=e.target.closest('[data-run-filter]');if(filt){agentRunFilter=filt.dataset.runFilter;renderAgentActivity();return;}var b=e.target.closest('[data-agent-run]');if(!b)return;var run=agentRuns[Number(b.dataset.agentRun)];if(!run)return;switchAgentMode(run.type);renderAgentResult(run.type,run.result||{});});
+document.getElementById('agent-activity').addEventListener('click',function(e){var del=e.target.closest('[data-del-run]');if(del){e.stopPropagation();fetch('/api/agents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:del.dataset.delRun})}).then(function(){loadAgentActivity();});return;}var b=e.target.closest('[data-agent-run]');if(!b)return;var run=agentRuns[Number(b.dataset.agentRun)];if(!run)return;switchAgentMode(run.type);renderAgentResult(run.type,run.result||{});});
+document.addEventListener('click',function(e){var d=e.target.closest('[data-cat-del]');if(!d)return;var card=d.closest('.cat-card');fetch('/api/agents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:d.dataset.catDel})}).then(function(){if(card)card.remove();});});
 
 document.getElementById('conv-refresh-btn').addEventListener('click',lconvs);
 document.getElementById('perf-refresh-btn').addEventListener('click',function(){lperf();lanalytics();});
