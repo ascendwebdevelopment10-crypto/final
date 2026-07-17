@@ -3,15 +3,18 @@ import path from 'path';
 import { hasValidSession } from '../lib/auth.js';
 
 const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ascend Outreach — Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;font-family:'Barlow',sans-serif;background:#0b1213;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.card{background:#101a1b;border:1px solid #1e2b2c;border-radius:14px;padding:36px 32px;width:320px;text-align:center}
-h1{font-size:18px;letter-spacing:2px;margin:0 0 6px;color:#12fbfd;text-transform:uppercase;font-weight:800}
-p{margin:0 0 22px;font-size:13px;color:#64748b}
-input{width:100%;box-sizing:border-box;background:#0b1213;border:1px solid #1e2b2c;border-radius:8px;color:#e2e8f0;padding:12px 14px;font-size:14px;margin-bottom:14px;font-family:inherit}
-input:focus{outline:none;border-color:#12fbfd}
-button{width:100%;background:#12fbfd;color:#0b1213;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:1px}
+*{box-sizing:border-box}
+body{margin:0;font-family:'DM Sans',sans-serif;background:#050807;color:#f0f4f1;display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
+body:before{content:'';position:fixed;inset:-30%;background:radial-gradient(circle at 35% 45%,rgba(60,208,126,.11),transparent 30%),radial-gradient(circle at 70% 20%,rgba(31,92,59,.09),transparent 26%);pointer-events:none}
+.card{position:relative;background:rgba(11,13,12,.94);border:1px solid #252a27;border-top-color:#53d98b;border-radius:14px;padding:38px 34px 30px;width:min(390px,calc(100vw - 32px));text-align:left;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+h1{font-size:17px;letter-spacing:-.01em;margin:0 0 8px;color:#f4f7f5;font-weight:700;text-transform:none}
+h1:first-letter{color:#58dc8f}
+p{margin:0 0 28px;font-size:13px;color:#777f7a}
+input{width:100%;box-sizing:border-box;background:#141715;border:1px solid #272c29;border-radius:8px;color:#edf2ef;padding:13px 14px;font-size:14px;margin-bottom:14px;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:#58dc8f;box-shadow:0 0 0 3px rgba(88,220,143,.1)}
+button{width:100%;background:linear-gradient(120deg,#54dc8c,#9ee9ad);color:#07100a;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0;box-shadow:0 8px 24px rgba(62,192,113,.14)}
 button:disabled{opacity:.5;cursor:wait}
 #err{color:#f87171;font-size:12.5px;min-height:18px;margin-top:12px}
 </style></head><body>
