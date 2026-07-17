@@ -250,26 +250,41 @@ Return STRICT JSON only:
 }
 
 async function runContent(body) {
-  const platformName = clean(body.platformName, 160) || 'Ascend Outreach Command Center';
-  const audience = clean(body.audience, 400);
-  const offer = clean(body.offer, 900);
-  const channels = clean(body.channels, 240) || 'Instagram, LinkedIn, and short-form video';
-  const tone = clean(body.tone, 160) || 'premium, direct, credible';
-  const goal = clean(body.goal, 600) || 'Validate demand and attract paid beta users';
+  const platformName = clean(body.platformName, 160) || 'Ascend Command Center';
+  const handle = clean(body.handle, 100);
+  const websiteUrl = clean(body.websiteUrl, 500);
+  const audience = clean(body.audience, 500);
+  const offer = clean(body.offer, 1400);
+  const brandStyle = clean(body.brandStyle, 500) || 'dark premium liquid glass with emerald and aqua accents';
+  const tone = clean(body.tone, 200) || 'premium, direct, credible, founder-led';
+  const goal = clean(body.goal, 700) || 'Validate demand and attract paid beta users';
   if (!audience) throw new Error('Target audience is required');
   if (!offer) throw new Error('Platform offer is required');
-  const result = await ask(`You are the content strategist for a new SaaS-style business platform. Create a practical content pack that helps validate whether people will pay. Do not invent customers, results, testimonials, user counts, scarcity, integrations, or features. Distinguish existing features from future ideas. Focus on specific problems, product demonstrations, founder-led credibility, and clear beta calls to action.
+  const result = await ask(`You are launching and managing the Instagram presence for a new SaaS-style business platform. Create a complete, ready-to-use Instagram launch kit. Do not invent customers, results, testimonials, user counts, scarcity, integrations, or features. Distinguish current features from future ideas. Write natural, specific content—not generic AI marketing language.
 
 Platform: ${platformName}
+Preferred handle, if any: ${handle || 'Create handle ideas'}
+Website or beta link: ${websiteUrl || 'Not provided'}
 Audience: ${audience}
-Offer and real features: ${offer}
-Channels: ${channels}
-Tone: ${tone}
-Business goal: ${goal}
+Real offer and current features: ${offer}
+Brand style: ${brandStyle}
+Voice: ${tone}
+Goal: ${goal}
 
 Return STRICT JSON only:
-{"campaignName":"...","positioning":"...","corePromise":"...","audiencePainPoints":["..."],"contentPillars":[{"name":"...","purpose":"...","topics":["..."]}],"posts":[{"channel":"...","hook":"...","caption":"...","cta":"...","visualDirection":"..."}],"reelScripts":[{"title":"...","duration":"15-30 seconds","hook":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}],"cta":"..."}],"adConcepts":[{"headline":"...","primaryText":"...","cta":"...","creative":"..."}],"landingPage":{"headline":"...","subheadline":"...","benefits":["..."],"betaCta":"...","faq":[{"question":"...","answer":"..."}]},"sevenDayPlan":[{"day":1,"channel":"...","content":"...","goal":"..."}],"validationQuestions":["..."]}`, 3200);
-  const run = await saveRun('content', result.campaignName || 'Platform content pack', result, { platformName, audience, offer, channels, tone, goal });
+{"campaignName":"...","positioning":"...","profile":{"usernameIdeas":["..."],"displayName":"...","category":"...","bio":"...","linkStrategy":"...","highlights":[{"name":"...","purpose":"...","storyIdeas":["..."]}]},"brandSystem":{"visualDirection":"...","colorRoles":["..."],"fontStyle":"...","photoStyle":"...","designRules":["..."]},"pinnedPostIds":[1,2,3],"launchGrid":[{"id":1,"format":"single|carousel|reel","title":"...","hook":"...","caption":"...","cta":"...","hashtags":["..."],"asset":{"eyebrow":"...","headline":"...","subheadline":"..."},"slides":[{"headline":"...","body":"..."}],"reel":{"duration":"15-30 seconds","coverText":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}]},"storyTeaser":"..."}],"stories":[{"title":"...","headline":"...","body":"...","cta":"..."}],"postingSchedule":[{"day":1,"postId":1,"recommendedTime":"...","storySupport":"...","engagementTask":"..."}],"engagementPlan":["..."],"launchChecklist":["..."],"validationQuestions":["..."]}
+
+Requirements:
+- Create exactly 9 launchGrid items arranged as a coherent 3x3 profile launch.
+- Use exactly 3 single-image posts, 3 carousels, and 3 Reels.
+- Every carousel must have 4 concise slides. Non-carousel slides must be an empty array.
+- Every Reel must have 3 concise scenes and a strong cover. Non-Reel reel must be an object with empty duration, coverText, and scenes.
+- Keep each caption under 120 words and provide 8-12 relevant hashtags.
+- Create exactly 7 Stories and a 9-day posting schedule using every post once.
+- Make the first three pinned posts explain the problem, product, and founder/beta offer.
+- Asset headlines must be short enough to fit a designed Instagram graphic.
+- Keep the complete JSON concise enough to finish within the response limit.`, 5600);
+  const run = await saveRun('content', result.campaignName || 'Instagram launch kit', result, { platformName, handle, websiteUrl, audience, offer, brandStyle, tone, goal });
   return { ...result, runId: run.id };
 }
 
