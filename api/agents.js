@@ -19,7 +19,9 @@ function parseJson(text) {
   try { return JSON.parse(raw); } catch {
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
-    if (start >= 0 && end > start) return JSON.parse(raw.slice(start, end + 1));
+    if (start >= 0 && end > start) {
+      try { return JSON.parse(raw.slice(start, end + 1)); } catch {}
+    }
     throw new Error('The AI returned an invalid response. Please try again.');
   }
 }
@@ -32,7 +34,20 @@ async function ask(prompt, maxTokens = 2200) {
     temperature: 0.35,
     messages: [{ role: 'user', content: prompt }],
   });
-  return parseJson(message.content?.[0]?.text || '');
+  const raw = message.content?.[0]?.text || '';
+  try { return parseJson(raw); } catch {
+    const repair = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: Math.max(2600, maxTokens),
+      temperature: 0,
+      messages: [{
+        role: 'user',
+        content: `Repair the JSON below. Return one complete, valid JSON object only—no markdown or explanation. Preserve the intended fields and meaning, complete any structure cut off at the end, and shorten verbose values if necessary so the entire object fits within the response limit.\n\nBROKEN JSON:\n${raw.slice(0, 24000)}`,
+      }],
+    });
+    try { return parseJson(repair.content?.[0]?.text || ''); }
+    catch { throw new Error('The AI response could not be formatted correctly. Please run the agent again.'); }
+  }
 }
 
 async function saveRun(type, summary, result, input = {}) {
@@ -201,7 +216,8 @@ Page capture truncated at safety limit: ${truncated ? 'Yes. Audit only the captu
 Visible page text excerpt: ${page.text}
 
 Return STRICT JSON only:
-{"siteName":"...","executiveSummary":"...","overallScore":0,"scores":{"firstImpression":0,"mobileReadiness":0,"conversion":0,"seoFoundation":0,"trust":0,"accessibility":0},"strengths":["..."],"issues":[{"severity":"high|medium|low","category":"...","finding":"...","evidence":"...","recommendation":"...","businessImpact":"..."}],"quickWins":["..."],"recommendedProject":{"name":"...","scope":["..."],"expectedOutcome":"..."},"salesTalkingPoints":["..."],"limitations":["..."]}`, 2600);
+{"siteName":"...","executiveSummary":"...","overallScore":0,"scores":{"firstImpression":0,"mobileReadiness":0,"conversion":0,"seoFoundation":0,"trust":0,"accessibility":0},"strengths":["..."],"issues":[{"severity":"high|medium|low","category":"...","finding":"...","evidence":"...","recommendation":"...","businessImpact":"..."}],"quickWins":["..."],"recommendedProject":{"name":"...","scope":["..."],"expectedOutcome":"..."},"salesTalkingPoints":["..."],"limitations":["..."]}
+Keep it concise: exactly 3 strengths, no more than 6 issues, 5 quick wins, 4 sales talking points, and 3 limitations.`, 3200);
   result.website = finalUrl;
   const run = await saveRun('audit', 'Website audit: ' + (result.siteName || businessName || new URL(finalUrl).hostname), result, { website: finalUrl, businessName, goals });
   return { ...result, runId: run.id };
