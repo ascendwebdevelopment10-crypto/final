@@ -32,7 +32,7 @@ function fallbackPitchMessage(service) {
 }
 
 // Real person replied — briefly answer what they said, then a short pitch. Whole thing under 160 chars.
-async function generatePitchReply(incomingBody, service) {
+async function generatePitchReply(incomingBody, service, contactName) {
       const serviceDesc = serviceDescription(service);
       const prompt = `You are Ty Smith, owner of Ascend Web Development, replying by text to someone who just replied to our cold outreach SMS.
 
@@ -189,11 +189,18 @@ export default async function handler(req, res) {
           console.error('KV log error:', e.message);
   }
 
-  // 4. Notify Ty's phone by text — fires for every real reply
+  // Generate a TAILORED suggested reply for Ty to review & send himself. No auto-send.
+  let suggestedReply = '';
+  if (!isNotInterested(body) && !isAutomatedReply(body)) {
+          try { suggestedReply = await generatePitchReply(body, originalService, contactName); }
+          catch (e) { console.error('Suggested reply gen error:', e.message); }
+  }
+
+  // 4. Notify Ty's phone by text (now includes the suggested reply he can edit & send)
   try {
           const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
           await client.messages.create({
-                    body: 'You got a reply on Ascend Outreach!\nFrom: ' + (contactName || from) + ' (' + from + ')\n\n' + body,
+                    body: 'New reply - Ascend Outreach\nFrom: ' + (contactName || from) + ' (' + from + ')\nThey said: ' + body + (suggestedReply ? '\n\nSuggested reply (edit & send):\n' + suggestedReply : ''),
                     from: process.env.TWILIO_PHONE_NUMBER,
                     to: FORWARD_TO
           });
@@ -205,33 +212,7 @@ export default async function handler(req, res) {
   // you already get a text to your phone + the dashboard entry for every reply.)
   await sendPushNotification(from, body, contactName);
 
-  // 6. Schedule ONE reply only, to be sent ~3 minutes from now — never again after that
-  if (!alreadyAutoReplied && !isNotInterested(body)) {
-          try {
-                    let replyBody;
-                    if (isAutomatedReply(body)) {
-                                replyBody = AUTOMATED_REPLY_TEXT;
-                    } else {
-                                try {
-                                              replyBody = await generatePitchReply(body, originalService);
-                                } catch (e) {
-                                              console.error('AI reply generation error:', e.message);
-                                              replyBody = fallbackPitchMessage(originalService);
-                                }
-                    }
-                    if (replyBody.length > 160) replyBody = fallbackPitchMessage(originalService);
-                    await kv.sadd('sms:auto_replied_numbers', from);
-                    await kv.rpush('sms:pending_replies', JSON.stringify({
-                                to: from,
-                                body: replyBody,
-                                contactName,
-                                sendAt: Date.now() + REPLY_DELAY_MS,
-                                createdAt: Date.now()
-                    }));
-          } catch (e) {
-                    console.error('Schedule reply error:', e.message);
-          }
-  }
+  // Auto-replies disabled: Ty sends replies himself using the suggested reply above.
 
   res.setHeader('Content-Type', 'text/xml');
       res.status(200).send('<Response></Response>');
