@@ -285,6 +285,15 @@ export default async function handler(req, res) {
     }
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
     const action = clean(req.body?.action, 30).toLowerCase();
+    if (action === 'delete') {
+      const id = clean(req.body?.id, 60);
+      const raw = await kv.lrange('agents:runs', 0, -1);
+      const kept = raw.map(x => typeof x === 'string' ? JSON.parse(x) : x).filter(r => r.id !== id);
+      await kv.del('agents:runs');
+      for (const e of kept.reverse()) await kv.lpush('agents:runs', JSON.stringify(e));
+      res.status(200).json({ ok: true, deleted: id });
+      return;
+    }
     const result = action === 'audit' ? await runAudit(req.body || {})
       : action === 'proposal' ? await runProposal(req.body || {})
       : action === 'content' ? await runContent(req.body || {})
