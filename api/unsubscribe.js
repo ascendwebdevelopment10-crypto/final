@@ -1,6 +1,6 @@
 // One-click unsubscribe. GET renders a confirmation page; POST handles the
 // email-client "one-click" (List-Unsubscribe-Post) request. Both record the opt-out.
-import { addSuppressed } from "../lib/store.js";
+import { addToSuppression } from "../lib/store.js";
 import { tokenValid } from "../lib/sign.js";
 
 function page(title, msg) {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await addSuppressed(email);
+    await addToSuppression(email);
   } catch (e) {
     res.setHeader("Content-Type", "text/html");
     return res.status(500).send(page("Something went wrong", "We couldn't record that just now. Please email us directly and we'll remove you."));
