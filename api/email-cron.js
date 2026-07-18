@@ -1,10 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail, MAIL_PROVIDER } from '../lib/mailer.js';
-import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed, wasHunterQueued, markHunterQueued, getTotalStats } from '../lib/store.js';
+import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed, getTotalStats } from '../lib/store.js';
 import { tokenFor } from '../lib/sign.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
-import { hunterConfigured, ensureHunterSequenceConfigured, addHunterRecipients, HUNTER_SEQUENCE_ID } from '../lib/hunter.js';
 
 export const config = { maxDuration: 300 };
 
@@ -20,7 +19,6 @@ const DEFAULT_DAILY_EMAIL_CAP = MAIL_PROVIDER === 'ses' ? 150 : 95;
 const EMAIL_CAP = Math.max(1, Math.min(25, parseInt(process.env.EMAILS_PER_RUN || DEFAULT_EMAILS_PER_RUN, 10)));
 const DAILY_EMAIL_CAP = Math.max(1, Math.min(1000, parseInt(process.env.DAILY_EMAIL_CAP || DEFAULT_DAILY_EMAIL_CAP, 10)));
 const SEND_DELAY_MS = Math.max(250, Math.min(10000, parseInt(process.env.EMAIL_SEND_DELAY_MS || '1000', 10)));
-const HUNTER_QUEUE_PER_RUN = Math.max(1, Math.min(50, parseInt(process.env.HUNTER_QUEUE_PER_RUN || '20', 10)));
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://final-phi-swart.vercel.app';
 const FETCH_LIMIT = 20;
 const OUTSCRAPER_TIMEOUT_MS = 45000;
@@ -214,11 +212,10 @@ export default async function handler(req, res) {
         const errors = [];
 
   try {
-            const useHunter = hunterConfigured();
             const currentStats = await getTotalStats();
             const remainingToday = Math.max(0, DAILY_EMAIL_CAP - (currentStats.todayEmailSent || 0));
-            const runCap = useHunter ? HUNTER_QUEUE_PER_RUN : Math.min(EMAIL_CAP, remainingToday);
-            if (!useHunter && runCap === 0) {
+            const runCap = Math.min(EMAIL_CAP, remainingToday);
+            if (runCap === 0) {
               res.status(200).json({ skipped: 'daily_cap_reached', provider: MAIL_PROVIDER, dailyEmailCap: DAILY_EMAIL_CAP, emailsSent: 0, timestamp: new Date().toISOString() });
               return;
             }
@@ -262,37 +259,7 @@ export default async function handler(req, res) {
           for (const c of emailCandidates) {
             if (emailableLeads.length >= runCap) break;
             if (await wasEmailed(c.email)) continue;   // never email the same business twice
-            if (useHunter && await wasHunterQueued(c.email)) continue;
             emailableLeads.push(c);
-          }
-
-          if (useHunter) {
-            const eligible = [];
-            for (const contact of emailableLeads) {
-              if (await isSuppressed(contact.email)) {
-                await logNotSent(1);
-                continue;
-              }
-              eligible.push(contact);
-            }
-
-            const setup = await ensureHunterSequenceConfigured();
-            const queued = await addHunterRecipients(eligible.map(contact => contact.email));
-            for (const contact of eligible) await markHunterQueued(contact.email);
-
-            res.status(200).json({
-              provider: 'hunter',
-              sequenceId: HUNTER_SEQUENCE_ID,
-              sequenceActive: setup.active,
-              sequenceConfigured: setup.configured,
-              queuedToHunter: queued.submitted,
-              note: setup.active
-                ? 'Recipients were queued to the active Hunter sequence.'
-                : 'Recipients were queued safely. The Hunter sequence is still a draft until you activate it.',
-              errors,
-              timestamp: new Date().toISOString()
-            });
-            return;
           }
 
           const emailContents = await Promise.all(
@@ -350,5 +317,5 @@ export default async function handler(req, res) {
             errors.push({ type: 'fatal', error: e.message });
   }
 
-  res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, dailyEmailCap: DAILY_EMAIL_CAP, provider: MAIL_PROVIDER, hunterConfigured: hunterConfigured(), sendDelayMs: SEND_DELAY_MS, errors, timestamp: new Date().toISOString() });
+  res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, dailyEmailCap: DAILY_EMAIL_CAP, provider: MAIL_PROVIDER, sendDelayMs: SEND_DELAY_MS, errors, timestamp: new Date().toISOString() });
 }
