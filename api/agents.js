@@ -257,7 +257,7 @@ async function runContent(body) {
   if (!audience) throw new Error('Audience is required');
   if (!offer) throw new Error('What you are promoting is required');
   const isReels = contentType === 'reels';
-  const result = await ask(`You create practical Instagram content and production prompts for a real product. Generate exactly 3 ${isReels ? 'Reels' : 'single-image posts'}, each with a polished caption and a production-ready AI media prompt. Do not invent testimonials, customers, results, urgency, integrations, or unsupported claims. Use a premium dark liquid-glass visual identity with emerald and aqua accents. Do not request real people, public figures, copyrighted characters, copyrighted music, or visible third-party logos.
+  const result = await ask(`You create practical Instagram content and production prompts for a real product. Generate exactly 3 ${isReels ? 'Reels' : 'single-image posts'}, each with a polished caption and a production-ready AI media prompt. Do not invent testimonials, customers, results, urgency, integrations, or unsupported claims. Use a restrained premium dark liquid-glass visual identity with emerald and aqua accents. The creative should feel like polished product advertising made by a strong human design team—not generic AI imagery. Do not request people, faces, hands, public figures, copyrighted characters, copyrighted music, or visible third-party logos. Avoid sci-fi HUDs, random floating interface panels, excessive neon, impossible morphing, visual clutter, and meaningless decorative objects.
 
 What is being promoted: ${offer}
 Audience: ${audience}
@@ -270,8 +270,8 @@ Requirements:
 - Return exactly 3 items.
 - Every caption must be complete, natural, under 140 words, and end with one clear call to action.
 - Give every item 6-10 relevant hashtags.
-- Every imagePrompt must describe a finished square 1:1 premium Instagram image with composition, lighting, colors, subject, and clean space for the short headline. Avoid tiny interface text.
-- ${isReels ? 'Every videoPrompt must describe one coherent 8-second vertical 9:16 commercial with camera movement, timing, premium liquid-glass product visuals, no people or faces, no copyrighted music, and no hard-to-render paragraphs of text. Every Reel must also include 4 concise scenes, voiceover, on-screen text, and a clear cover headline.' : 'Set videoPrompt to an empty string. Set reel to an object with empty duration, coverText, and scenes.'}
+- Every imagePrompt must describe a finished square 1:1 premium Instagram visual with specific composition, realistic lighting, restrained colors, and product-focused subject matter. It must contain absolutely no people, faces, hands, letters, words, numbers, logos, watermarks, fake UI labels, or generated typography. The exact headline is added separately by the app.
+- ${isReels ? 'Every videoPrompt must describe one coherent 8-second vertical 9:16 product commercial with believable camera movement, controlled lighting, clean edits, and specific premium product visuals. It must contain absolutely no people, faces, hands, letters, words, numbers, logos, watermarks, captions, or readable interface labels. Do not ask the video model to render the supplied on-screen text; that exact overlay copy stays separate so spelling is guaranteed. Avoid generic AI clichés, overdone glow, random floating objects, warped screens, impossible motion, and meaningless UI. Every Reel must also include 4 concise scenes, exact voiceover, exact on-screen overlay copy, and a clear cover headline.' : 'Set videoPrompt to an empty string. Set reel to an object with empty duration, coverText, and scenes.'}
 - Keep all product claims supported by the provided offer.
 - Keep the JSON concise and valid.`, 3800);
   result.contentType = contentType;
