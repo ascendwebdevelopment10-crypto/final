@@ -4,6 +4,7 @@ import twilio from 'twilio';
 import { logEmail, logSms, isSuppressed, getSmsLog, isExcludedPhone, logNotSent, wasEmailed, markEmailed } from '../lib/store.js';
 import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
+import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
 
 export const config = { maxDuration: 300 };
 
@@ -160,7 +161,10 @@ async function generateEmail(contact, segment) {
               : service === 'ads'
         ? 'Google and Meta ad campaigns that drive real paying customers'
               : 'custom mobile apps with online booking, loyalty rewards, and push notifications';
-      const prompt = 'Write a short cold email (under 150 words) to ' + firstName + ' at ' + company + (segment === 'no_website' ? ' who has no website' : ' in the ' + industry + ' industry') + '. We are Ascend Web Development. We build ' + serviceDesc + '. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Ascend Web Development. No placeholders in brackets. Output only subject and body.';
+      const hook = segment === 'no_website'
+        ? 'They have NO website. Lead by offering a FREE, no-obligation starter mockup/plan for a simple site that would bring a ' + industry + ' business more customers - offer to send it if they just reply.'
+        : 'Lead by offering a FREE, no-obligation audit of their website: you took a quick look and spotted a couple of things that are likely costing them calls/customers, and you will send the full audit if they just reply.';
+      const prompt = 'Write a short cold email (under 130 words) to ' + firstName + ' at ' + company + ' (a ' + industry + ' business). You are Ty Smith, owner of Ascend Web Development. ' + hook + ' Make it about the specific RESULT for their type of business, never say "we build websites" as the pitch. Warm, human, no fluff, no hype, no hard sell. The only ask is a reply to get the free thing. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Ascend Web Development. No placeholder text in brackets. Output only subject and body.';
       const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 300, messages: [{ role: 'user', content: prompt }] });
       const text = cleanPlaceholders(msg.content[0].text);
       const lines = text.split('\n');
@@ -173,7 +177,9 @@ async function generateEmail(contact, segment) {
 async function generateSms(contact, segment) {
         const company = contact.organization_name || 'your business';
         const service = pickService();
-        const msgBody = `Hey! is this ${company}?`;
+        const msgBody = segment === 'no_website'
+          ? `Hi, it's Ty at Ascend Web Dev. ${company} came up with no website - I put together a quick free mockup that'd bring in more customers. Want me to send it?`
+          : `Hi, it's Ty at Ascend Web Dev. I ran a quick free audit of ${company}'s site & found a few things costing you customers. Want me to send it over?`;
         return { text: msgBody, service };
 }
 
@@ -250,13 +256,19 @@ export default async function handler(req, res) {
 
         // MAIN OUTREACH — rotate through high-response industries
         const hour = new Date().getUTCHours();
-          const qi = Math.floor(Math.random() * HIGH_RESPONSE_QUERIES.length);  // random industries each run -> keeps finding fresh numbers
-          const [b1, b2, b3, b4] = await Promise.all([
-                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[qi], FETCH_LIMIT),
-                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 1) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT),
-                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 2) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT),
-                    fetchOutscraperLeads(HIGH_RESPONSE_QUERIES[(qi + 3) % HIGH_RESPONSE_QUERIES.length], FETCH_LIMIT)
+          // Free OpenStreetMap leads by default. Set USE_OUTSCRAPER=true (and top up) to use paid Outscraper.
+          const useOutscraper = process.env.USE_OUTSCRAPER === 'true' && OUTSCRAPER_API_KEY;
+          const SRC = useOutscraper ? HIGH_RESPONSE_QUERIES : OSM_TAGS;
+          const fetchLeads = useOutscraper ? fetchOutscraperLeads : fetchOsmLeads;
+          const qi = Math.floor(Math.random() * SRC.length);
+          // allSettled so one slow/failed source doesn't zero out the whole run
+          const _batches = await Promise.allSettled([
+                    fetchLeads(SRC[qi], FETCH_LIMIT),
+                    fetchLeads(SRC[(qi + 1) % SRC.length], FETCH_LIMIT),
+                    fetchLeads(SRC[(qi + 2) % SRC.length], FETCH_LIMIT),
+                    fetchLeads(SRC[(qi + 3) % SRC.length], FETCH_LIMIT)
                   ]);
+          const [b1, b2, b3, b4] = _batches.map(r => r.status === 'fulfilled' ? r.value : []);
 
         const seenPhones = new Set();
           const allLeads = [...b1, ...b2, ...b3, ...b4]

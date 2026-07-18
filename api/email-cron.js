@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { sendEmail } from '../lib/mailer.js';
 import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed } from '../lib/store.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
+import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
 
 export const config = { maxDuration: 300 };
 
@@ -178,7 +179,7 @@ async function generateEmail(contact) {
         } else {
                   serviceDesc = 'custom mobile apps — online booking, loyalty rewards, push notifications';
         }
-        const prompt = 'Write a short cold email (under 150 words) to ' + firstName + ' at ' + company + ' in the ' + industry + ' industry. We are Ascend Web Development. We build ' + serviceDesc + '. Friendly, no fluff. Soft CTA to reply. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Ascend Web Development. IMPORTANT: Do not use any placeholder text such as [Your Name], [Name], [Company], [Phone], [Link], or any text in brackets. Output only the subject line and email body, nothing else.';
+        const prompt = 'Write a short cold email (under 130 words) to ' + firstName + ' at ' + company + ' (a ' + industry + ' business). You are Ty Smith, owner of Ascend Web Development. Lead by offering a FREE, no-obligation audit of their website: you took a quick look and spotted a couple of things that are likely costing them calls/customers, and you will send the full audit if they just reply. Make it about the specific RESULT for their type of business, never say "we build websites" as the pitch. Warm, human, no fluff, no hype, no hard sell. The only ask is a reply to get the free audit. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Ascend Web Development. Do not use any placeholder text in brackets. Output only the subject line and email body.';
         const msg = await anthropic.messages.create({
                   model: ANTHROPIC_MODEL, max_tokens: 350,
                   messages: [{ role: 'user', content: prompt }]
@@ -205,19 +206,21 @@ export default async function handler(req, res) {
         const errors = [];
 
   try {
-            const hour = new Date().getUTCHours();
-            const queryIndex = Math.floor(hour / 2) % HIGH_RESPONSE_QUERIES.length;
-            const q1 = HIGH_RESPONSE_QUERIES[queryIndex];
-            const q2 = HIGH_RESPONSE_QUERIES[(queryIndex + 1) % HIGH_RESPONSE_QUERIES.length];
-            const q3 = HIGH_RESPONSE_QUERIES[(queryIndex + 2) % HIGH_RESPONSE_QUERIES.length];
+            const useOutscraper = process.env.USE_OUTSCRAPER === 'true' && process.env.OUTSCRAPER_API_KEY;
+            const SRC = useOutscraper ? HIGH_RESPONSE_QUERIES : OSM_TAGS;
+            const fetchLeads = useOutscraper ? fetchLeadsWithWebsites : fetchOsmLeads;
+            const queryIndex = Math.floor(Math.random() * SRC.length);
+            const q1 = SRC[queryIndex];
+            const q2 = SRC[(queryIndex + 1) % SRC.length];
+            const q3 = SRC[(queryIndex + 2) % SRC.length];
 
           // BUGFIX: was Promise.all, so one slow/hanging Outscraper query took the whole
           // run down with it and no emails ever got sent. Promise.allSettled lets a failed
           // or timed-out batch degrade gracefully instead of killing the other batch.
           const [batch1Result, batch2Result, batch3Result] = await Promise.allSettled([
-                      fetchLeadsWithWebsites(q1, FETCH_LIMIT),
-                      fetchLeadsWithWebsites(q2, FETCH_LIMIT),
-                      fetchLeadsWithWebsites(q3, FETCH_LIMIT)
+                      fetchLeads(q1, FETCH_LIMIT),
+                      fetchLeads(q2, FETCH_LIMIT),
+                      fetchLeads(q3, FETCH_LIMIT)
                     ]);
 
           const batch1 = batch1Result.status === 'fulfilled' ? batch1Result.value : [];
