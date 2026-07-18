@@ -6,6 +6,12 @@ export const config = { maxDuration: 60 };
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
 const GRAPH = 'https://graph.facebook.com/' + GRAPH_VERSION;
+const PROFILE_DEFAULTS = {
+  displayName: 'Ascend Outreach | AI Growth System',
+  handle: '@ascendoutreachsystem',
+  bio: 'AI-powered outreach, content, audits & proposals.\nBuilt for agencies and service businesses.\n↓ See the platform',
+  profileUrl: 'https://final-phi-swart.vercel.app/dashboard'
+};
 
 function clean(value, max = 2000) {
   return String(value || '').trim().slice(0, max);
@@ -35,7 +41,8 @@ async function connection() {
 
 async function profile() {
   const value = await kv.get('instagram:profile');
-  return (typeof value === 'string' ? JSON.parse(value) : value) || {};
+  const saved = (typeof value === 'string' ? JSON.parse(value) : value) || {};
+  return { ...PROFILE_DEFAULTS, ...saved };
 }
 
 function sameHost(req, mediaUrl) {
@@ -64,7 +71,9 @@ export default async function handler(req, res) {
       const pages = await graph('/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,profile_picture_url}&access_token=' + encodeURIComponent(userToken));
       const page = (pages.data || []).find((x) => x.instagram_business_account);
       if (!page) throw new Error('No Instagram professional account connected to an accessible Facebook Page was found.');
-      await kv.set('instagram:connection', JSON.stringify({ igUserId: page.instagram_business_account.id, username: page.instagram_business_account.username, profilePictureUrl: page.instagram_business_account.profile_picture_url || '', pageId: page.id, pageName: page.name, accessToken: page.access_token, connectedAt: new Date().toISOString() }));
+      const username = page.instagram_business_account.username || 'ascendoutreachsystem';
+      await kv.set('instagram:connection', JSON.stringify({ igUserId: page.instagram_business_account.id, username, profilePictureUrl: page.instagram_business_account.profile_picture_url || '', pageId: page.id, pageName: page.name, accessToken: page.access_token, connectedAt: new Date().toISOString() }));
+      await kv.set('instagram:profile', JSON.stringify({ ...PROFILE_DEFAULTS, handle: '@' + username, profileUrl: 'https://instagram.com/' + username, appUrl: PROFILE_DEFAULTS.profileUrl, updatedAt: new Date().toISOString() }));
       res.redirect(302, '/dashboard#content');
       return;
     }
