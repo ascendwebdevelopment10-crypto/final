@@ -257,22 +257,23 @@ async function runContent(body) {
   if (!audience) throw new Error('Audience is required');
   if (!offer) throw new Error('What you are promoting is required');
   const isReels = contentType === 'reels';
-  const result = await ask(`You create practical Instagram content for a real product. Generate exactly 3 ${isReels ? 'Reels' : 'single-image posts'}, each with a polished caption. Do not create profiles, Stories, calendars, strategy sections, testimonials, fake results, fake urgency, or unsupported product claims. Write like a credible founder, not generic AI marketing copy.
+  const result = await ask(`You create practical Instagram content and production prompts for a real product. Generate exactly 3 ${isReels ? 'Reels' : 'single-image posts'}, each with a polished caption and a production-ready AI media prompt. Do not invent testimonials, customers, results, urgency, integrations, or unsupported claims. Use a premium dark liquid-glass visual identity with emerald and aqua accents. Do not request real people, public figures, copyrighted characters, copyrighted music, or visible third-party logos.
 
 What is being promoted: ${offer}
 Audience: ${audience}
 Topic or goal: ${goal || 'Explain the product clearly and create interest'}
 
 Return STRICT JSON only:
-{"contentType":"${contentType}","title":"...","note":"...","items":[{"format":"${isReels ? 'reel' : 'single'}","title":"...","hook":"...","caption":"...","cta":"...","hashtags":["..."],"asset":{"eyebrow":"...","headline":"...","subheadline":"..."},"reel":{"duration":"...","coverText":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}]}}]}
+{"contentType":"${contentType}","title":"...","note":"...","items":[{"format":"${isReels ? 'reel' : 'single'}","title":"...","hook":"...","caption":"...","cta":"...","hashtags":["..."],"imagePrompt":"...","videoPrompt":"...","asset":{"eyebrow":"...","headline":"...","subheadline":"..."},"reel":{"duration":"8 seconds","coverText":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}]}}]}
 
 Requirements:
 - Return exactly 3 items.
 - Every caption must be complete, natural, under 140 words, and end with one clear call to action.
 - Give every item 6-10 relevant hashtags.
-- Keep asset headlines short enough for an Instagram graphic.
-- ${isReels ? 'Every Reel must include a strong first-two-second hook, 4 concise scenes, voiceover, on-screen text, a 15-30 second duration, and a clear cover headline.' : 'Every post must include a useful finished concept and downloadable single-image graphic copy. Set reel to an object with empty duration, coverText, and scenes.'}
-- Keep the JSON concise and valid.`, 3200);
+- Every imagePrompt must describe a finished square 1:1 premium Instagram image with composition, lighting, colors, subject, and clean space for the short headline. Avoid tiny interface text.
+- ${isReels ? 'Every videoPrompt must describe one coherent 8-second vertical 9:16 commercial with camera movement, timing, premium liquid-glass product visuals, no people or faces, no copyrighted music, and no hard-to-render paragraphs of text. Every Reel must also include 4 concise scenes, voiceover, on-screen text, and a clear cover headline.' : 'Set videoPrompt to an empty string. Set reel to an object with empty duration, coverText, and scenes.'}
+- Keep all product claims supported by the provided offer.
+- Keep the JSON concise and valid.`, 3800);
   result.contentType = contentType;
   const run = await saveRun('content', result.title || `Instagram ${contentType}`, result, { contentType, audience, offer, goal });
   return { ...result, runId: run.id };
