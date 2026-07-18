@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { sendEmail } from '../lib/mailer.js';
-import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed } from '../lib/store.js';
+import { sendEmail, MAIL_PROVIDER } from '../lib/mailer.js';
+import { logEmail, isSuppressed, logNotSent, wasEmailed, markEmailed, getTotalStats } from '../lib/store.js';
+import { tokenFor } from '../lib/sign.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 
 export const config = { maxDuration: 300 };
@@ -12,7 +13,12 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 5;
+const DEFAULT_EMAILS_PER_RUN = MAIL_PROVIDER === 'ses' ? 12 : 7;
+const DEFAULT_DAILY_EMAIL_CAP = MAIL_PROVIDER === 'ses' ? 150 : 95;
+const EMAIL_CAP = Math.max(1, Math.min(25, parseInt(process.env.EMAILS_PER_RUN || DEFAULT_EMAILS_PER_RUN, 10)));
+const DAILY_EMAIL_CAP = Math.max(1, Math.min(1000, parseInt(process.env.DAILY_EMAIL_CAP || DEFAULT_DAILY_EMAIL_CAP, 10)));
+const SEND_DELAY_MS = Math.max(250, Math.min(10000, parseInt(process.env.EMAIL_SEND_DELAY_MS || '1000', 10)));
+const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://final-phi-swart.vercel.app';
 const FETCH_LIMIT = 20;
 const OUTSCRAPER_TIMEOUT_MS = 45000;
 
@@ -205,6 +211,13 @@ export default async function handler(req, res) {
         const errors = [];
 
   try {
+            const currentStats = await getTotalStats();
+            const remainingToday = Math.max(0, DAILY_EMAIL_CAP - (currentStats.todayEmailSent || 0));
+            const runCap = Math.min(EMAIL_CAP, remainingToday);
+            if (runCap === 0) {
+              res.status(200).json({ skipped: 'daily_cap_reached', provider: MAIL_PROVIDER, dailyEmailCap: DAILY_EMAIL_CAP, emailsSent: 0, timestamp: new Date().toISOString() });
+              return;
+            }
             const hour = new Date().getUTCHours();
             const queryIndex = Math.floor(hour / 2) % HIGH_RESPONSE_QUERIES.length;
             const q1 = HIGH_RESPONSE_QUERIES[queryIndex];
@@ -241,7 +254,7 @@ export default async function handler(req, res) {
           const emailCandidates = leads.filter(c => c.email);
           const emailableLeads = [];
           for (const c of emailCandidates) {
-            if (emailableLeads.length >= EMAIL_CAP) break;
+            if (emailableLeads.length >= runCap) break;
             if (await wasEmailed(c.email)) continue;   // never email the same business twice
             emailableLeads.push(c);
           }
@@ -250,29 +263,50 @@ export default async function handler(req, res) {
                       emailableLeads.map(c => generateEmail(c).catch(e => ({ error: e.message })))
                     );
 
-          const sendResults = await Promise.all(emailableLeads.map(async (contact, i) => {
-                      const content = emailContents[i];
-                      if (content.error) return { error: content.error };
-                      try {
-                                    const suppressed = await isSuppressed(contact.email);
-                                    if (suppressed) { await logNotSent(1); return null; }
-                                    const { subject, body, service } = content;
-                                    const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
-                                    const sendOptions = {
-                                                    from: FROM_EMAIL, to: contact.email, subject,
-                                                    html: (body + footer).replace(/\n/g, '<br>'),
-                                                    reply_to: REPLY_TO
-                                    };
-                                    if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
-                                    await sendEmail(sendOptions);
-                                    await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
-                                    await markEmailed(contact.email);
-                                    return 'ok';
-                      } catch (e) {
-                                    await logNotSent(1);
-                                    return { error: e.message };
-                      }
-          }));
+          const sendResults = [];
+          for (let i = 0; i < emailableLeads.length; i++) {
+            const contact = emailableLeads[i];
+            const content = emailContents[i];
+            if (content.error) {
+              sendResults.push({ error: content.error });
+              continue;
+            }
+            try {
+              const suppressed = await isSuppressed(contact.email);
+              if (suppressed) {
+                await logNotSent(1);
+                sendResults.push(null);
+                continue;
+              }
+              const { subject, body, service } = content;
+              const token = tokenFor(contact.email);
+              const unsubscribeUrl = BASE_URL + '/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(token);
+              const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
+              const sendOptions = {
+                from: FROM_EMAIL,
+                to: contact.email,
+                subject,
+                html: (body + '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="' + unsubscribeUrl + '">Unsubscribe</a>').replace(/\n/g, '<br>'),
+                text: body + footer,
+                reply_to: REPLY_TO,
+                headers: {
+                  'List-Unsubscribe': '<' + unsubscribeUrl + '>',
+                  'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+                }
+              };
+              if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
+              await sendEmail(sendOptions);
+              await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
+              await markEmailed(contact.email);
+              sendResults.push('ok');
+            } catch (e) {
+              await logNotSent(1);
+              sendResults.push({ error: e.message });
+            }
+            if (i < emailableLeads.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, SEND_DELAY_MS));
+            }
+          }
 
           emailsSent = sendResults.filter(r => r === 'ok').length;
             sendResults.filter(r => r?.error).forEach(r => errors.push({ type: 'email', error: r.error }));
@@ -280,5 +314,5 @@ export default async function handler(req, res) {
             errors.push({ type: 'fatal', error: e.message });
   }
 
-  res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, errors, timestamp: new Date().toISOString() });
+  res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, dailyEmailCap: DAILY_EMAIL_CAP, provider: MAIL_PROVIDER, sendDelayMs: SEND_DELAY_MS, errors, timestamp: new Date().toISOString() });
 }
