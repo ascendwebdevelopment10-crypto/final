@@ -87,7 +87,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET' && action === 'connect') {
-      if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) { res.status(400).json({ error: 'META_APP_ID and META_APP_SECRET are not configured' }); return; }
+      if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
+        res.redirect(302, '/dashboard?instagram=meta_setup_required#content');
+        return;
+      }
       const state = crypto.randomBytes(24).toString('hex');
       await kv.set('instagram:oauth:' + state, '1', { ex: 600 });
       const scopes = process.env.META_INSTAGRAM_SCOPES || 'pages_show_list,pages_read_engagement,instagram_basic,instagram_content_publish';
