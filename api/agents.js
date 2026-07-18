@@ -250,41 +250,31 @@ Return STRICT JSON only:
 }
 
 async function runContent(body) {
-  const platformName = clean(body.platformName, 160) || 'Ascend Command Center';
-  const handle = clean(body.handle, 100);
-  const websiteUrl = clean(body.websiteUrl, 500);
+  const contentType = clean(body.contentType, 20).toLowerCase() === 'reels' ? 'reels' : 'posts';
   const audience = clean(body.audience, 500);
-  const offer = clean(body.offer, 1400);
-  const brandStyle = clean(body.brandStyle, 500) || 'dark premium liquid glass with emerald and aqua accents';
-  const tone = clean(body.tone, 200) || 'premium, direct, credible, founder-led';
-  const goal = clean(body.goal, 700) || 'Validate demand and attract paid beta users';
-  if (!audience) throw new Error('Target audience is required');
-  if (!offer) throw new Error('Platform offer is required');
-  const result = await ask(`You are launching and managing the Instagram presence for a new SaaS-style business platform. Create a complete, ready-to-use Instagram launch kit. Do not invent customers, results, testimonials, user counts, scarcity, integrations, or features. Distinguish current features from future ideas. Write natural, specific content—not generic AI marketing language.
+  const offer = clean(body.offer, 1600);
+  const goal = clean(body.goal, 700);
+  if (!audience) throw new Error('Audience is required');
+  if (!offer) throw new Error('What you are promoting is required');
+  const isReels = contentType === 'reels';
+  const result = await ask(`You create practical Instagram content for a real product. Generate exactly 3 ${isReels ? 'Reels' : 'single-image posts'}, each with a polished caption. Do not create profiles, Stories, calendars, strategy sections, testimonials, fake results, fake urgency, or unsupported product claims. Write like a credible founder, not generic AI marketing copy.
 
-Platform: ${platformName}
-Preferred handle, if any: ${handle || 'Create handle ideas'}
-Website or beta link: ${websiteUrl || 'Not provided'}
+What is being promoted: ${offer}
 Audience: ${audience}
-Real offer and current features: ${offer}
-Brand style: ${brandStyle}
-Voice: ${tone}
-Goal: ${goal}
+Topic or goal: ${goal || 'Explain the product clearly and create interest'}
 
 Return STRICT JSON only:
-{"campaignName":"...","positioning":"...","profile":{"usernameIdeas":["..."],"displayName":"...","category":"...","bio":"...","linkStrategy":"...","highlights":[{"name":"...","purpose":"...","storyIdeas":["..."]}]},"brandSystem":{"visualDirection":"...","colorRoles":["..."],"fontStyle":"...","photoStyle":"...","designRules":["..."]},"pinnedPostIds":[1,2,3],"launchGrid":[{"id":1,"format":"single|carousel|reel","title":"...","hook":"...","caption":"...","cta":"...","hashtags":["..."],"asset":{"eyebrow":"...","headline":"...","subheadline":"..."},"slides":[{"headline":"...","body":"..."}],"reel":{"duration":"15-30 seconds","coverText":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}]},"storyTeaser":"..."}],"stories":[{"title":"...","headline":"...","body":"...","cta":"..."}],"postingSchedule":[{"day":1,"postId":1,"recommendedTime":"...","storySupport":"...","engagementTask":"..."}],"engagementPlan":["..."],"launchChecklist":["..."],"validationQuestions":["..."]}
+{"contentType":"${contentType}","title":"...","note":"...","items":[{"format":"${isReels ? 'reel' : 'single'}","title":"...","hook":"...","caption":"...","cta":"...","hashtags":["..."],"asset":{"eyebrow":"...","headline":"...","subheadline":"..."},"reel":{"duration":"...","coverText":"...","scenes":[{"time":"...","visual":"...","voiceover":"...","onScreenText":"..."}]}}]}
 
 Requirements:
-- Create exactly 9 launchGrid items arranged as a coherent 3x3 profile launch.
-- Use exactly 3 single-image posts, 3 carousels, and 3 Reels.
-- Every carousel must have 4 concise slides. Non-carousel slides must be an empty array.
-- Every Reel must have 3 concise scenes and a strong cover. Non-Reel reel must be an object with empty duration, coverText, and scenes.
-- Keep each caption under 120 words and provide 8-12 relevant hashtags.
-- Create exactly 7 Stories and a 9-day posting schedule using every post once.
-- Make the first three pinned posts explain the problem, product, and founder/beta offer.
-- Asset headlines must be short enough to fit a designed Instagram graphic.
-- Keep the complete JSON concise enough to finish within the response limit.`, 5600);
-  const run = await saveRun('content', result.campaignName || 'Instagram launch kit', result, { platformName, handle, websiteUrl, audience, offer, brandStyle, tone, goal });
+- Return exactly 3 items.
+- Every caption must be complete, natural, under 140 words, and end with one clear call to action.
+- Give every item 6-10 relevant hashtags.
+- Keep asset headlines short enough for an Instagram graphic.
+- ${isReels ? 'Every Reel must include a strong first-two-second hook, 4 concise scenes, voiceover, on-screen text, a 15-30 second duration, and a clear cover headline.' : 'Every post must include a useful finished concept and downloadable single-image graphic copy. Set reel to an object with empty duration, coverText, and scenes.'}
+- Keep the JSON concise and valid.`, 3200);
+  result.contentType = contentType;
+  const run = await saveRun('content', result.title || `Instagram ${contentType}`, result, { contentType, audience, offer, goal });
   return { ...result, runId: run.id };
 }
 
