@@ -8,8 +8,10 @@ export const config = { maxDuration: 60 };
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
 const GRAPH = 'https://graph.instagram.com/' + GRAPH_VERSION;
-const APP_ID = process.env.INSTAGRAM_APP_ID || process.env.META_APP_ID;
-const APP_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.META_APP_SECRET;
+// Instagram Login has its own platform credentials. A Facebook/Meta App ID
+// from App Settings > Basic is not a valid client ID for this OAuth flow.
+const APP_ID = process.env.INSTAGRAM_APP_ID;
+const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
 const PROFILE_DEFAULTS = {
   displayName: 'Ascend Outreach | AI Growth System',
   handle: '@ascendoutreachsystem',
