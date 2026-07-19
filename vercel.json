@@ -22,14 +22,59 @@
       "schedule": "*/5 * * * *"
     }
   ],
-  "redirects": [
+  "rewrites": [
     {
       "source": "/",
-      "destination": "/dashboard",
-      "permanent": false
-    }
-  ],
-  "rewrites": [
+      "destination": "/api/customer-page?route=/"
+    },
+    {
+      "source": "/login",
+      "destination": "/api/customer-page?route=/login"
+    },
+    {
+      "source": "/signup",
+      "destination": "/api/customer-page?route=/signup"
+    },
+    {
+      "source": "/forgot-password",
+      "destination": "/api/customer-page?route=/forgot-password"
+    },
+    {
+      "source": "/verify-email",
+      "destination": "/api/customer-page?route=/verify-email"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/api/customer-page?route=/reset-password"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/api/customer-page?route=/pricing"
+    },
+    {
+      "source": "/welcome",
+      "destination": "/api/customer-page?route=/welcome"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/api/customer-page?route=/checkout"
+    },
+    {
+      "source": "/checkout/:path*",
+      "destination": "/api/customer-page?route=/checkout/:path*"
+    },
+    {
+      "source": "/app",
+      "destination": "/api/customer-page?route=/app"
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "/api/customer-page?route=/app/:path*"
+    },
+    {
+      "source": "/admin",
+      "destination": "/api/dashboard"
+    },
     {
       "source": "/dashboard",
       "destination": "/api/dashboard"
@@ -64,4 +109,3 @@
     }
   ]
 }
-
