@@ -30,7 +30,7 @@ function origin(req) {
 }
 
 function redirectUri(req) {
-  return process.env.INSTAGRAM_REDIRECT_URI || process.env.META_REDIRECT_URI || (origin(req) + '/api/instagram?action=callback');
+  return process.env.INSTAGRAM_REDIRECT_URI || 'https://final-phi-swart.vercel.app/api/instagram-callback';
 }
 
 async function graph(path, options = {}) {
