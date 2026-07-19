@@ -4,7 +4,7 @@ import { isAuthorized } from '../lib/auth.js';
 
 export const config = { maxDuration: 60 };
 
-// Production redeploy marker: load Meta OAuth environment configuration.
+// Production redeploy marker: load dedicated Instagram OAuth credentials.
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
 const GRAPH = 'https://graph.instagram.com/' + GRAPH_VERSION;
