@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { kv } from '@vercel/kv';
-import { sendEmail, FROM_EMAIL } from '../lib/mailer.js';
+import { sendEmail, FROM_EMAIL, MAIL_PROVIDER } from '../lib/mailer.js';
 import {
   clearCustomerSessionCookie, clientIp, consumeActionToken, createActionToken,
   customerSessionCookie, getCustomer, getCustomerByEmail, hashPassword,
@@ -17,8 +17,10 @@ async function sendAccountEmail(req, user, kind) {
   const link = requestOrigin(req) + path + '?token=' + encodeURIComponent(token);
   const title = kind === 'verify' ? 'Verify your Ascend account' : 'Reset your Ascend password';
   const action = kind === 'verify' ? 'Verify email' : 'Reset password';
+  const sender = process.env.CUSTOMER_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || (MAIL_PROVIDER === 'resend' ? 'info@ascendwebdevelopment.com' : FROM_EMAIL);
   await sendEmail({
-    from: FROM_EMAIL ? `Ascend <${FROM_EMAIL}>` : undefined,
+    from: sender ? `Ascend <${sender}>` : undefined,
+    reply_to: process.env.REPLY_TO || FROM_EMAIL || undefined,
     to: user.email,
     subject: title,
     text: `${title}\n\n${link}\n\nThis link expires ${kind === 'verify' ? 'in 24 hours' : 'in 1 hour'}.`,
