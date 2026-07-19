@@ -4,6 +4,8 @@ import { isAuthorized } from '../lib/auth.js';
 
 export const config = { maxDuration: 60 };
 
+// Production redeploy marker: load Meta OAuth environment configuration.
+
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
 const GRAPH = 'https://graph.facebook.com/' + GRAPH_VERSION;
 const PROFILE_DEFAULTS = {
