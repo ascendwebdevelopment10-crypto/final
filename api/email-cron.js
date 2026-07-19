@@ -12,8 +12,8 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 10;   // up to 10 emails per run (until Resend's daily cap)
-const FETCH_LIMIT = 20;
+const EMAIL_CAP = 16;   // target 16 emails/run (matches dashboard schedule tab); daily total still bounded by Resend free plan (~100/day)   // up to 10 emails per run (until Resend's daily cap)
+const FETCH_LIMIT = 30;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
