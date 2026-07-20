@@ -8,15 +8,15 @@ const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name=
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:'DM Sans',sans-serif;background:#060707;color:#f2f2f2;display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
-body:before,body:after{content:'';position:fixed;width:520px;height:520px;border-radius:44% 56% 62% 38%/46% 38% 62% 54%;filter:blur(72px);pointer-events:none;opacity:.2;animation:liquidFloat 14s ease-in-out infinite alternate}body:before{left:-180px;top:-160px;background:linear-gradient(135deg,#e5844c,#c15b20)}body:after{right:-220px;bottom:-190px;background:linear-gradient(135deg,#7e4423,#ff995e);animation-delay:-7s}@keyframes liquidFloat{to{transform:translate3d(70px,45px,0) rotate(24deg);border-radius:62% 38% 42% 58%/38% 59% 41% 62%}}
-.card{position:relative;background:linear-gradient(145deg,rgba(34,37,35,.7),rgba(14,10,7,.54));border:1px solid rgba(255,211,185,.2);border-top-color:rgba(255,183,141,.75);border-radius:22px;padding:38px 34px 30px;width:min(390px,calc(100vw - 32px));text-align:left;box-shadow:0 32px 100px rgba(0,0,0,.54),inset 0 1px 0 rgba(255,255,255,.11),inset 0 -1px 0 rgba(224,132,78,.08);backdrop-filter:blur(26px) saturate(155%);-webkit-backdrop-filter:blur(26px) saturate(155%);overflow:hidden}
-.card:before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:linear-gradient(125deg,rgba(255,255,255,.12),transparent 28%,transparent 70%,rgba(224,118,57,.08));pointer-events:none}
+body:before,body:after{content:'';position:fixed;width:520px;height:520px;border-radius:44% 56% 62% 38%/46% 38% 62% 54%;filter:blur(72px);pointer-events:none;opacity:.2;animation:liquidFloat 14s ease-in-out infinite alternate}body:before{left:-180px;top:-160px;background:linear-gradient(135deg,#61171e,#61171e)}body:after{right:-220px;bottom:-190px;background:linear-gradient(135deg,#61171e,#61171e);animation-delay:-7s}@keyframes liquidFloat{to{transform:translate3d(70px,45px,0) rotate(24deg);border-radius:62% 38% 42% 58%/38% 59% 41% 62%}}
+.card{position:relative;background:linear-gradient(145deg,rgba(34,37,35,.7),rgba(14,10,7,.54));border:1px solid rgba(97,23,30,.2);border-top-color:rgba(97,23,30,.75);border-radius:22px;padding:38px 34px 30px;width:min(390px,calc(100vw - 32px));text-align:left;box-shadow:0 32px 100px rgba(0,0,0,.54),inset 0 1px 0 rgba(255,255,255,.11),inset 0 -1px 0 rgba(97,23,30,.08);backdrop-filter:blur(26px) saturate(155%);-webkit-backdrop-filter:blur(26px) saturate(155%);overflow:hidden}
+.card:before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:linear-gradient(125deg,rgba(255,255,255,.12),transparent 28%,transparent 70%,rgba(97,23,30,.08));pointer-events:none}
 h1{font-size:17px;letter-spacing:-.01em;margin:0 0 8px;color:#f5f6f5;font-weight:700;text-transform:none}
-h1:first-letter{color:#dc8858}
+h1:first-letter{color:#61171e}
 p{margin:0 0 28px;font-size:13px;color:#777f7a}
 input{width:100%;box-sizing:border-box;background:#151615;border:1px solid #282b29;border-radius:8px;color:#eff0ef;padding:13px 14px;font-size:14px;margin-bottom:14px;font-family:inherit;transition:border-color .15s,box-shadow .15s}
-input:focus{outline:none;border-color:#dc8858;box-shadow:0 0 0 3px rgba(220,136,88,.1)}
-button{width:100%;background:linear-gradient(120deg,#e48853,#f3c3a7 52%,#e7a178);color:#100a07;border:1px solid rgba(255,255,255,.28);border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0;box-shadow:0 10px 30px rgba(214,118,62,.2),inset 0 1px 0 rgba(255,255,255,.45)}
+input:focus{outline:none;border-color:#61171e;box-shadow:0 0 0 3px rgba(97,23,30,.1)}
+button{width:100%;background:linear-gradient(120deg,#61171e,#61171e 52%,#61171e);color:#100a07;border:1px solid rgba(255,255,255,.28);border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0;box-shadow:0 10px 30px rgba(97,23,30,.2),inset 0 1px 0 rgba(255,255,255,.45)}
 button:disabled{opacity:.5;cursor:wait}
 #err{color:#f87171;font-size:12.5px;min-height:18px;margin-top:12px}
 </style></head><body>
