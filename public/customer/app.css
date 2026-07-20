@@ -23,3 +23,9 @@
 .assistant-page .activity-item b{font-size:13px}
 .assistant-page .activity-item p{font-size:11px}
 @media(max-width:760px){.assistant-page .section-toolbar h2{font-size:26px}.assistant-page .empty-state h3{font-size:23px}}
+
+/* Customer's own brand color + logo applied to their workspace */
+.customer-shell .btn-primary{background:linear-gradient(120deg,var(--green),var(--aqua));border-color:var(--green)}
+.customer-shell .btn-primary:hover{background:linear-gradient(120deg,var(--green),var(--aqua));filter:brightness(1.08)}
+.workspace-logo.has-img{overflow:hidden;padding:0}
+.workspace-logo.has-img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:8px}
