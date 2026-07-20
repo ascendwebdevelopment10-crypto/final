@@ -20,7 +20,7 @@ button{width:100%;background:linear-gradient(120deg,#e48853,#f3c3a7 52%,#e7a178)
 button:disabled{opacity:.5;cursor:wait}
 #err{color:#f87171;font-size:12.5px;min-height:18px;margin-top:12px}
 </style></head><body>
-<div class="card"><h1>&#863d12; Nitro Outreach</h1><p>Enter your dashboard password</p>
+<div class="card"><h1>&#9889; Nitro Outreach</h1><p>Enter your dashboard password</p>
 <form id="f"><input type="password" id="pw" placeholder="Password" autofocus autocomplete="current-password"><button id="b" type="submit">Sign in</button><div id="err"></div></form></div>
 <script>
 document.getElementById('f').addEventListener('submit',function(e){
