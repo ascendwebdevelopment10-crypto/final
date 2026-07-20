@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       const email = normalizeEmail(body.email);
       // Owner shortcut: the site owner signs in with ADMIN_EMAIL + the admin dashboard
       // password and is taken straight into the admin command center at /dashboard.
-      const ADMIN_EMAIL = normalizeEmail(process.env.ADMIN_EMAIL || 'info@ascendwebdevelopment.com');
+      const ADMIN_EMAIL = normalizeEmail(process.env.ADMIN_EMAIL || 'tysmith327@icloud.com');
       if (email === ADMIN_EMAIL) {
         if (!(await rateLimit('ownerlogin:' + ip, 12, 900))) { res.status(429).json({ error: 'Too many login attempts. Wait 15 minutes and try again.' }); return; }
         if (!verifyAdminPassword(body.password)) {
