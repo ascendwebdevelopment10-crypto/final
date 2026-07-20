@@ -272,7 +272,7 @@ th{color:#6a716c;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 </style>
 </head><body>
 <div class="liquid-scene" aria-hidden="true"><div class="liquid-object one"></div><div class="liquid-object two"></div><div class="liquid-object three"></div></div>
-<div class="header"><h1>&#863d12; Nitro Outreach</h1><div style="display:flex;align-items:center;gap:10px"><span class="last-upd" id="last-upd"></span><button class="install-btn" id="install-btn" type="button">＋ Install App</button><span class="live-clock" id="live-clock"><span id="clock-main">--:--</span><span class="clock-seconds" id="clock-seconds">--</span></span><span class="badge-live">LIVE</span></div></div>
+<div class="header"><h1>&#9889; Nitro Outreach</h1><div style="display:flex;align-items:center;gap:10px"><span class="last-upd" id="last-upd"></span><button class="install-btn" id="install-btn" type="button">＋ Install App</button><span class="live-clock" id="live-clock"><span id="clock-main">--:--</span><span class="clock-seconds" id="clock-seconds">--</span></span><span class="badge-live">LIVE</span></div></div>
 <nav class="nav">
 <button class="nav-btn active" data-page="overview">Overview</button>
 <button class="nav-btn" data-page="conversations">Conversations<span class="rbadge" id="rbadge">0</span></button>
@@ -354,7 +354,7 @@ th{color:#6a716c;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 <div class="page-header"><h2 style="font-size:20px;font-weight:700;color:#e8eaea">Conversations</h2>
 <div style="display:flex;gap:8px">
 <button class="refresh-btn" id="conv-refresh-btn">&#8635; Refresh</button>
-<button class="reset-btn" id="reset-convs-btn">&#843c12; Reset All</button>
+<button class="reset-btn" id="reset-convs-btn">&#128465; Reset All</button>
 </div></div>
 <div class="conv-wrap" id="conv-wrap" data-mobile-view="list">
 <div class="conv-sidebar">
@@ -362,7 +362,7 @@ th{color:#6a716c;border-bottom-color:var(--line);font-size:10px}td{border-bottom
 <div class="conv-list" id="conv-list"><div class="empty">Loading...</div></div>
 </div>
 <div class="conv-main" id="conv-main">
-<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b"><div style="font-size:48px">&#813b12;</div><p>Select a conversation</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>
 </div>
 </div>
 </div>
@@ -620,7 +620,7 @@ if(cv){openConv(cv.key);}
 else{
 // Show message that no conversation found yet
 var main=document.getElementById('conv-main');
-if(main)main.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b;gap:12px"><div style="font-size:48px">&#813b12;</div><p>No conversation found for '+esc(contact)+'</p><p style="font-size:12px">They may have replied by email — check your inbox.</p></div>';
+if(main)main.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b;gap:12px"><div style="font-size:48px">&#128172;</div><p>No conversation found for '+esc(contact)+'</p><p style="font-size:12px">They may have replied by email — check your inbox.</p></div>';
 }
 }
 function lperf(){
@@ -775,7 +775,7 @@ var lastMsg=cv.msgs[cv.msgs.length-1];
 var preview=lastMsg?(lastMsg.dir==='out'?'You: ':'')+String(lastMsg.body||'').substring(0,50):'';
 var tb=cv.type==='sms'?'<span class="ci-badge sms">SMS</span>':'<span class="ci-badge email">Email</span>';
 var ub=cv.inCount?'<span class="ci-badge reply">'+cv.inCount+(cv.inCount===1?' reply':' replies')+'</span>':'';
-return'<div class="conv-item'+(cv.key===activeKey?' active':'')+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#843c12;</button>'+'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+'</span> '+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+'</span></div>'+'<div class="ci-preview">'+esc(preview)+'</div>'+'</div>';
+return'<div class="conv-item'+(cv.key===activeKey?' active':'')+'" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'">'+'<button class="del-btn" data-key="'+esc(cv.key)+'" data-contact="'+esc(cv.contact)+'" title="Delete">&#128465;</button>'+'<div class="ci-top">'+tb+' <span class="ci-name">'+esc(cv.contact)+'</span> '+ub+'<span class="ci-time">'+fmtShort(cv.lastTs)+'</span></div>'+'<div class="ci-preview">'+esc(preview)+'</div>'+'</div>';
 }).join('');
 if(activeKey&&convData[activeKey])openConv(activeKey);
 }
@@ -783,7 +783,7 @@ if(activeKey&&convData[activeKey])openConv(activeKey);
 function deleteConv(key,contact){
 if(!confirm('Delete conversation with '+contact+'?'))return;
 fetch('/api/delete-conv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact:contact})}).then(function(r){return r.json();}).then(function(d){
-if(d.ok){delete convData[key];if(activeKey===key){activeKey=null;document.getElementById('conv-main').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b"><div style="font-size:48px">&#813b12;</div><p>Select a conversation</p></div>';}renderList();var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';lstats();}
+if(d.ok){delete convData[key];if(activeKey===key){activeKey=null;document.getElementById('conv-main').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#55585b"><div style="font-size:48px">&#128172;</div><p>Select a conversation</p></div>';}renderList();var tot=Object.values(convData).filter(function(cv){return cv.hasReply;}).length;var b=document.getElementById('rbadge');b.textContent=tot;b.style.display=tot?'inline-block':'none';lstats();}
 else alert('Delete failed: '+(d.error||'Unknown'));
 }).catch(function(){alert('Network error');});
 }
