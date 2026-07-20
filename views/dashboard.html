@@ -121,6 +121,9 @@ tr.data-row:hover td{background:#1a1c1c}
 .method-fill{height:100%;border-radius:4px;transition:width .4s}
 .method-pct{font-size:11px;color:#74777b;width:36px;text-align:right;flex-shrink:0}
 .reset-btn{padding:6px 14px;background:#450a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;font-family:'Barlow',sans-serif}
+.row-del{margin-left:8px;background:transparent;border:1px solid #3a2a22;color:#8a5a44;width:22px;height:22px;line-height:1;border-radius:6px;cursor:pointer;font-size:15px;padding:0;vertical-align:middle;transition:background .15s,border-color .15s,color .15s}
+.row-del:hover{background:#ff6b00;border-color:#ff6b00;color:#0a0a0a}
+.row-del:disabled{opacity:.4;cursor:wait}
 .reset-btn:hover{background:#7f1d1d;color:#fca5a5}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .refresh-btn{padding:7px 14px;background:#111313;border:1px solid #242626;border-radius:8px;color:#74777b;cursor:pointer;font-size:12px;font-family:'Barlow',sans-serif}
@@ -690,7 +693,7 @@ var html='';
 er.forEach(function(r){
 var when=r.timestamp?new Date(r.timestamp).toLocaleString():'';
 html+='<div style="border:1px solid #242626;border-radius:10px;padding:14px;margin-bottom:10px;background:#111313">';
-html+='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span style="color:#fd6812;font-weight:600;font-size:13px">'+esc(r.from)+'</span><span style="color:#55585b;font-size:11px">'+esc(when)+'</span></div>';
+html+='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span style="color:#fd6812;font-weight:600;font-size:13px">'+esc(r.from)+'</span><span style="display:flex;align-items:center;gap:8px"><span style="color:#55585b;font-size:11px">'+esc(when)+'</span><button class="row-del" title="Delete reply" data-del-list="replies" data-del-id="'+esc(String(r.id||''))+'">&times;</button></span></div>';
 if(r.subject)html+='<div style="color:#e1d3cb;font-size:12px;margin-top:4px;font-weight:500">'+esc(r.subject)+'</div>';
 html+='<div style="color:#a3a6a9;font-size:12.5px;margin-top:8px;white-space:pre-wrap">'+esc(String(r.body||'').slice(0,600))+'</div>';
 html+='</div>';
@@ -854,7 +857,7 @@ document.getElementById('email-tbody').innerHTML='<tr><td colspan="6"><div class
 fetch('/api/logs?type=emails&limit=100').then(function(r){return r.json();}).then(function(emails){
 var rows='';
 emails.forEach(function(e,i){var xid='xem'+i;var rawBody=String(e.body||'').replace(/<[^>]+>/g,'').trim();
-rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(e.subject||'(no subject)')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bs')+'">'+(e.replied?'Replied':'Sent')+'</span></td></tr>';
+rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(e.subject||'(no subject)')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bs')+'">'+(e.replied?'Replied':'Sent')+'</span><button class="row-del" title="Delete email" data-del-list="email" data-del-id="'+esc(String(e.id||''))+'">&times;</button></td></tr>';
 rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Email Body</div><div class="msg-full">'+esc(rawBody||'(not stored)')+'</div></td></tr>';
 });
 document.getElementById('email-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No emails sent yet.</td></tr>';
@@ -866,7 +869,7 @@ document.getElementById('sms-tbody').innerHTML='<tr><td colspan="6"><div class="
 fetch('/api/logs?type=sms&limit=100').then(function(r){return r.json();}).then(function(sms){
 var rows='';
 sms.forEach(function(e,i){var xid='xsms'+i;var rawBody=String(e.body||'').trim();
-rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(rawBody.substring(0,60))+(rawBody.length>60?'..':'')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bsm')+'">'+(e.replied?'Replied':'Sent')+'</span></td></tr>';
+rows+='<tr class="data-row" data-xid="'+xid+'"><td>'+esc(e.to||'-')+'</td><td>'+esc(rawBody.substring(0,60))+(rawBody.length>60?'..':'')+'<span class="expand-indicator">&#9658;</span></td><td>'+svcBadge(e.service)+'</td><td>'+(e.segment||'-')+'</td><td>'+fmt(e.timestamp)+'</td><td><span class="'+(e.replied?'br':'bsm')+'">'+(e.replied?'Replied':'Sent')+'</span><button class="row-del" title="Delete SMS" data-del-list="sms" data-del-to="'+esc(String(e.to||''))+'" data-del-ts="'+esc(String(e.timestamp||''))+'">&times;</button></td></tr>';
 rows+='<tr class="expand-row" id="'+xid+'"><td colspan="6"><div class="msg-label">Full SMS</div><div class="msg-full">'+esc(rawBody||'(empty)')+'</div></td></tr>';
 });
 document.getElementById('sms-tbody').innerHTML=rows||'<tr><td colspan="6" class="empty">No SMS sent yet.</td></tr>';
@@ -874,8 +877,24 @@ document.getElementById('sms-tbody').innerHTML=rows||'<tr><td colspan="6" class=
 }
 
 document.addEventListener('click',function(e){
+if(e.target.closest('.row-del'))return;
 var dr=e.target.closest('tr.data-row');
 if(dr){var xid=dr.dataset.xid;if(!xid)return;var xr=document.getElementById(xid);if(!xr)return;xr.classList.toggle('open');dr.classList.toggle('row-open');}
+});
+document.addEventListener('click',function(e){
+var db=e.target.closest('.row-del');if(!db)return;
+e.preventDefault();e.stopPropagation();
+if(!confirm('Delete this entry? This cannot be undone.'))return;
+var body={list:db.dataset.delList};
+if(db.dataset.delId)body.id=db.dataset.delId;
+if(db.dataset.delTo!==undefined)body.to=db.dataset.delTo;
+if(db.dataset.delTs!==undefined)body.timestamp=db.dataset.delTs;
+db.disabled=true;
+fetch('/api/delete-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+.then(function(r){return r.json();}).then(function(d){
+if(d&&d.ok){var l=body.list;if(l==='email')le();else if(l==='sms')ls();else if(l==='replies')lemailreplies();if(typeof lstats==='function')lstats();}
+else{db.disabled=false;alert('Delete failed: '+((d&&d.error)||'Unknown'));}
+}).catch(function(){db.disabled=false;alert('Network error');});
 });
 
 lstats();
