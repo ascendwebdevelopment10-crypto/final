@@ -32,12 +32,9 @@ function normalizeContact(place) {
 
 function hasNoWebsite(c) { return !c.website_url || c.website_url.trim() === ''; }
 
-function generateSms(contact, segment) {
+function generateSms(contact) {
   const company = contact.organization_name || 'your business';
-  const text = segment === 'no_website'
-    ? `Hi, it's Ty at Ascend Web Dev. ${company} came up with no website - I put together a quick free mockup of one that could bring you more customers. Want me to send it over?`
-    : `Hi, it's Ty at Ascend Web Dev. I ran a quick free audit of ${company}'s site & noticed a few things that may be costing you customers. Want me to send it over?`;
-  return { text, service: 'website' };
+  return { text: `Hi! is this ${company}?`, service: 'website' };
 }
 
 export default async function handler(req, res) {
@@ -64,6 +61,7 @@ export default async function handler(req, res) {
     const seenPhones = new Set();
     const leads = fetched.filter(c => {
       if (!c.phone) return false;
+      if (!hasNoWebsite(c)) return false;   // only target businesses that need a website
       const n = c.phone.replace(/\D/g, '');
       if (!n || seenPhones.has(n)) return false;
       if (isTollFree(c.phone)) return false;
@@ -82,7 +80,7 @@ export default async function handler(req, res) {
 
     const smsResults = await Promise.all(smsLeads.map(async (contact) => {
       try {
-        const { text, service } = generateSms(contact, hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade');
+        const { text, service } = generateSms(contact);
         await twilioClient.messages.create({ body: text, from: TWILIO_FROM, to: contact.phone });
         await logSms({ to: contact.phone, body: text, contactName: contact.organization_name, timestamp: Date.now(), segment: hasNoWebsite(contact) ? 'no_website' : 'needs_upgrade', service });
         await kv.sadd('sms:contacted_numbers', (contact.phone || '').replace(/\D/g, ''));
