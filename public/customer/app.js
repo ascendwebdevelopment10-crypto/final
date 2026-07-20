@@ -3,10 +3,9 @@ const toastRegion = document.getElementById('toast-region');
 
 const PLANS = {
   free:{id:'free',name:'Free',monthly:0,yearly:0,credits:5,desc:'Try Nitro Outreach and launch one project.',features:['1 website project','5 AI generations / month','Save up to 5 content pieces','Basic analytics','Community support']},
-  starter:{id:'starter',name:'Starter',monthly:30,yearly:300,credits:50,desc:'For solo operators getting consistent.',features:['Everything in Free','50 AI generations / month','3 websites','Social drafts & scheduling','Email support']},
-  growth:{id:'growth',name:'Growth',monthly:50,yearly:500,credits:150,desc:'For businesses scaling their marketing.',features:['Everything in Starter','150 AI generations / month','10 websites','Ad campaign management','Analytics dashboard','Priority email support']},
-  pro:{id:'pro',name:'Pro',monthly:90,yearly:900,credits:500,recommended:true,desc:'The full growth system for established teams.',features:['Everything in Growth','500 AI generations / month','25 websites','Built-in CRM','Advanced automations','Priority support']},
-  scale:{id:'scale',name:'Scale',monthly:160,yearly:1600,credits:null,desc:'Unlimited scale for agencies and teams.',features:['Everything in Pro','Unlimited AI generations','Unlimited websites','Team members','White-label options','API access','Dedicated support']}
+  starter:{id:'starter',name:'Starter',monthly:25,yearly:250,credits:50,desc:'For solo operators getting consistent.',features:['Everything in Free','50 AI generations / month','3 websites','Social drafts & scheduling','Email support']},
+  growth:{id:'growth',name:'Growth',monthly:50,yearly:500,credits:150,recommended:true,desc:'For growing businesses that need more firepower.',features:['Everything in Starter','150 AI generations / month','10 websites','Ad campaign management','Analytics dashboard','Priority email support']},
+  pro:{id:'pro',name:'Pro',monthly:150,yearly:1500,credits:null,desc:'The complete growth system with unlimited scale.',features:['Everything in Growth','Unlimited AI generations','Unlimited websites','Built-in CRM & automations','Team members & white-label','API access','Priority support']}
 };
 
 const NAV = [
