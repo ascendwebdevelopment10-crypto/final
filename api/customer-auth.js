@@ -7,6 +7,7 @@ import {
   normalizeEmail, passwordIssue, publicCustomer, rateLimit, requestOrigin,
   sameOrigin, saveCustomer, validEmail, verifyCustomerPassword,
 } from '../lib/customer-auth.js';
+import { verifyPassword as verifyAdminPassword, makeSessionCookie as makeAdminSessionCookie } from '../lib/auth.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function esc(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -65,6 +66,19 @@ export default async function handler(req, res) {
 
     if (action === 'login') {
       const email = normalizeEmail(body.email);
+      // Owner shortcut: the site owner signs in with ADMIN_EMAIL + the admin dashboard
+      // password and is taken straight into the admin command center at /dashboard.
+      const ADMIN_EMAIL = normalizeEmail(process.env.ADMIN_EMAIL || 'info@ascendwebdevelopment.com');
+      if (email === ADMIN_EMAIL) {
+        if (!(await rateLimit('ownerlogin:' + ip, 12, 900))) { res.status(429).json({ error: 'Too many login attempts. Wait 15 minutes and try again.' }); return; }
+        if (!verifyAdminPassword(body.password)) {
+          await new Promise(resolve => setTimeout(resolve, 700));
+          res.status(401).json({ error: 'Email or password is incorrect' }); return;
+        }
+        res.setHeader('Set-Cookie', makeAdminSessionCookie());
+        res.status(200).json({ ok: true, redirect: '/dashboard' });
+        return;
+      }
       if (!(await rateLimit('login:' + ip + ':' + email, 12, 900))) { res.status(429).json({ error: 'Too many login attempts. Wait 15 minutes and try again.' }); return; }
       const user = await getCustomerByEmail(email);
       if (!user || !verifyCustomerPassword(body.password, user.passwordHash)) {
