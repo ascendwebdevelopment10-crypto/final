@@ -18,7 +18,7 @@ function workspace(user) {
   user.usage.aiUsed = Number(user.usage.aiUsed || 0);
   return user.workspace;
 }
-function usageError(plan) { return `You've used all ${plan.aiCredits} AI credits on the Free plan. Upgrade to continue.`; }
+function usageError(plan) { return `You've used all ${plan.aiCredits} AI credits on the ${plan.name} plan. Upgrade to continue.`; }
 function textOf(message) { return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || ''; }
 async function generate(prompt, maxTokens = 700) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   const data = workspace(user);
   try {
     if (action === 'create-website') {
-      if (plan.id === 'free' && data.websites.length >= 1) { res.status(403).json({ error: 'The Free plan includes one website project. Upgrade to add more.' }); return; }
+      if (plan.websites !== null && data.websites.length >= plan.websites) { res.status(403).json({ error: `Your ${plan.name} plan includes ${plan.websites} website${plan.websites === 1 ? '' : 's'}. Upgrade to add more.` }); return; }
       const name = clean(body.name, 100);
       if (!name) { res.status(400).json({ error: 'Give your website a name.' }); return; }
       const website = { id: id('site'), name, url: clean(body.url, 300), status: 'draft', createdAt: new Date().toISOString() };
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       data.socialDrafts.unshift(draft); await saveCustomer(user); res.status(201).json({ ok: true, draft }); return;
     }
     if (action === 'create-campaign') {
-      if (!['growth', 'pro'].includes(plan.id)) { res.status(403).json({ error: 'Ad campaign management starts on the Growth plan.' }); return; }
+      if (!['growth', 'pro', 'scale'].includes(plan.id)) { res.status(403).json({ error: 'Ad campaign management starts on the Growth plan.' }); return; }
       const name = clean(body.name, 140);
       if (!name) { res.status(400).json({ error: 'Give this campaign a name.' }); return; }
       const campaign = { id: id('campaign'), name, objective: clean(body.objective, 500), status: 'draft', createdAt: new Date().toISOString() };
