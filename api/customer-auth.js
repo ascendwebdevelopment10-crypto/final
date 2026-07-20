@@ -16,16 +16,16 @@ async function sendAccountEmail(req, user, kind) {
   const token = await createActionToken(kind, user.id, kind === 'verify' ? 86400 : 3600);
   const path = kind === 'verify' ? '/verify-email' : '/reset-password';
   const link = requestOrigin(req) + path + '?token=' + encodeURIComponent(token);
-  const title = kind === 'verify' ? 'Verify your Ascend account' : 'Reset your Ascend password';
+  const title = kind === 'verify' ? 'Verify your Nitro Outreach account' : 'Reset your Nitro Outreach password';
   const action = kind === 'verify' ? 'Verify email' : 'Reset password';
   const sender = process.env.CUSTOMER_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || (MAIL_PROVIDER === 'resend' ? 'info@ascendwebdevelopment.com' : FROM_EMAIL);
   await sendEmail({
-    from: sender ? `Ascend <${sender}>` : undefined,
+    from: sender ? `Nitro Outreach <${sender}>` : undefined,
     reply_to: process.env.REPLY_TO || FROM_EMAIL || undefined,
     to: user.email,
     subject: title,
     text: `${title}\n\n${link}\n\nThis link expires ${kind === 'verify' ? 'in 24 hours' : 'in 1 hour'}.`,
-    html: `<div style="background:#07100b;padding:36px;font-family:Arial,sans-serif;color:#eef7f1"><div style="max-width:560px;margin:auto;background:#101914;border:1px solid #294235;border-radius:20px;padding:32px"><div style="color:#66f2a3;font-weight:800;letter-spacing:.12em">ASCEND</div><h1 style="font-size:25px;margin:24px 0 10px">${esc(title)}</h1><p style="color:#a8b8ae;line-height:1.7">Hi ${esc(user.firstName || 'there')}, use the secure button below to continue.</p><a href="${esc(link)}" style="display:inline-block;margin:18px 0;padding:13px 20px;border-radius:10px;background:#66f2a3;color:#07100b;font-weight:800;text-decoration:none">${action}</a><p style="color:#6f8175;font-size:12px;line-height:1.6">If you did not request this, you can safely ignore this email.</p></div></div>`,
+    html: `<div style="background:#080808;padding:36px;font-family:Arial,sans-serif;color:#f4f4f4"><div style="max-width:560px;margin:auto;background:#121212;border:1px solid #2a2a2a;border-radius:20px;padding:32px"><div style="color:#ff6b00;font-weight:800;letter-spacing:.12em">&#9889; NITRO OUTREACH</div><h1 style="font-size:25px;margin:24px 0 10px">${esc(title)}</h1><p style="color:#a7a7a7;line-height:1.7">Hi ${esc(user.firstName || 'there')}, use the secure button below to continue.</p><a href="${esc(link)}" style="display:inline-block;margin:18px 0;padding:13px 20px;border-radius:10px;background:#ff6b00;color:#0a0a0a;font-weight:800;text-decoration:none">${action}</a><p style="color:#7a7a7a;font-size:12px;line-height:1.6">If you did not request this, you can safely ignore this email.</p></div></div>`,
   });
 }
 

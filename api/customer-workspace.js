@@ -60,10 +60,10 @@ export default async function handler(req, res) {
     }
     if (action === 'ask-assistant') {
       const prompt = clean(body.prompt, 1200);
-      if (!prompt) { res.status(400).json({ error: 'Ask Ascend a question first.' }); return; }
+      if (!prompt) { res.status(400).json({ error: 'Ask Nitro a question first.' }); return; }
       if (plan.aiCredits !== null && user.usage.aiUsed >= plan.aiCredits) { res.status(403).json({ error: usageError(plan) }); return; }
       const context = `Company: ${clean(user.company?.name || user.companyName || 'Not set', 140)}. Industry: ${clean(user.company?.industry || user.onboarding?.data?.industry || 'Not set', 100)}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
-      const answer = await generate(`You are Ascend, a practical growth assistant. ${context}\n\nAnswer this request clearly and actionably in no more than 500 words:\n${prompt}`, 700);
+      const answer = await generate(`You are Nitro, a practical growth assistant. ${context}\n\nAnswer this request clearly and actionably in no more than 500 words:\n${prompt}`, 700);
       const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       user.usage.aiUsed += 1;

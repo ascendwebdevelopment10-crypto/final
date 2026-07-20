@@ -12,7 +12,7 @@ const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Co
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 9;    // ~9/run x ~11 runs = ~99/day, spread evenly under Resend free cap (100/day)
+const EMAIL_CAP = 7;    // ~7/run x ~13 runs = ~91/day max, stays under Resend free cap (100/day)
 const FETCH_LIMIT = 20;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
