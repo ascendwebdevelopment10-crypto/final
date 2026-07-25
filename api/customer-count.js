@@ -28,6 +28,7 @@ export default async function handler(req, res) {
         websites: u.usage?.websites || 0,
         onboarded: !!u.onboarding?.completed,
         createdAt: u.createdAt || null,
+        updatedAt: u.updatedAt || null,
       });
     }
     accounts.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));

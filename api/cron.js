@@ -9,8 +9,8 @@ export const config = { maxDuration: 300 };
 // Email is handled entirely by email-cron.js. No follow-ups (cost control).
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const SMS_CAP = 10;     // up to 10 texts per run
-const FETCH_LIMIT = 20;
+const SMS_CAP = 15;     // up to 15 texts per run
+const FETCH_LIMIT = 30;
 
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
@@ -54,14 +54,15 @@ export default async function handler(req, res) {
     const batches = await Promise.allSettled([
       fetchOsmLeads(OSM_TAGS[qi], FETCH_LIMIT),
       fetchOsmLeads(OSM_TAGS[(qi + 1) % OSM_TAGS.length], FETCH_LIMIT),
-      fetchOsmLeads(OSM_TAGS[(qi + 2) % OSM_TAGS.length], FETCH_LIMIT)
+      fetchOsmLeads(OSM_TAGS[(qi + 2) % OSM_TAGS.length], FETCH_LIMIT),
+      fetchOsmLeads(OSM_TAGS[(qi + 3) % OSM_TAGS.length], FETCH_LIMIT),
+      fetchOsmLeads(OSM_TAGS[(qi + 4) % OSM_TAGS.length], FETCH_LIMIT)
     ]);
     const fetched = batches.flatMap(b => b.status === 'fulfilled' ? b.value : []).map(normalizeContact);
 
     const seenPhones = new Set();
     const leads = fetched.filter(c => {
       if (!c.phone) return false;
-      if (!hasNoWebsite(c)) return false;   // only target businesses that need a website
       const n = c.phone.replace(/\D/g, '');
       if (!n || seenPhones.has(n)) return false;
       if (isTollFree(c.phone)) return false;
