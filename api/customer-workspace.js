@@ -41,6 +41,16 @@ function extractHtml(raw) {
   if (start >= 0) t = t.slice(start);
   return t.trim();
 }
+// If a generation was cut off, close any dangling tags so the page still renders.
+function repairHtml(h) {
+  let t = String(h || '');
+  const opens = (t.match(/<style[\s>]/gi) || []).length;
+  const closes = (t.match(/<\/style>/gi) || []).length;
+  if (opens > closes) t += '\n</style>';
+  if (/<body/i.test(t) && !/<\/body>/i.test(t)) t += '\n</body>';
+  if (/<html/i.test(t) && !/<\/html>/i.test(t)) t += '\n</html>';
+  return t;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -77,10 +87,11 @@ Requirements:
 - Return ONLY the HTML document, starting with <!DOCTYPE html>. No explanation, no markdown fences.
 - Everything inline in ONE file: put all CSS inside a <style> tag in the head. No external files, no frameworks, no JS required.
 - Sections: a sticky header with the business name + nav, a hero with a strong headline and a call-to-action button, a services/offer section (3-4 items), an about section, a simple contact section with a placeholder email/phone, and a footer.
-- Clean, professional, mobile-responsive design. Tasteful modern color palette that fits the industry. Good typography, spacing, and hover states.
+- Clean, professional, mobile-responsive design with a LIGHT, readable background (light or white sections with dark text). Good typography, spacing, and hover states. A tasteful accent color that fits the industry.
+- Keep the CSS compact so the whole document fits in one response and every tag is properly closed. The page MUST end with </body></html>.
 - Use realistic, specific copy written for this business (not lorem ipsum). Do not invent fake reviews, awards, or statistics.`;
-      const html = extractHtml(await generate(prompt, 4200));
-      if (!html || html.length < 200) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
+      const html = repairHtml(extractHtml(await generate(prompt, 8000)));
+      if (!html || html.length < 600 || !/<body/i.test(html)) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
       const siteId = id('site');
       const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, createdAt: new Date().toISOString() };
       data.websites.unshift(website);
