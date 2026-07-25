@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { currentCustomer, sameOrigin, saveCustomer, rateLimit } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
+import { kv } from '@vercel/kv';
 
-export const config = { maxDuration: 30 };
+export const config = { maxDuration: 60 };
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -25,6 +26,21 @@ async function generate(prompt, maxTokens = 700) {
   const result = await anthropic.messages.create({ model: MODEL, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
   return textOf(result);
 }
+function ctx(user) {
+  return {
+    company: clean(user.company?.name || user.companyName || user.onboarding?.data?.companyName || 'the business', 140),
+    industry: clean(user.company?.industry || user.onboarding?.data?.industry || 'general', 100),
+  };
+}
+// Pull the HTML document out of a model response even if it adds prose or code fences.
+function extractHtml(raw) {
+  let t = String(raw || '');
+  const fence = t.match(/```(?:html)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1];
+  const start = t.search(/<!DOCTYPE|<html/i);
+  if (start >= 0) t = t.slice(start);
+  return t.trim();
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -38,51 +54,121 @@ export default async function handler(req, res) {
   const action = clean(body.action, 60).toLowerCase();
   const plan = planFor(user.subscription?.plan);
   const data = workspace(user);
+  const creditsLeft = () => plan.aiCredits === null || user.usage.aiUsed < plan.aiCredits;
+
   try {
-    if (action === 'create-website') {
-      if (plan.websites !== null && data.websites.length >= plan.websites) { res.status(403).json({ error: `Your ${plan.name} plan includes ${plan.websites} website${plan.websites === 1 ? '' : 's'}. Upgrade to add more.` }); return; }
+    // ---- WEBSITES: generate a real, complete one-page site ----
+    if (action === 'generate-website' || action === 'create-website') {
+      if (plan.websites !== null && data.websites.length >= plan.websites) {
+        res.status(403).json({ error: `Your ${plan.name} plan includes ${plan.websites} website${plan.websites === 1 ? '' : 's'}. Upgrade to add more.` }); return;
+      }
       const name = clean(body.name, 100);
       if (!name) { res.status(400).json({ error: 'Give your website a name.' }); return; }
-      const website = { id: id('site'), name, url: clean(body.url, 300), status: 'draft', createdAt: new Date().toISOString() };
-      data.websites.unshift(website); user.usage.websites = data.websites.length;
-      await saveCustomer(user); res.status(201).json({ ok: true, website }); return;
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const about = clean(body.about || body.description, 800);
+      const industry = clean(body.industry, 120) || ctx(user).industry;
+      const prompt = `You are an expert web designer. Build a COMPLETE, modern, responsive one-page marketing website as a single HTML file for this business.
+
+Business name: ${name}
+Industry: ${industry}
+What they do / details: ${about || 'A local business that wants more customers.'}
+
+Requirements:
+- Return ONLY the HTML document, starting with <!DOCTYPE html>. No explanation, no markdown fences.
+- Everything inline in ONE file: put all CSS inside a <style> tag in the head. No external files, no frameworks, no JS required.
+- Sections: a sticky header with the business name + nav, a hero with a strong headline and a call-to-action button, a services/offer section (3-4 items), an about section, a simple contact section with a placeholder email/phone, and a footer.
+- Clean, professional, mobile-responsive design. Tasteful modern color palette that fits the industry. Good typography, spacing, and hover states.
+- Use realistic, specific copy written for this business (not lorem ipsum). Do not invent fake reviews, awards, or statistics.`;
+      const html = extractHtml(await generate(prompt, 4200));
+      if (!html || html.length < 200) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
+      const siteId = id('site');
+      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, createdAt: new Date().toISOString() };
+      data.websites.unshift(website);
+      user.usage.websites = data.websites.length;
+      user.usage.aiUsed += 1;
+      await kv.set(`site:${siteId}`, { html, name, owner: user.id, createdAt: website.createdAt });
+      await saveCustomer(user);
+      res.status(201).json({ ok: true, website, aiUsed: user.usage.aiUsed }); return;
     }
+
+    // ---- CONTENT: generate a ready-to-post piece ----
     if (action === 'generate-content') {
       const topic = clean(body.topic, 600);
       if (!topic) { res.status(400).json({ error: 'Enter a topic for the content.' }); return; }
-      if (plan.aiCredits !== null && user.usage.aiUsed >= plan.aiCredits) { res.status(403).json({ error: usageError(plan) }); return; }
-      const company = clean(user.company?.name || user.companyName || user.onboarding?.data?.companyName || 'the business', 140);
-      const content = await generate(`Write a polished, useful social post for ${company}. Topic: ${topic}. Include a clear hook, a concise body, a helpful call to action, and 3-5 relevant hashtags. Do not claim results you cannot prove. Return only the ready-to-post copy.`, 500);
-      const item = { id: id('content'), topic, text: clean(content, 5000), createdAt: new Date().toISOString() };
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const format = clean(body.format, 40) || 'social post';
+      const { company } = ctx(user);
+      const content = await generate(`Write a polished, useful ${format} for ${company}. Topic: ${topic}. Include a clear hook, a concise body, a helpful call to action, and 3-5 relevant hashtags where appropriate. Do not claim results you cannot prove. Return only the ready-to-post copy.`, 600);
+      const item = { id: id('content'), topic, format, text: clean(content, 5000), createdAt: new Date().toISOString() };
       data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
       user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed }); return;
     }
+
+    // ---- ASSISTANT ----
     if (action === 'ask-assistant') {
       const prompt = clean(body.prompt, 1200);
       if (!prompt) { res.status(400).json({ error: 'Ask Nitro a question first.' }); return; }
-      if (plan.aiCredits !== null && user.usage.aiUsed >= plan.aiCredits) { res.status(403).json({ error: usageError(plan) }); return; }
-      const context = `Company: ${clean(user.company?.name || user.companyName || 'Not set', 140)}. Industry: ${clean(user.company?.industry || user.onboarding?.data?.industry || 'Not set', 100)}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const { company, industry } = ctx(user);
+      const context = `Company: ${company}. Industry: ${industry}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
       const answer = await generate(`You are Nitro, a practical growth assistant. ${context}\n\nAnswer this request clearly and actionably in no more than 500 words:\n${prompt}`, 700);
       const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(200).json({ ok: true, entry, aiUsed: user.usage.aiUsed }); return;
     }
-    if (action === 'create-social-draft') {
+
+    // ---- SOCIAL: schedule a post for a real date/time ----
+    if (action === 'schedule-post' || action === 'create-social-draft') {
       if (plan.id === 'free') { res.status(403).json({ error: 'Social scheduling starts on the Starter plan.' }); return; }
       const text = clean(body.text, 3000);
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
-      const draft = { id: id('social'), text, status: 'draft', createdAt: new Date().toISOString() };
-      data.socialDrafts.unshift(draft); await saveCustomer(user); res.status(201).json({ ok: true, draft }); return;
+      let when = clean(body.scheduledFor, 40);
+      let ts = when ? Date.parse(when) : NaN;
+      const draft = {
+        id: id('social'), text,
+        platform: clean(body.platform, 30) || 'instagram',
+        scheduledFor: isNaN(ts) ? null : new Date(ts).toISOString(),
+        status: isNaN(ts) ? 'draft' : 'scheduled',
+        createdAt: new Date().toISOString(),
+      };
+      data.socialDrafts.unshift(draft);
+      await saveCustomer(user);
+      res.status(201).json({ ok: true, draft }); return;
     }
-    if (action === 'create-campaign') {
+
+    // ---- ADS: build a real, detailed campaign plan ----
+    if (action === 'build-campaign' || action === 'create-campaign') {
       if (!['growth', 'pro', 'scale'].includes(plan.id)) { res.status(403).json({ error: 'Ad campaign management starts on the Growth plan.' }); return; }
       const name = clean(body.name, 140);
       if (!name) { res.status(400).json({ error: 'Give this campaign a name.' }); return; }
-      const campaign = { id: id('campaign'), name, objective: clean(body.objective, 500), status: 'draft', createdAt: new Date().toISOString() };
-      data.campaigns.unshift(campaign); await saveCustomer(user); res.status(201).json({ ok: true, campaign }); return;
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const objective = clean(body.objective, 500) || 'get more leads';
+      const budget = clean(body.budget, 40) || 'a small monthly budget';
+      const { company, industry } = ctx(user);
+      const plan_text = await generate(`You are a senior paid-media strategist. Build a concrete, ready-to-launch ad campaign plan for this business.
+
+Business: ${company} (${industry})
+Campaign name: ${name}
+Objective: ${objective}
+Budget: ${budget}
+
+Write a clear, well-structured plan in Markdown with these sections:
+1. Recommended platform(s) and why (Meta, Google, etc.)
+2. Target audience (specific demographics, interests, locations)
+3. Budget breakdown and suggested daily spend
+4. Three ad copy variants (each with a headline, primary text, and CTA)
+5. Creative direction (what the image/video should show)
+6. A step-by-step launch checklist the owner can follow themselves.
+
+Be specific and practical. Do not invent fake performance numbers.`, 1600);
+      const campaign = { id: id('campaign'), name, objective, budget, status: 'planned', plan: clean(plan_text, 12000), createdAt: new Date().toISOString() };
+      data.campaigns.unshift(campaign);
+      user.usage.aiUsed += 1;
+      await saveCustomer(user); res.status(201).json({ ok: true, campaign, aiUsed: user.usage.aiUsed }); return;
     }
+
     res.status(400).json({ error: 'Unknown workspace action' });
   } catch (error) {
     console.error('Customer workspace error:', error.message);
