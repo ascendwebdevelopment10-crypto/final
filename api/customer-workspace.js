@@ -181,6 +181,31 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       await saveCustomer(user); res.status(201).json({ ok: true, campaign, aiUsed: user.usage.aiUsed }); return;
     }
 
+    // ---- DELETE items (frees up plan slots / lets users start over) ----
+    if (action === 'delete-website') {
+      const wid = clean(body.id, 80);
+      const before = data.websites.length;
+      data.websites = data.websites.filter(w => w.id !== wid);
+      if (data.websites.length !== before) { try { await kv.del(`site:${wid}`); } catch {} }
+      user.usage.websites = data.websites.length;
+      await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+    if (action === 'delete-content') {
+      const cid = clean(body.id, 80);
+      data.content = data.content.filter(c => c.id !== cid);
+      await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+    if (action === 'delete-campaign') {
+      const cid = clean(body.id, 80);
+      data.campaigns = data.campaigns.filter(c => c.id !== cid);
+      await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+    if (action === 'delete-social') {
+      const sid = clean(body.id, 80);
+      data.socialDrafts = data.socialDrafts.filter(s => s.id !== sid);
+      await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+
     res.status(400).json({ error: 'Unknown workspace action' });
   } catch (error) {
     console.error('Customer workspace error:', error.message);
