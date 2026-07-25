@@ -42,9 +42,17 @@ export default async function handler(req, res) {
   const auth = req.headers['authorization'];
   if (CRON_SECRET && auth !== 'Bearer ' + CRON_SECRET) { res.status(401).end('Unauthorized'); return; }
 
+  // Publish any due scheduled Instagram posts (runs on this existing schedule).
+  let socialPublished = 0;
+  try {
+    const { runSocialPublish } = await import('./social-cron.js');
+    const r = await runSocialPublish();
+    socialPublished = r.published || 0;
+  } catch (e) { /* non-fatal */ }
+
   // === SMS SENDING DISABLED (cost control). No Twilio messages are sent. ===
   // To re-enable later, remove this block.
-  res.status(200).json({ disabled: true, smsSent: 0, note: 'SMS paused for cost control', timestamp: new Date().toISOString() });
+  res.status(200).json({ disabled: true, smsSent: 0, socialPublished, note: 'SMS paused; social publishing active', timestamp: new Date().toISOString() });
   return;
 
   // Take Sundays off (Mountain Time).

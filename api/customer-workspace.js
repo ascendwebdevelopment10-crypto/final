@@ -129,6 +129,7 @@ Requirements:
       const draft = {
         id: id('social'), text,
         platform: clean(body.platform, 30) || 'instagram',
+        imageUrl: clean(body.imageUrl, 600) || null,
         scheduledFor: isNaN(ts) ? null : new Date(ts).toISOString(),
         status: isNaN(ts) ? 'draft' : 'scheduled',
         createdAt: new Date().toISOString(),
