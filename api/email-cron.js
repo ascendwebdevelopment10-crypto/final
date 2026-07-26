@@ -94,6 +94,12 @@ export default async function handler(req, res) {
   const auth = req.headers['authorization'];
   if (CRON_SECRET && auth !== 'Bearer ' + CRON_SECRET) { res.status(401).end('Unauthorized'); return; }
 
+  // === COLD-OUTREACH EMAIL SENDING DISABLED (pivoted to the customer product). ===
+  // No prospecting emails are sent. Customer transactional emails (verification, etc.) are unaffected.
+  // To re-enable, remove this block.
+  res.status(200).json({ disabled: true, emailsSent: 0, note: 'Outreach emails paused', timestamp: new Date().toISOString() });
+  return;
+
   // Take Sundays off (Mountain Time).
   const mtDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/Denver', weekday: 'short' });
   if (mtDay === 'Sun') { res.status(200).json({ skipped: 'sunday', timestamp: new Date().toISOString() }); return; }
