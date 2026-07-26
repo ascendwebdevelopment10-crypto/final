@@ -141,14 +141,15 @@ var PRICE={free:0,starter:25,growth:50,pro:150};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function fmtDate(s){if(!s)return '—';var d=new Date(s);if(isNaN(d))return '—';return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 function money(n){return '$'+Math.round(n).toLocaleString();}
-function mrrOf(a){if(a.plan==='free'||a.status==='canceled')return 0;var base=PRICE[a.plan]||0;return a.interval==='yearly'?base*10/12:base;}
+function isRealPayer(a){return a.billingMode==='stripe'&&a.status!=='canceled';}
+function mrrOf(a){if(!isRealPayer(a))return 0;var base=PRICE[a.plan]||0;return a.interval==='yearly'?base*10/12:base;}
 
 function metricCard(lbl,val,sub,icon,accent){return '<div class="metric"><div class="ic">'+icon+'</div><div class="lbl">'+lbl+'</div><div class="val'+(accent?' p':'')+'">'+val+'</div><div class="sub">'+sub+'</div></div>';}
 
 function render(data){
   var acc=data.accounts||[];
   var now=Date.now();
-  var paying=acc.filter(function(a){return a.plan!=='free'&&a.status!=='canceled';});
+  var paying=acc.filter(isRealPayer);
   var mrr=acc.reduce(function(s,a){return s+mrrOf(a);},0);
   var signups7=acc.filter(function(a){return a.createdAt&&(now-Date.parse(a.createdAt))<7*864e5;}).length;
   var free=acc.filter(function(a){return a.plan==='free';}).length;
