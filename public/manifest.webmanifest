@@ -1,9 +1,9 @@
 {
-  "id": "/dashboard",
-  "name": "Ascend Outreach Command Center",
-  "short_name": "Ascend",
-  "description": "Live outreach performance, conversations, replies, and campaign operations.",
-  "start_url": "/dashboard?source=pwa",
+  "id": "/app",
+  "name": "Nitro Outreach",
+  "short_name": "Nitro",
+  "description": "Your all-in-one marketing workspace — websites, content, social, ads, and analytics.",
+  "start_url": "/app?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
@@ -12,12 +12,11 @@
   "categories": ["business", "productivity"],
   "icons": [
     {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
-    {"src": "/icons/ascend-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ],
   "shortcuts": [
-    {"name": "Dashboard", "short_name": "Overview", "url": "/dashboard?source=pwa"},
-    {"name": "Conversations", "short_name": "Replies", "url": "/dashboard?source=pwa#conversations"},
-    {"name": "AI Agent Center", "short_name": "AI Agents", "url": "/dashboard?source=pwa#agents"}
+    {"name": "Dashboard", "short_name": "Dashboard", "url": "/app?source=pwa#dashboard"},
+    {"name": "Content", "short_name": "Content", "url": "/app?source=pwa#content"},
+    {"name": "Owner", "short_name": "Owner", "url": "/app?source=pwa#owner"}
   ]
 }
