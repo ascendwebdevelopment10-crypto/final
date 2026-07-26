@@ -7,7 +7,7 @@ import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
 export const config = { maxDuration: 300 };
 
 // EMAIL ENGINE. Uses the FREE OpenStreetMap lead source (never paid Outscraper).
-const FROM_EMAIL = process.env.FROM_EMAIL || 'info@ascendwebdevelopment.com';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@nitrooutreach.app';
 const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
@@ -17,7 +17,7 @@ const FETCH_LIMIT = 20;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const BCC_PREVIEW_EMAIL = 'info@ascendwebdevelopment.com';
+const BCC_PREVIEW_EMAIL = 'no-reply@nitrooutreach.app';
 const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
 
 const SERVICES = ['website', 'ads', 'app'];
@@ -28,8 +28,8 @@ function cleanPlaceholders(text) {
     .replace(/\[your name\]/gi, 'Ty Smith')
     .replace(/\[name\]/gi, 'Ty Smith')
     .replace(/\(your name\)/gi, 'Ty Smith')
-    .replace(/\[your company\]/gi, 'Ascend Web Development')
-    .replace(/\[company name\]/gi, 'Ascend Web Development')
+    .replace(/\[your company\]/gi, 'Nitro Outreach')
+    .replace(/\[company name\]/gi, 'Nitro Outreach')
     .replace(/\[your (?:phone|number|email|website|link|url)[^\]]*\]/gi, '')
     .replace(/\[[^\]]{1,40}\]/g, '')
     .trim();
@@ -79,7 +79,7 @@ async function generateEmail(contact) {
     : service === 'ads'
     ? 'Google and Meta ad campaigns that bring in real paying customers'
     : 'custom mobile apps with online booking, loyalty rewards, and push notifications';
-  const prompt = 'Write a short cold email (under 150 words) to ' + firstName + ' at ' + company + ' in the ' + industry + ' industry. We are Ascend Web Development. LEAD BY OFFERING A FREE, no-obligation audit of their website: say you took a quick look at their site and noticed a couple of things that are likely costing them calls/customers, and you will send the full audit over if they just reply. You can also mention we build ' + serviceDesc + '. Friendly, no fluff, no hard sell. Soft CTA: just reply and I will send it over. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Ascend Web Development. Do NOT use any placeholder text in brackets. Output only the subject line and body.';
+  const prompt = 'Write a short cold email (under 150 words) to ' + firstName + ' at ' + company + ' in the ' + industry + ' industry. We are Nitro Outreach. LEAD BY OFFERING A FREE, no-obligation audit of their website: say you took a quick look at their site and noticed a couple of things that are likely costing them calls/customers, and you will send the full audit over if they just reply. You can also mention we build ' + serviceDesc + '. Friendly, no fluff, no hard sell. Soft CTA: just reply and I will send it over. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Nitro Outreach. Do NOT use any placeholder text in brackets. Output only the subject line and body.';
   const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 350, messages: [{ role: 'user', content: prompt }] });
   const text = cleanPlaceholders(msg.content[0].text);
   const lines = text.split('\n');
@@ -143,7 +143,7 @@ export default async function handler(req, res) {
       try {
         if (await isSuppressed(contact.email)) return null;
         const { subject, body, service } = content;
-        const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
+        const footer = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
         const sendOptions = { from: FROM_EMAIL, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>'), reply_to: FROM_EMAIL };
         if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
         await resend.emails.send(sendOptions);
