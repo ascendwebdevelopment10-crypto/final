@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
         // Send follow-up SMS on no-answer or busy
         if ((outcome === 'no-answer' || outcome === 'busy') && phone) {
-                  const smsBody = `Hi${contactName ? ' ' + contactName : ''}, this is Alex from Ascend Web Development. I tried calling but missed you. We help ${industry || 'businesses'} get more clients through websites, ads & apps. Worth a quick chat? Reply anytime.`;
+                  const smsBody = `Hi${contactName ? ' ' + contactName : ''}, this is Alex from Nitro Outreach. I tried calling but missed you. We help ${industry || 'businesses'} get more clients through websites, ads & apps. Worth a quick chat? Reply anytime.`;
                   try {
                               await twilioClient.messages.create({ body: smsBody, from: TWILIO_FROM, to: phone });
                               await kv.incr('stats:followup_sms');

@@ -1,6 +1,6 @@
 import { trackEmailClick } from '../lib/store.js';
 
-const FALLBACK_URL = 'https://ascendwebdevelopment.com';
+const FALLBACK_URL = 'https://final-phi-swart.vercel.app';
 
 function safeTarget(raw) {
     if (!raw) return FALLBACK_URL;
