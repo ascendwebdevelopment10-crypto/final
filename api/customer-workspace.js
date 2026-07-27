@@ -16,6 +16,9 @@ function workspace(user) {
   for (const key of ['websites', 'content', 'socialDrafts', 'campaigns', 'assistant', 'messages']) {
     if (!Array.isArray(user.workspace[key])) user.workspace[key] = [];
   }
+  if (!user.workspace.connections || typeof user.workspace.connections !== 'object') {
+    user.workspace.connections = { email: { connected: false }, sms: { connected: false } };
+  }
   user.usage = user.usage || {};
   user.usage.aiUsed = Number(user.usage.aiUsed || 0);
   return user.workspace;
@@ -235,6 +238,19 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       const mid = clean(body.id, 80);
       data.messages = data.messages.filter(m => m.id !== mid);
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+    // ---- MESSAGING: connect an email/texting account so sends auto-log ----
+    if (action === 'connect-messaging') {
+      const channel = clean(body.channel, 10).toLowerCase() === 'sms' ? 'sms' : 'email';
+      data.connections[channel] = channel === 'email'
+        ? { connected: true, from: clean(body.from, 200), connectedAt: new Date().toISOString() }
+        : { connected: true, number: clean(body.number, 40), connectedAt: new Date().toISOString() };
+      await saveCustomer(user); res.status(200).json({ ok: true, connections: data.connections }); return;
+    }
+    if (action === 'disconnect-messaging') {
+      const channel = clean(body.channel, 10).toLowerCase() === 'sms' ? 'sms' : 'email';
+      data.connections[channel] = { connected: false };
+      await saveCustomer(user); res.status(200).json({ ok: true, connections: data.connections }); return;
     }
 
     res.status(400).json({ error: 'Unknown workspace action' });
