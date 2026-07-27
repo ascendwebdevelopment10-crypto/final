@@ -1,111 +1,36 @@
 {
   "version": 2,
   "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 13-23 * * *"
-    },
-    {
-      "path": "/api/cron",
-      "schedule": "0 0-1 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 13-23 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 0-1 * * *"
-    },
-    {
-      "path": "/api/send-pending-replies",
-      "schedule": "*/5 * * * *"
-    }
+    { "path": "/api/cron",       "schedule": "0 13 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 13 * * *" },
+    { "path": "/api/cron",       "schedule": "0 14 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 14 * * *" },
+    { "path": "/api/cron",       "schedule": "0 15 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 15 * * *" },
+    { "path": "/api/cron",       "schedule": "0 17 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 17 * * *" },
+    { "path": "/api/cron",       "schedule": "0 20 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 20 * * *" },
+    { "path": "/api/cron",       "schedule": "0 21 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 21 * * *" },
+    { "path": "/api/cron",       "schedule": "0 23 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 23 * * *" },
+    { "path": "/api/cron",       "schedule": "0 0 * * *" },
+    { "path": "/api/email-cron", "schedule": "0 0 * * *" },
+        { "path": "/api/send-pending-replies", "schedule": "*/1 * * * *" }
+  ],
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "final-phi-swart.vercel.app" }], "destination": "https://nitrooutreach.com/:path*", "permanent": true },
+    { "source": "/", "destination": "/dashboard", "permanent": false }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/api/customer-page?route=/"
-    },
-    {
-      "source": "/login",
-      "destination": "/api/customer-page?route=/login"
-    },
-    {
-      "source": "/signup",
-      "destination": "/api/customer-page?route=/signup"
-    },
-    {
-      "source": "/forgot-password",
-      "destination": "/api/customer-page?route=/forgot-password"
-    },
-    {
-      "source": "/verify-email",
-      "destination": "/api/customer-page?route=/verify-email"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "/api/customer-page?route=/reset-password"
-    },
-    {
-      "source": "/pricing",
-      "destination": "/api/customer-page?route=/pricing"
-    },
-    {
-      "source": "/welcome",
-      "destination": "/api/customer-page?route=/welcome"
-    },
-    {
-      "source": "/checkout",
-      "destination": "/api/customer-page?route=/checkout"
-    },
-    {
-      "source": "/checkout/:path*",
-      "destination": "/api/customer-page?route=/checkout/:path*"
-    },
-    {
-      "source": "/app",
-      "destination": "/api/customer-page?route=/app"
-    },
-    {
-      "source": "/app/:path*",
-      "destination": "/api/customer-page?route=/app/:path*"
-    },
-    {
-      "source": "/admin",
-      "destination": "/api/dashboard"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/api/dashboard"
-    },
-    {
-      "source": "/logs",
-      "destination": "/api/logs"
-    },
-    {
-      "source": "/suppressed",
-      "destination": "/api/suppressed"
-    },
-    {
-      "source": "/unsubscribe",
-      "destination": "/api/unsubscribe"
-    },
-    {
-      "source": "/webhook",
-      "destination": "/api/webhook"
-    },
-    {
-      "source": "/sms-webhook",
-      "destination": "/api/sms-webhook"
-    },
-    {
-      "source": "/pipeline",
-      "destination": "/api/pipeline"
-    },
-    {
-      "source": "/reset-data",
-      "destination": "/api/reset-data"
-    }
+    { "source": "/dashboard",   "destination": "/api/dashboard" },
+    { "source": "/logs",        "destination": "/api/logs" },
+    { "source": "/suppressed",  "destination": "/api/suppressed" },
+    { "source": "/unsubscribe", "destination": "/api/unsubscribe" },
+    { "source": "/webhook",     "destination": "/api/webhook" },
+    { "source": "/sms-webhook", "destination": "/api/sms-webhook" },
+    { "source": "/pipeline",    "destination": "/api/pipeline" },
+    { "source": "/reset-data",  "destination": "/api/reset-data" }
   ]
 }
