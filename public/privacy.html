@@ -8,97 +8,198 @@
 :root{--bg:#0a0a0a;--panel:#141210;--line:#262220;--ink:#ececec;--mut:#a29a90;--peach:#eb9255}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-.wrap{max-width:760px;margin:0 auto;padding:56px 24px 90px}
+.wrap{max-width:800px;margin:0 auto;padding:56px 24px 100px}
 .brand{display:flex;align-items:center;gap:11px;margin-bottom:40px}
 .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f7d7a4,var(--peach) 50%,#8f4a22);display:grid;place-items:center;color:#2a1408;font-weight:800}
 .brand b{font-size:16px;letter-spacing:-.2px}
 h1{font-size:32px;letter-spacing:-.5px;margin:0 0 6px}
-.eff{color:var(--mut);font-size:14px;margin-bottom:36px}
-h2{font-size:19px;margin:34px 0 10px;letter-spacing:-.2px}
+.eff{color:var(--mut);font-size:14px;margin-bottom:14px}
+.intro{color:#d6d2cd}
+h2{font-size:20px;margin:38px 0 10px;letter-spacing:-.2px}
+h3{font-size:16px;margin:20px 0 6px;color:#f0ece7}
 p,li{color:#d6d2cd}
 a{color:var(--peach)}
 ul{padding-left:20px}
 li{margin:5px 0}
-hr{border:0;border-top:1px solid var(--line);margin:38px 0}
-.mut{color:var(--mut);font-size:14px}
-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+.mut{color:var(--mut);font-size:13.5px}
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:26px 0 8px}
+.toc h4{margin:0 0 10px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut)}
+.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+.toc a{color:#cfc9c3;text-decoration:none;font-size:14px}
+.toc a:hover{color:var(--peach)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
 td,th{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
 th{color:var(--mut);font-weight:600}
+.note{background:rgba(235,146,85,.06);border:1px solid rgba(235,146,85,.22);border-radius:12px;padding:14px 16px;font-size:14px;color:#e6ddd4}
+@media(max-width:640px){.toc ol{columns:1}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="brand"><span class="mark">&#9889;</span><b>Nitro Outreach</b></div>
   <h1>Privacy Policy</h1>
-  <div class="eff">Last updated: July 26, 2026</div>
+  <div class="eff">Last updated: July 26, 2026 &nbsp;·&nbsp; Effective date: July 26, 2026</div>
+  <p class="intro">This Privacy Policy describes how Nitro Outreach ("Nitro Outreach," "we," "us," or "our") collects, uses, discloses, and protects information in connection with our website, applications, and services (collectively, the "Service"). It also explains the rights and choices you have regarding your information. Please read it carefully. If you do not agree with this policy, please do not access or use the Service.</p>
 
-  <p>Nitro Outreach ("Nitro Outreach," "we," "us," or "our") provides an all-in-one marketing workspace where you can build websites, generate content, schedule social posts, plan ad campaigns, and manage related work. This Privacy Policy explains what information we collect, how we use it, who we share it with, and the choices you have. By creating an account or using the service, you agree to this policy.</p>
+  <div class="toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#s1">Who we are &amp; scope</a></li>
+      <li><a href="#s2">Information we collect</a></li>
+      <li><a href="#s3">How we collect it</a></li>
+      <li><a href="#s4">Cookies &amp; similar technologies</a></li>
+      <li><a href="#s5">How we use information</a></li>
+      <li><a href="#s6">Legal bases (EEA/UK)</a></li>
+      <li><a href="#s7">AI processing</a></li>
+      <li><a href="#s8">How we share information</a></li>
+      <li><a href="#s9">Service providers</a></li>
+      <li><a href="#s10">Social account connections</a></li>
+      <li><a href="#s11">Payments</a></li>
+      <li><a href="#s12">Data retention</a></li>
+      <li><a href="#s13">Data security</a></li>
+      <li><a href="#s14">International transfers</a></li>
+      <li><a href="#s15">Your rights &amp; choices</a></li>
+      <li><a href="#s16">U.S. state privacy rights</a></li>
+      <li><a href="#s17">Do Not Sell/Share</a></li>
+      <li><a href="#s18">Children's privacy</a></li>
+      <li><a href="#s19">Third-party links</a></li>
+      <li><a href="#s20">Automated decisions</a></li>
+      <li><a href="#s21">Changes to this policy</a></li>
+      <li><a href="#s22">Contact &amp; complaints</a></li>
+    </ol>
+  </div>
 
-  <h2>1. Information we collect</h2>
+  <h2 id="s1">1. Who we are and scope of this policy</h2>
+  <p>Nitro Outreach provides an all-in-one marketing workspace where users can build websites, generate content, schedule social media posts, plan advertising campaigns, and view related analytics. This policy applies to information we process when you visit our website, create an account, or otherwise use the Service. It does not apply to third-party products or websites that we do not control, even if they link to or from the Service.</p>
+  <p>For the purposes of applicable data protection laws (including the EU/UK GDPR), Nitro Outreach is the "controller" of personal information processed about account holders and visitors, except where we act as a "processor" on behalf of a customer with respect to content and end-user data that customer submits to their workspace.</p>
+
+  <h2 id="s2">2. Information we collect</h2>
+  <h3>Information you provide</h3>
   <ul>
-    <li><b>Account information</b> — your name, email address, and a securely hashed password.</li>
-    <li><b>Business profile</b> — details you provide during onboarding or in settings, such as company name, industry, website, goals, and brand colors.</li>
-    <li><b>Content you create</b> — websites, posts, captions, campaign plans, and the prompts or topics you enter to generate them.</li>
-    <li><b>Usage data</b> — actions in the workspace, feature usage, and counts such as AI generations used.</li>
-    <li><b>Payment information</b> — if you subscribe to a paid plan, payments are processed by Stripe. We do not see or store your full card number; we store limited subscription details (plan, status, and identifiers returned by Stripe).</li>
-    <li><b>Connected accounts</b> — if you connect a social account (such as Instagram), we store the access token and basic account identifiers needed to publish on your behalf.</li>
-    <li><b>Cookies</b> — a session cookie is used to keep you signed in. We do not use third-party advertising cookies.</li>
+    <li><b>Account data:</b> your name, email address, and a securely hashed password.</li>
+    <li><b>Business profile:</b> information you enter during onboarding or in settings, such as company name, industry, website URL, goals, brand colors, and logo.</li>
+    <li><b>Content and inputs:</b> websites, posts, captions, campaign plans, and the topics, prompts, or instructions you provide to generate them.</li>
+    <li><b>Communications:</b> messages, support requests, and feedback you send us.</li>
+    <li><b>Payment details:</b> if you subscribe, billing is handled by our payment processor; we receive limited subscription information but not your full card number (see Section 11).</li>
+  </ul>
+  <h3>Information collected automatically</h3>
+  <ul>
+    <li><b>Usage data:</b> actions taken in the workspace, features used, pages viewed, and counts such as AI generations used.</li>
+    <li><b>Device and technical data:</b> IP address, browser type, device and operating system information, approximate location derived from IP, timestamps, and diagnostic/error logs.</li>
+    <li><b>Cookies and identifiers:</b> as described in Section 4.</li>
+  </ul>
+  <h3>Information from third parties</h3>
+  <ul>
+    <li><b>Connected accounts:</b> if you connect a social account (e.g., Instagram), we receive an access token and basic account identifiers from that provider (see Section 10).</li>
+    <li><b>Payment processor:</b> subscription status and identifiers from our payment provider.</li>
   </ul>
 
-  <h2>2. How we use your information</h2>
+  <h2 id="s3">3. How we collect information</h2>
+  <p>We collect information directly from you when you create an account, complete onboarding, use features, connect accounts, subscribe, or contact us; automatically through your use of the Service and standard web technologies; and from third-party providers who help us deliver the Service (such as our payment and social-publishing partners).</p>
+
+  <h2 id="s4">4. Cookies and similar technologies</h2>
+  <p>We use a small number of cookies and local browser storage that are strictly necessary to operate the Service — primarily a session cookie to keep you signed in and browser storage to remember preferences (such as your selected billing cycle). We do not use third-party advertising cookies and do not track you across unaffiliated websites for advertising. Because the cookies we use are essential to providing the Service you request, they operate on that basis; you can control cookies through your browser settings, though disabling essential cookies may prevent the Service from functioning.</p>
+
+  <h2 id="s5">5. How we use information</h2>
   <ul>
-    <li>Provide, operate, and secure the service and your workspace.</li>
-    <li>Generate content and answer requests using AI, based on the context you provide.</li>
-    <li>Process subscriptions and payments.</li>
-    <li>Publish scheduled posts to social accounts you have connected.</li>
-    <li>Send transactional emails such as verification, password resets, and account notices.</li>
-    <li>Improve reliability, troubleshoot issues, and prevent abuse.</li>
+    <li>Provide, operate, maintain, and secure the Service and your workspace.</li>
+    <li>Authenticate you and manage your account.</li>
+    <li>Generate content, websites, campaign plans, and assistant responses using AI, based on the context and inputs you provide (see Section 7).</li>
+    <li>Process subscriptions, payments, renewals, and cancellations.</li>
+    <li>Publish scheduled posts to social accounts you connect, at the times you set.</li>
+    <li>Send transactional messages such as email verification, password resets, receipts, and important account notices.</li>
+    <li>Respond to your requests and provide customer support.</li>
+    <li>Monitor, troubleshoot, analyze, and improve the Service, and develop new features.</li>
+    <li>Detect, prevent, and address fraud, abuse, security incidents, and violations of our terms.</li>
+    <li>Comply with legal obligations and enforce our agreements.</li>
   </ul>
 
-  <h2>3. Instagram and Meta data</h2>
-  <p>If you choose to connect an Instagram (or Facebook) account, we request only the permissions needed to publish content you schedule and to identify the connected account. We use this access solely to publish posts you create and to show your connection status. We store the access token securely and use it only for these purposes. You can disconnect at any time, which removes our ability to publish and deletes the stored token. We do not sell this data or use it for advertising.</p>
+  <h2 id="s6">6. Legal bases for processing (EEA/UK users)</h2>
+  <p>Where the GDPR applies, we process personal information under one or more of the following legal bases:</p>
+  <ul>
+    <li><b>Performance of a contract</b> — to provide the Service you request and administer your account.</li>
+    <li><b>Legitimate interests</b> — to secure, maintain, analyze, and improve the Service, and to prevent fraud and abuse, provided these interests are not overridden by your rights.</li>
+    <li><b>Consent</b> — where required, for example when you connect a social account or opt in to non-essential communications. You may withdraw consent at any time.</li>
+    <li><b>Legal obligation</b> — to comply with applicable laws and lawful requests.</li>
+  </ul>
 
-  <h2>4. Service providers we share data with</h2>
-  <p>We share the minimum data necessary with trusted providers who help us run the service:</p>
+  <h2 id="s7">7. AI processing</h2>
+  <p>Certain features use artificial intelligence to generate content, websites, campaign plans, and assistant responses. When you use these features, the inputs you provide (such as your topic, business profile, and instructions) are sent to our AI provider to produce a result, which is returned to your workspace. We instruct our AI provider to process this data solely to deliver the requested output. AI-generated output may be inaccurate or incomplete; you are responsible for reviewing it before use. We do not use your private workspace content to train third-party foundation models where such use would require your consent.</p>
+
+  <h2 id="s8">8. How we share information</h2>
+  <p>We do not sell your personal information. We share information only as described here:</p>
+  <ul>
+    <li><b>Service providers / processors:</b> vendors who host, power, and support the Service under contractual confidentiality and data-protection obligations (see Section 9).</li>
+    <li><b>Social platforms you connect:</b> to publish content you schedule (see Section 10).</li>
+    <li><b>Legal and safety:</b> when we believe disclosure is reasonably necessary to comply with law, respond to lawful requests, enforce our terms, or protect the rights, property, or safety of Nitro Outreach, our users, or others.</li>
+    <li><b>Business transfers:</b> in connection with a merger, acquisition, financing, reorganization, or sale of assets, information may be transferred as part of that transaction, subject to this policy.</li>
+    <li><b>With your direction or consent:</b> when you ask us to share information or otherwise consent.</li>
+  </ul>
+
+  <h2 id="s9">9. Service providers (categories of recipients)</h2>
+  <p>We rely on the following categories of providers to operate the Service. We share only the minimum data needed for each purpose:</p>
   <table>
     <tr><th>Provider</th><th>Purpose</th></tr>
-    <tr><td>Vercel</td><td>Hosting and data storage</td></tr>
+    <tr><td>Vercel</td><td>Application hosting and data storage</td></tr>
     <tr><td>Anthropic</td><td>AI content and assistant generation</td></tr>
-    <tr><td>Stripe</td><td>Subscription billing and payments</td></tr>
-    <tr><td>Meta (Instagram/Facebook)</td><td>Publishing to accounts you connect</td></tr>
-    <tr><td>Email delivery provider</td><td>Transactional emails (verification, resets)</td></tr>
+    <tr><td>Stripe</td><td>Subscription billing and payment processing</td></tr>
+    <tr><td>Meta Platforms (Instagram/Facebook)</td><td>Publishing to social accounts you connect</td></tr>
+    <tr><td>Email delivery provider</td><td>Transactional email (verification, password reset, receipts)</td></tr>
   </table>
-  <p>We do not sell your personal information.</p>
+  <p class="mut">Each provider processes information under its own privacy terms and our agreements with it. This list may change as the Service evolves.</p>
 
-  <h2>5. Data retention and deletion</h2>
-  <p>We keep your information while your account is active. You can delete your account at any time from Settings, which removes your workspace data. You may also request deletion or a copy of your data by contacting us. Some records may be retained where required for legal, security, or accounting reasons.</p>
+  <h2 id="s10">10. Social account connections</h2>
+  <p>If you choose to connect a social account such as Instagram, we request only the permissions necessary to (a) identify the connected account and (b) publish the content you schedule. We store the access token securely and use it solely for these purposes. We do not read your private messages, and we do not sell or use this data for advertising. You may disconnect at any time, which revokes our ability to publish and deletes the stored token. Your use of connected platforms is also governed by those platforms' own terms and policies.</p>
 
-  <h2>6. Your choices and rights</h2>
+  <h2 id="s11">11. Payments</h2>
+  <p>Paid subscriptions are processed by our third-party payment processor (Stripe). Your card details are collected and processed directly by the processor under its own security standards (PCI-DSS); we do not receive or store your full card number. We receive limited information such as your plan, subscription status, billing interval, and processor-issued identifiers, which we use to manage your subscription.</p>
+
+  <h2 id="s12">12. Data retention</h2>
+  <p>We retain personal information for as long as your account is active or as needed to provide the Service. You can delete your account at any time from Settings, which removes your workspace data. After deletion, we may retain limited information where necessary to comply with legal, tax, accounting, or security obligations, to resolve disputes, or to enforce our agreements, after which it is deleted or de-identified. Backups are cycled out in the ordinary course.</p>
+
+  <h2 id="s13">13. Data security</h2>
+  <p>We implement reasonable technical and organizational measures designed to protect personal information, including password hashing, encryption of data in transit, access controls, and least-privilege practices. However, no method of transmission or storage is completely secure, and we cannot guarantee absolute security. You are responsible for keeping your account credentials confidential and for activity that occurs under your account. If we become aware of a security incident affecting your personal information, we will notify you and any regulators as required by law.</p>
+
+  <h2 id="s14">14. International data transfers</h2>
+  <p>We operate from the United States and use providers that may store and process information in the United States and other countries. If you access the Service from outside the United States, you understand that your information may be transferred to, stored, and processed in the United States and other jurisdictions that may have different data-protection laws than your own. Where required, we rely on appropriate safeguards (such as Standard Contractual Clauses) for cross-border transfers of personal information.</p>
+
+  <h2 id="s15">15. Your rights and choices</h2>
+  <p>Depending on where you live, you may have some or all of the following rights regarding your personal information:</p>
   <ul>
-    <li>Access, update, or correct your information in Settings.</li>
-    <li>Disconnect connected social accounts at any time.</li>
-    <li>Delete your account, or request deletion or export of your data.</li>
-    <li>Opt out of non-essential emails using the controls in your notification settings.</li>
+    <li><b>Access</b> — request a copy of the personal information we hold about you.</li>
+    <li><b>Correction</b> — ask us to correct inaccurate or incomplete information (you can update much of it in Settings).</li>
+    <li><b>Deletion</b> — request deletion of your personal information, or delete your account directly.</li>
+    <li><b>Portability</b> — request your information in a portable format, where applicable.</li>
+    <li><b>Restriction / objection</b> — ask us to restrict or object to certain processing, where applicable.</li>
+    <li><b>Withdraw consent</b> — withdraw consent where processing is based on consent (e.g., disconnecting a social account).</li>
+    <li><b>Opt out of non-essential email</b> — via your notification settings.</li>
   </ul>
-  <p class="mut">Depending on where you live, you may have additional rights under laws such as the GDPR or CCPA. Contact us to exercise them.</p>
+  <p>To exercise these rights, contact us using the details in Section 22. We will respond within the time required by applicable law and may need to verify your identity first. You will not be discriminated against for exercising your rights.</p>
 
-  <h2>7. Security</h2>
-  <p>We use reasonable technical and organizational measures to protect your information, including password hashing, encrypted connections, and access controls. No method of transmission or storage is completely secure, so we cannot guarantee absolute security.</p>
+  <h2 id="s16">16. U.S. state privacy rights (including California)</h2>
+  <p>If you are a resident of California or another U.S. state with a comprehensive privacy law, you may have rights to know/access, correct, delete, and obtain a portable copy of your personal information, and to opt out of "sale" or "sharing" of personal information and certain targeted advertising. <b>We do not sell your personal information, and we do not share it for cross-context behavioral advertising.</b> The categories of personal information we collect and the purposes for which we use them are described in Sections 2 and 5, and the categories of recipients in Sections 8–9. You may exercise your rights, including through an authorized agent, by contacting us as described in Section 22.</p>
 
-  <h2>8. Children</h2>
-  <p>Nitro Outreach is intended for businesses and is not directed to children under 16. We do not knowingly collect personal information from children.</p>
+  <h2 id="s17">17. Do Not Sell or Share My Personal Information</h2>
+  <p>Nitro Outreach does not sell personal information and does not share personal information for cross-context behavioral advertising, as those terms are defined under applicable U.S. state laws. Because we do not engage in these activities, no opt-out is necessary; however, you may still contact us with any questions.</p>
 
-  <h2>9. International users</h2>
-  <p>We operate from the United States and may process and store information there. By using the service, you understand your information may be transferred to and processed in the United States.</p>
+  <h2 id="s18">18. Children's privacy</h2>
+  <p>The Service is intended for businesses and for users aged 18 and over. It is not directed to children, and we do not knowingly collect personal information from children under 16. If you believe a child has provided us personal information, please contact us and we will take appropriate steps to delete it.</p>
 
-  <h2>10. Changes to this policy</h2>
-  <p>We may update this policy from time to time. When we do, we will revise the "Last updated" date above and, where appropriate, notify you.</p>
+  <h2 id="s19">19. Third-party links and services</h2>
+  <p>The Service may contain links to third-party websites or integrate third-party services. We are not responsible for the privacy practices or content of those third parties. We encourage you to review their privacy policies before providing information to them.</p>
 
-  <h2>11. Contact us</h2>
-  <p>Questions or requests about this policy or your data? Email <a href="mailto:nitrooutreach@outlook.com">nitrooutreach@outlook.com</a>.</p>
+  <h2 id="s20">20. Automated decision-making</h2>
+  <p>We do not use your personal information to make decisions that produce legal or similarly significant effects about you solely through automated means without human involvement.</p>
+
+  <h2 id="s21">21. Changes to this policy</h2>
+  <p>We may update this Privacy Policy from time to time to reflect changes to the Service, our practices, or legal requirements. When we make material changes, we will update the "Last updated" date above and, where appropriate, provide additional notice. Your continued use of the Service after an update becomes effective constitutes acceptance of the revised policy.</p>
+
+  <h2 id="s22">22. How to contact us and file complaints</h2>
+  <p>If you have questions, requests, or complaints about this policy or your personal information, contact us at <a href="mailto:nitrooutreach@outlook.com">nitrooutreach@outlook.com</a>. We will work in good faith to resolve your concern. If you are in the EEA or UK and believe we have not addressed your concern, you also have the right to lodge a complaint with your local data-protection supervisory authority.</p>
 
   <hr>
-  <p class="mut">This policy describes our current practices and may be updated as the service evolves.</p>
+  <p class="mut">This Privacy Policy reflects Nitro Outreach's current data practices and is provided for general informational purposes. It is not legal advice. Laws vary by jurisdiction; for advice specific to your situation, consult a qualified attorney.</p>
 </div>
 </body>
 </html>
