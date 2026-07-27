@@ -20,6 +20,7 @@
         { "path": "/api/send-pending-replies", "schedule": "*/1 * * * *" }
   ],
   "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "final-phi-swart.vercel.app" }], "destination": "https://nitrooutreach.com/:path*", "permanent": true },
     { "source": "/", "destination": "/dashboard", "permanent": false }
   ],
   "rewrites": [
