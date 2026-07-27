@@ -30,6 +30,7 @@
     { "source": "/webhook",     "destination": "/api/webhook" },
     { "source": "/sms-webhook", "destination": "/api/sms-webhook" },
     { "source": "/pipeline",    "destination": "/api/pipeline" },
-    { "source": "/reset-data",  "destination": "/api/reset-data" }
+    { "source": "/reset-data",  "destination": "/api/reset-data" },
+    { "source": "/(.*)",        "destination": "/index.html" }
   ]
 }
