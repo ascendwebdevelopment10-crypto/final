@@ -6,6 +6,7 @@ import { kv } from '@vercel/kv';
 export const config = { maxDuration: 60 };
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
+const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function clean(value, max = 1000) { return String(value || '').trim().slice(0, max); }
@@ -21,9 +22,9 @@ function workspace(user) {
 }
 function usageError(plan) { return `You've used all ${plan.aiCredits} AI credits on the ${plan.name} plan. Upgrade to continue.`; }
 function textOf(message) { return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || ''; }
-async function generate(prompt, maxTokens = 700) {
+async function generate(prompt, maxTokens = 700, model = MODEL) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
-  const result = await anthropic.messages.create({ model: MODEL, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
+  const result = await anthropic.messages.create({ model, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
   return textOf(result);
 }
 function ctx(user) {
@@ -123,7 +124,7 @@ Requirements:
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
       const { company, industry } = ctx(user);
       const context = `Company: ${company}. Industry: ${industry}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
-      const answer = await generate(`You are Nitro, a practical growth assistant. ${context}\n\nAnswer this request clearly and actionably in no more than 500 words:\n${prompt}`, 700);
+      const answer = await generate(`You are Nitro, a practical growth assistant for a small business. ${context}\n\nAnswer clearly and concisely (aim for under 300 words). Use short Markdown: a couple of ## headings, bold for key terms, and - bullet points. Skip filler. Request:\n${prompt}`, 600, FAST_MODEL);
       const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       user.usage.aiUsed += 1;
