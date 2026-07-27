@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { randomBytes } from 'node:crypto';
 import { currentCustomer, sameOrigin, saveCustomer, rateLimit } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
@@ -245,6 +246,12 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       data.connections[channel] = channel === 'email'
         ? { connected: true, from: clean(body.from, 200), connectedAt: new Date().toISOString() }
         : { connected: true, number: clean(body.number, 40), connectedAt: new Date().toISOString() };
+      // One durable webhook token per account so a connected provider can auto-log sends & replies.
+      if (!data.connections.hookToken) {
+        const token = randomBytes(24).toString('base64url');
+        data.connections.hookToken = token;
+        try { await kv.set('customer:msghook:' + token, user.id); } catch {}
+      }
       await saveCustomer(user); res.status(200).json({ ok: true, connections: data.connections }); return;
     }
     if (action === 'disconnect-messaging') {
