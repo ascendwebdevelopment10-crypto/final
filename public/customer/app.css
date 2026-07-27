@@ -209,3 +209,22 @@
 .conn-note{color:var(--muted);font-size:12.5px;margin:4px 0 0}
 .conn-note a{color:var(--green)}
 @media(max-width:700px){.conn-list{grid-template-columns:1fr}.conn-card{flex-wrap:wrap}}
+
+/* ===== Messaging: manage, guide, webhook ===== */
+.conn-card{flex-wrap:wrap}
+.conn-actions{display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-top:4px}
+.conn-actions .btn{flex:0 0 auto}
+.msg-grid2{grid-template-columns:1.4fr 1fr;align-items:start}
+.guide-card .auto-steps{margin:6px 0 18px}
+.guide-card .auto-step a{color:var(--green)}
+.pro-band{border:1px solid var(--line);border-radius:13px;padding:16px;background:linear-gradient(135deg,#f2996612,transparent)}
+.pro-band b{display:block;margin-bottom:5px;font-size:15px}
+.pro-band p{margin:0 0 13px;color:var(--muted);font-size:13.5px;line-height:1.55}
+.pro-actions{display:flex;gap:9px;flex-wrap:wrap}
+.hook-box{margin:14px 0 4px;padding:14px;border:1px dashed var(--line);border-radius:12px;background:#120d0a}
+.hook-box label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:.02em}
+.hook-row{display:flex;gap:8px;align-items:center}
+.hook-row code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:12.5px;background:#0c0806;border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--text)}
+.hook-box small{display:block;margin-top:8px;color:var(--muted);font-size:12px}
+.status-pill.s-reply{background:#3b82f61f;color:#60a5fa}
+@media(max-width:820px){.msg-grid2{grid-template-columns:1fr}}
