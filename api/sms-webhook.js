@@ -1,11 +1,12 @@
 import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
-import { sendEmail } from '../lib/mailer.js';
+import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
 const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
 const FORWARD_TO = '+13854716500';
-const SIGNOFF = '\n- Ty Smith, Owner of Ascend Web Development';
+const SIGNOFF = '\n- Ty Smith, Owner of Nitro Outreach';
 const REPLY_DELAY_MS = 3 * 60 * 1000; // wait ~3 minutes before actually sending the reply
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
@@ -13,55 +14,48 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 // Fixed reply sent when the incoming text looks like an automated / auto-responder message
 const AUTOMATED_REPLY_TEXT = 'No problem, get back to me when you can - I have a question for you guys.' + SIGNOFF;
 
-// Hard cap every outbound auto-reply at one SMS segment (160 chars). Trims at a word boundary.
-function capSegment(text) {
-      const t = (text || '').trim();
-      if (t.length <= 160) return t;
-      return t.slice(0, 160).replace(/\s+\S*$/, '').trim();
-}
-
 function serviceDescription(service) {
       if (service === 'ads') return 'targeted ad campaigns';
       if (service === 'app') return 'a custom mobile app';
       return 'a professional website';
 }
 
-// Fixed pitch text (used as a fallback if the AI call fails) — kept under 160 chars (1 segment)
+// Fixed pitch text (used as a fallback if the AI call fails)
 function fallbackPitchMessage(service) {
-      return "Hey, it's Ty, owner of Ascend Web Development. We build " + serviceDescription(service) + " for local businesses & I think we could really help. Want to hear more?";
+      return "Hey! I'm Ty Smith, the owner of Nitro Outreach. I'm personally reaching out to companies I think would benefit from our services - looks like you guys would benefit a lot from " + serviceDescription(service) + " and we'd love to help with that. Would you be interested in talking about it?";
 }
 
-// Real person replied — briefly answer what they said, then a short pitch. Whole thing under 160 chars.
-async function generatePitchReply(incomingBody, service, contactName) {
+// Real person replied — first acknowledge/answer what they actually said, then flow into the pitch
+async function generatePitchReply(incomingBody, service) {
       const serviceDesc = serviceDescription(service);
-      const prompt = `You are Ty Smith, owner of Ascend Web Development, replying by text to someone who just replied to our cold outreach SMS.
+      const prompt = `You are Ty Smith, owner of Nitro Outreach, replying by text to someone who just replied to our cold outreach SMS.
 
       Their reply was: "${incomingBody}"
 
-      Write ONE very short SMS reply that does two things in one flowing message:
-      1. In just a few words, acknowledge or answer what they actually said. If they asked about price/cost, say it depends on what they need - never give a specific number. If they said "yes"/"sure"/"who is this", respond naturally.
-      2. Then a short pitch, close to this wording: "It's Ty, owner of Ascend Web Development - we build ${serviceDesc} for local businesses & I think we could really help. Want to hear more?"
+      Write ONE short, natural SMS reply that does two things, in this order, blended into one flowing message (not two disconnected sentences):
+      1. Directly acknowledge or answer what they actually said. If they asked a question, briefly answer it (if it's about price/cost, say it depends on what they need and it's easy to figure out - never give a specific number). If they said something affirmative like "yes", "sure", "how can we help", or asked who this is, respond to that naturally and specifically.
+      2. Then introduce the pitch, keeping this part close to this exact wording: "I'm Ty Smith, the owner of Nitro Outreach. I'm personally reaching out to companies I think would benefit from our services - looks like you guys would benefit a lot from ${serviceDesc} and we'd love to help with that. Would you be interested in talking about it?"
 
       Rules:
       - Sound like a real, professional person texting - direct and warm, never salesy or robotic
-      - Never say "ha" or "haha". No emojis.
-      - CRITICAL: the ENTIRE message (acknowledgment + pitch) MUST be under 140 characters total. Keep it tight.
-      - Do NOT include a sign-off or extra name at the end (the message already says Ty Smith)
+      - Never say "ha", "haha"
+      - No emojis
+      - Keep the whole message under 320 characters
+      - Do NOT include a sign-off or extra name at the end (the message already introduces Ty Smith by name)
       - Output ONLY the message text, nothing else`;
 
   const msg = await anthropic.messages.create({
           model: ANTHROPIC_MODEL,
-          max_tokens: 120,
+          max_tokens: 200,
           messages: [{ role: 'user', content: prompt }]
   });
-      const out = msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim();
-      return out.length <= 160 ? out : fallbackPitchMessage(service);
+      return msg.content[0].text.trim().replace(/^["']|["']$/g, '').trim();
 }
 
 // Push notification via ntfy.sh — instant alert on your phone when someone replies
 async function sendPushNotification(from, body, contactName) {
       try {
-              const topic = process.env.NTFY_TOPIC || 'ascend-replies-8fk3q7wz';
+              const topic = process.env.NTFY_TOPIC || 'nitro-replies';
               const title = contactName ? `Reply from ${contactName}` : `New SMS Reply`;
               const message = `${from}: ${body.slice(0, 200)}`;
               await fetch(`https://ntfy.sh/${topic}`, {
@@ -109,46 +103,33 @@ function isNotInterested(body) {
       return /not interested|no thanks|no thank you|don't contact|do not contact|remove me|leave me alone|stop texting|wrong number|unsubscribe/.test(b);
 }
 
-// Verify inbound requests actually came from Twilio (X-Twilio-Signature).
-// Safety valve: set SMS_SIG_CHECK=off in Vercel to disable instantly without a
-// redeploy if anything misbehaves. If TWILIO_AUTH_TOKEN is unset we can't
-// validate, so we allow (never block on missing config).
-function fromTwilio(req) {
-      if (process.env.SMS_SIG_CHECK === 'off') return true;
-      const token = process.env.TWILIO_AUTH_TOKEN;
-      if (!token) return true;
-      const sig = req.headers['x-twilio-signature'];
-      if (!sig) return false;
-      const proto = req.headers['x-forwarded-proto'] || 'https';
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
-      const params = req.body || {};
-      const urls = [
-                  proto + '://' + host + '/sms-webhook',
-                  proto + '://' + host + '/api/sms-webhook',
-                  'https://final-phi-swart.vercel.app/sms-webhook',
-                  'https://final-phi-swart.vercel.app/api/sms-webhook',
-      ];
-      return urls.some(function (u) {
-                  try { return twilio.validateRequest(token, sig, u, params); } catch (e) { return false; }
-      });
-}
-
 export default async function handler(req, res) {
       if (req.method !== 'POST') { res.status(405).end(); return; }
-      if (!fromTwilio(req)) { res.setHeader('Content-Type','text/xml'); res.status(403).send('<Response></Response>'); return; }
 
   const from = req.body?.From || '';
       const body = req.body?.Body || '';
       const to = req.body?.To || '';
 
-  // 1. If it's a carrier auto-response, stop here — no notify, no logging, no reply
+  // 1. Always forward the raw reply to your phone first
+  try {
+          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await client.messages.create({
+                    body: 'Reply from ' + from + ':\n' + body,
+                    from: process.env.TWILIO_PHONE_NUMBER,
+                    to: FORWARD_TO
+          });
+  } catch (e) {
+          console.error('Twilio forward error:', e.message);
+  }
+
+  // 2. If it's a carrier auto-response, stop here — no logging, no reply
   if (isAutoResponse(body)) {
           res.setHeader('Content-Type', 'text/xml');
           res.status(200).send('<Response></Response>');
           return;
   }
 
-  // 2. Check if we already scheduled/sent a reply to this number before.
+  // 3. Check if we already scheduled/sent a reply to this number before.
   // ONLY ever send ONE reply per person, ever — never text them again after that.
   let alreadyAutoReplied = false;
       let originalService = 'website';
@@ -168,7 +149,7 @@ export default async function handler(req, res) {
               console.error('KV lookup error:', e.message);
       }
 
-  // 3. Log as a real reply (single incr — no duplicates)
+  // 4. Log as a real reply (single incr — no duplicates)
   try {
           const entry = {
                     type: 'sms_reply', from, body, to,
@@ -189,30 +170,43 @@ export default async function handler(req, res) {
           console.error('KV log error:', e.message);
   }
 
-  // Generate a TAILORED suggested reply for Ty to review & send himself. No auto-send.
-  let suggestedReply = '';
-  if (!isNotInterested(body) && !isAutomatedReply(body)) {
-          try { suggestedReply = await generatePitchReply(body, originalService, contactName); }
-          catch (e) { console.error('Suggested reply gen error:', e.message); }
-  }
-
-  // 4. Notify Ty's phone by text (now includes the suggested reply he can edit & send)
-  try {
-          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          await client.messages.create({
-                    body: 'New reply - Ascend Outreach\nFrom: ' + (contactName || from) + ' (' + from + ')\nThey said: ' + body + (suggestedReply ? '\n\nSuggested reply (edit & send):\n' + suggestedReply : ''),
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: FORWARD_TO
-          });
-  } catch (e) {
-          console.error('Twilio notify error:', e.message);
-  }
-
-  // 5. Push notification only. (Email alert removed to conserve Resend daily quota —
-  // you already get a text to your phone + the dashboard entry for every reply.)
+  // 5. Send push notification to phone (ntfy.sh) — fires for every real reply
   await sendPushNotification(from, body, contactName);
+      try {
+              await resend.emails.send({
+                        from: 'nitrooutreach@outlook.com',
+                        to: NOTIFY_EMAIL,
+                        subject: `New SMS reply from ${contactName || from}`,
+                        html: `<p><strong>From:</strong> ${contactName || from} (${from})</p><hr/><p>${body}</p>`
+              });
+      } catch (e) { console.error('SMS email notify error:', e.message); }
 
-  // Auto-replies disabled: Ty sends replies himself using the suggested reply above.
+  // 6. Schedule ONE reply only, to be sent ~3 minutes from now — never again after that
+  if (!alreadyAutoReplied && !isNotInterested(body)) {
+          try {
+                    let replyBody;
+                    if (isAutomatedReply(body)) {
+                                replyBody = AUTOMATED_REPLY_TEXT;
+                    } else {
+                                try {
+                                              replyBody = await generatePitchReply(body, originalService);
+                                } catch (e) {
+                                              console.error('AI reply generation error:', e.message);
+                                              replyBody = fallbackPitchMessage(originalService);
+                                }
+                    }
+                    await kv.sadd('sms:auto_replied_numbers', from);
+                    await kv.rpush('sms:pending_replies', JSON.stringify({
+                                to: from,
+                                body: replyBody,
+                                contactName,
+                                sendAt: Date.now() + REPLY_DELAY_MS,
+                                createdAt: Date.now()
+                    }));
+          } catch (e) {
+                    console.error('Schedule reply error:', e.message);
+          }
+  }
 
   res.setHeader('Content-Type', 'text/xml');
       res.status(200).send('<Response></Response>');

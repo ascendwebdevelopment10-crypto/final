@@ -130,11 +130,11 @@ async function sendApproved(item) {
   if (item.channel === 'email') {
     const token = tokenFor(item.recipient);
     const unsubscribeUrl = BASE_URL + '/unsubscribe?e=' + encodeURIComponent(item.recipient) + '&t=' + encodeURIComponent(token);
-    const footer = '\n\n--\nTy Smith, Owner\nAscend Web Development\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
+    const footer = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
     const text = item.message + footer;
-    const html = '<p>' + escapeHtml(item.message).replace(/\n/g, '<br>') + '</p><p style="color:#64748b;font-size:12px">--<br>Ty Smith, Owner<br>Ascend Web Development<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a></p>';
+    const html = '<p>' + escapeHtml(item.message).replace(/\n/g, '<br>') + '</p><p style="color:#64748b;font-size:12px">--<br>Ty Smith, Owner<br>Nitro Outreach<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a></p>';
     const result = await sendEmail({
-      from: 'Ascend Web Development <' + FROM_EMAIL + '>',
+      from: 'Nitro Outreach <' + FROM_EMAIL + '>',
       to: item.recipient,
       subject: item.subject,
       text,

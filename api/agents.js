@@ -140,7 +140,7 @@ async function fetchPublicHtml(raw) {
       response = await fetch(url, {
         signal: controller.signal,
         redirect: 'manual',
-        headers: { 'User-Agent': 'AscendWebsiteAudit/1.0 (+https://ascendwebdevelopment.com)' },
+        headers: { 'User-Agent': 'NitroOutreach/1.0 (+https://final-phi-swart.vercel.app)' },
       });
     } finally { clearTimeout(timer); }
     if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -233,7 +233,7 @@ async function runProposal(body) {
   const timeline = clean(body.timeline, 120);
   if (!clientName && !businessType) throw new Error('Client or business details are required');
   if (!projectType && !goals) throw new Error('Project type or goals are required');
-  const result = await ask(`You create credible, client-ready proposals for Ascend Web Development. Build a concise proposal from the information below. Never fabricate results, testimonials, discounts, guarantees, legal terms, or client facts. Pricing must be presented as editable recommendations in USD, not promises. Make three packages meaningfully different and keep the middle package the best-value recommendation.
+  const result = await ask(`You create credible, client-ready proposals for Nitro Outreach. Build a concise proposal from the information below. Never fabricate results, testimonials, discounts, guarantees, legal terms, or client facts. Pricing must be presented as editable recommendations in USD, not promises. Make three packages meaningfully different and keep the middle package the best-value recommendation.
 
 Client: ${clientName || 'Prospective client'}
 Business type: ${businessType || 'Not provided'}
