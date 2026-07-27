@@ -12,8 +12,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 function clean(value, max = 1000) { return String(value || '').trim().slice(0, max); }
 function id(prefix) { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 function workspace(user) {
-  user.workspace = user.workspace || { websites: [], content: [], socialDrafts: [], campaigns: [], assistant: [] };
-  for (const key of ['websites', 'content', 'socialDrafts', 'campaigns', 'assistant']) {
+  user.workspace = user.workspace || { websites: [], content: [], socialDrafts: [], campaigns: [], assistant: [], messages: [] };
+  for (const key of ['websites', 'content', 'socialDrafts', 'campaigns', 'assistant', 'messages']) {
     if (!Array.isArray(user.workspace[key])) user.workspace[key] = [];
   }
   user.usage = user.usage || {};
@@ -124,7 +124,14 @@ Requirements:
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
       const { company, industry } = ctx(user);
       const context = `Company: ${company}. Industry: ${industry}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
-      const answer = await generate(`You are Nitro, a practical growth assistant for a small business. ${context}\n\nAnswer clearly and concisely (aim for under 300 words). Use short Markdown: a couple of ## headings, bold for key terms, and - bullet points. Skip filler. Request:\n${prompt}`, 600, FAST_MODEL);
+      // Optional short conversation history from the client for coherent multi-turn threads.
+      let transcript = '';
+      if (Array.isArray(body.history)) {
+        transcript = body.history.slice(-6)
+          .map(m => `${m && m.role === 'assistant' ? 'You' : 'User'}: ${clean(m && m.text, 700)}`)
+          .filter(Boolean).join('\n');
+      }
+      const answer = await generate(`You are Nitro, a sharp, practical growth assistant for a small business. ${context}\n\nStyle: get straight to the point. Answer in under 180 words. Use light Markdown only where it helps — bold key terms and short - bullet lists. No preamble, no filler, no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 450, FAST_MODEL);
       const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       user.usage.aiUsed += 1;
@@ -204,6 +211,29 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
     if (action === 'delete-social') {
       const sid = clean(body.id, 80);
       data.socialDrafts = data.socialDrafts.filter(s => s.id !== sid);
+      await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+
+    // ---- MESSAGING: log a sent/scheduled email or SMS the customer records ----
+    if (action === 'log-message') {
+      const channel = clean(body.channel, 10).toLowerCase() === 'sms' ? 'sms' : 'email';
+      const to = clean(body.to, 200);
+      const bodyText = clean(body.body, channel === 'sms' ? 1200 : 8000);
+      if (!to) { res.status(400).json({ error: 'Add a recipient first.' }); return; }
+      if (!bodyText) { res.status(400).json({ error: 'Write a message first.' }); return; }
+      const entry = {
+        id: id('msg'), channel, to,
+        subject: channel === 'email' ? (clean(body.subject, 240) || '(no subject)') : '',
+        body: bodyText,
+        status: clean(body.status, 20).toLowerCase() === 'scheduled' ? 'scheduled' : 'sent',
+        createdAt: new Date().toISOString(),
+      };
+      data.messages.unshift(entry); data.messages = data.messages.slice(0, 200);
+      await saveCustomer(user); res.status(200).json({ ok: true, entry }); return;
+    }
+    if (action === 'delete-message') {
+      const mid = clean(body.id, 80);
+      data.messages = data.messages.filter(m => m.id !== mid);
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
     }
 
