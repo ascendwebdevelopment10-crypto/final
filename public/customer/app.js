@@ -174,7 +174,7 @@ function connCard(kind,conn){
   const val=(kind==='email'?conn&&conn.from:conn&&conn.number)||'';
   const sub=on?esc(val||'Connected'):(kind==='email'?'Log every email you send':'Log every text you send');
   const icon=kind==='email'?ICONS.messages:PHONE_ICON;
-  const manage=on?`<button class="btn btn-ghost btn-sm" data-connect="${kind}">Edit</button>${kind==='sms'?`<a class="btn btn-ghost btn-sm" href="${TWILIO_NUMBERS_URL}" target="_blank" rel="noopener">Manage number ↗</a>`:''}<button class="btn btn-ghost btn-sm" data-disconnect="${kind}">Disconnect</button>`:`<button class="btn btn-primary btn-sm" data-connect="${kind}">Connect</button>`;
+  const manage=on?`<button class="btn btn-ghost btn-sm" data-connect="${kind}">Edit</button>${kind==='sms'?`<a class="btn btn-ghost btn-sm" href="${TWILIO_NUMBERS_URL}" target="_blank" rel="noopener">Manage number ↗</a>`:''}<button class="btn btn-ghost btn-sm" data-disconnect="${kind}">Disconnect</button>`:`<button class="btn btn-primary btn-sm" data-connect="${kind}">Connect provider</button>`;
   return `<div class="conn-card ${on?'on':''}"><span class="conn-ic">${icon}</span><div class="conn-body"><b>${label}</b><small>${sub}</small></div><span class="conn-status">${on?'<i class="dot dot-on"></i>Connected':'<i class="dot dot-off"></i>Not connected'}</span><div class="conn-actions">${manage}</div></div>`;
 }
 function messagesPage(){
