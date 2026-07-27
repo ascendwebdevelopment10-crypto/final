@@ -18,7 +18,7 @@ async function sendAccountEmail(req, user, kind) {
   const link = requestOrigin(req) + path + '?token=' + encodeURIComponent(token);
   const title = kind === 'verify' ? 'Verify your Nitro Outreach account' : 'Reset your Nitro Outreach password';
   const action = kind === 'verify' ? 'Verify email' : 'Reset password';
-  const sender = process.env.CUSTOMER_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || (MAIL_PROVIDER === 'resend' ? 'info@ascendwebdevelopment.com' : FROM_EMAIL);
+  const sender = process.env.CUSTOMER_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || FROM_EMAIL;
   await sendEmail({
     from: sender ? `Nitro Outreach <${sender}>` : undefined,
     reply_to: process.env.REPLY_TO || FROM_EMAIL || undefined,
