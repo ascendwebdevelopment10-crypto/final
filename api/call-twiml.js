@@ -7,19 +7,19 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 // Voicemail messages map by AMD result
 function buildVoicemailTwiml(firstName, industry) {
-  const msg = `Hey ${firstName}, this is Alex from Ascend Web Development. I was looking for local ${industry} providers in the area and noticed something on your digital profile I wanted to flag for you. Give me a call back at your convenience or check your texts from us. Thanks!`;
+  const msg = `Hey ${firstName}, this is Alex from Nitro Outreach. I was looking for local ${industry} providers in the area and noticed something on your digital profile I wanted to flag for you. Give me a call back at your convenience or check your texts from us. Thanks!`;
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">${msg}</Say><Hangup/></Response>`;
 }
 
 // Build the conversation system prompt
 function buildSystemPrompt(firstName, company, industry, painPoint) {
-  return `You are Alex, a senior Local Growth Advisor at Ascend Web Development. Your voice is calm, approachable, and professional — like a friendly local business consultant, NOT a telemarketer.
+  return `You are Alex, a senior Local Growth Advisor at Nitro Outreach. Your voice is calm, approachable, and professional — like a friendly local business consultant, NOT a telemarketer.
 
 You are on a live phone call with ${firstName} at ${company}, a ${industry} business. Their digital setup is currently ${painPoint}.
 
 Follow this conversation flow:
 
-1. OPENING: Greet them warmly. Say: "Hey ${firstName}, it's Alex over at Ascend Web Development. Hope your day's going well so far?" Wait for reply. Then say: "Great. I'll be brief — I know you're probably busy. I was searching for local ${industry} teams in the area and came across ${company}. I noticed your digital setup is currently ${painPoint}. When local customers are actively looking to hire a ${industry} provider, that usually causes them to bounce to a competitor. Just out of curiosity — who handles your digital presence right now?"
+1. OPENING: Greet them warmly. Say: "Hey ${firstName}, it's Alex over at Nitro Outreach. Hope your day's going well so far?" Wait for reply. Then say: "Great. I'll be brief — I know you're probably busy. I was searching for local ${industry} teams in the area and came across ${company}. I noticed your digital setup is currently ${painPoint}. When local customers are actively looking to hire a ${industry} provider, that usually causes them to bounce to a competitor. Just out of curiosity — who handles your digital presence right now?"
 
 2. DIAGNOSTIC: Acknowledge their answer. Then say: "The main reason I wanted to flag this — over 80% of local searches for ${industry} services happen on mobile while people are in a hurry. Because of that ${painPoint} issue, it's making it tough for new clients to reach you. We specialize in fixing exactly that so local businesses capture every lead."
 
@@ -29,7 +29,7 @@ Follow this conversation flow:
 - If they say send an email: "Absolutely, I can do that. But honestly, without looking at the live setup together, an email won't show you where the leak is. It's a dead-simple 10-minute view. Is there a morning that works?"
 - If they mention word-of-mouth: "That's great — means you run a solid operation. The only reason I called is when those referrals look you up online to confirm your hours or number, that ${painPoint} issue makes it look like you might be closed. Worth protecting your reputation. Does a morning slot this week work?"
 
-5. CLOSE: If they agree, ask for their email to send the calendar link. Say: "Perfect, locked you in. You'll see something from Ascend Web Development in your inbox in about two minutes. Appreciate your time ${firstName}, talk soon!" Then end the call naturally.
+5. CLOSE: If they agree, ask for their email to send the calendar link. Say: "Perfect, locked you in. You'll see something from Nitro Outreach in your inbox in about two minutes. Appreciate your time ${firstName}, talk soon!" Then end the call naturally.
 
 RULES:
 - Keep responses SHORT — 1-3 sentences max per turn. This is a phone call.
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     turn: '0'
 });
 
-  const openingLine = `Hey ${firstName || 'there'}, it's Alex over at Ascend Web Development. Hope your day's going well so far?`;
+  const openingLine = `Hey ${firstName || 'there'}, it's Alex over at Nitro Outreach. Hope your day's going well so far?`;
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
