@@ -7,7 +7,9 @@ export default async function handler(req, res) {
   const user = await currentCustomer(req);
   if (!user) { res.status(401).end(); return; }
   const imgId = String((req.query && req.query.id) || '').slice(0, 80);
-  const owns = ((user.workspace && user.workspace.content) || []).some(c => c.id === imgId && c.type === 'image');
+  const content = (user.workspace && user.workspace.content) || [];
+  const owns = content.some(c => c.id === imgId && c.type === 'image')
+    || content.some(c => Array.isArray(c.slides) && c.slides.some(s => s.id === imgId));
   if (!owns) { res.status(404).end(); return; }
   const b64 = await kv.get('customer:img:' + imgId);
   if (!b64) { res.status(404).end(); return; }

@@ -4,7 +4,7 @@ import { currentCustomer, sameOrigin, saveCustomer, rateLimit } from '../lib/cus
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
@@ -157,6 +157,44 @@ Requirements:
       await saveCustomer(user); res.status(201).json({ ok: true, content: item, dataUrl: `data:image/png;base64,${b64}`, aiUsed: user.usage.aiUsed }); return;
     }
 
+    // ---- CONTENT: one-click multi-slide carousel post (image per slide) ----
+    if (action === 'generate-carousel') {
+      const topic = clean(body.prompt || body.topic, 1000);
+      if (!topic) { res.status(400).json({ error: 'Describe what the carousel is about.' }); return; }
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      if (!process.env.OPENAI_API_KEY) { res.status(400).json({ error: 'Image generation is not set up yet.' }); return; }
+      let count = parseInt(clean(body.slides, 4), 10); if (!(count >= 2 && count <= 8)) count = 5;
+      const sizeMapC = { square: '1024x1024', landscape: '1536x1024', portrait: '1024x1536' };
+      const size = sizeMapC[clean(body.size, 20).toLowerCase()] || '1024x1024';
+      const { company, industry } = ctx(user);
+      // 1. Plan the slides (image description + caption for each)
+      const planRaw = await generate(`Plan an Instagram carousel of exactly ${count} slides for ${company} (industry: ${industry}). Topic: ${topic}. For each slide give: "image" = a vivid, specific art-direction prompt for an AI image generator (a clean, modern, on-brand marketing visual; mention composition and colors; avoid paragraphs of text in the image) and "caption" = a short punchy caption under 120 characters. Return ONLY a JSON array of exactly ${count} objects: [{"image":"...","caption":"..."}]. No markdown, no commentary.`, 1600, FAST_MODEL);
+      let slidePlan = null;
+      try { const m = planRaw.match(/\[[\s\S]*\]/); slidePlan = JSON.parse(m ? m[0] : planRaw); } catch { slidePlan = null; }
+      if (!Array.isArray(slidePlan) || !slidePlan.length) {
+        slidePlan = Array.from({ length: count }, (_, i) => ({ image: `${topic}. Slide ${i + 1} of ${count}, professional marketing visual for ${company}.`, caption: `${topic} — ${i + 1}/${count}` }));
+      }
+      slidePlan = slidePlan.slice(0, count);
+      // 2. Generate all slide images in parallel
+      const results = await Promise.all(slidePlan.map(async (sl) => {
+        const p = `${clean(sl && sl.image, 900)}. Polished professional marketing visual for ${company}. Modern, clean, high quality, on-brand.`.slice(0, 3800);
+        try { const b64 = await genImage(p, size); return { b64, caption: clean(sl && sl.caption, 200) }; }
+        catch { return null; }
+      }));
+      const slides = [];
+      for (const rr of results) {
+        if (!rr) continue;
+        const sid = id('img');
+        try { await kv.set(`customer:img:${sid}`, rr.b64, { ex: 60 * 60 * 24 * 120 }); } catch {}
+        slides.push({ id: sid, caption: rr.caption });
+      }
+      if (!slides.length) { res.status(500).json({ error: 'Could not generate the carousel. Please try again.' }); return; }
+      const item = { id: id('content'), type: 'carousel', topic: topic.slice(0, 120), prompt: topic, format: 'carousel', size, slides, createdAt: new Date().toISOString() };
+      data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
+      user.usage.aiUsed += 1;
+      await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed }); return;
+    }
+
     // ---- ASSISTANT ----
     if (action === 'ask-assistant') {
       const prompt = clean(body.prompt, 1200);
@@ -240,8 +278,10 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
     }
     if (action === 'delete-content') {
       const cid = clean(body.id, 80);
+      const gone = data.content.find(c => c.id === cid);
       data.content = data.content.filter(c => c.id !== cid);
       try { await kv.del(`customer:img:${cid}`); } catch {}
+      if (gone && Array.isArray(gone.slides)) { for (const s of gone.slides) { try { await kv.del(`customer:img:${s.id}`); } catch {} } }
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
     }
     if (action === 'delete-campaign') {
