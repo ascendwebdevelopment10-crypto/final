@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomBytes } from 'node:crypto';
-import { currentCustomer, sameOrigin, saveCustomer, rateLimit } from '../lib/customer-auth.js';
+import { currentCustomer, sameOrigin, saveCustomer, rateLimit, requestOrigin } from '../lib/customer-auth.js';
+import { publishImage, publishCarousel } from '../lib/meta.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
 
@@ -293,6 +294,37 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       const sid = clean(body.id, 80);
       data.socialDrafts = data.socialDrafts.filter(s => s.id !== sid);
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
+    }
+
+    // ---- SOCIAL: publish a generated image or carousel straight to Instagram ----
+    if (action === 'publish-instagram') {
+      const cid = clean(body.id, 80);
+      const item = data.content.find(c => c.id === cid);
+      if (!item) { res.status(404).json({ error: 'That content was not found.' }); return; }
+      if (!user.meta || !user.meta.token || !user.meta.igUserId) {
+        res.status(400).json({ error: 'Connect your Instagram first (Social tab).' }); return;
+      }
+      const base = requestOrigin(req) || 'https://nitrooutreach.com';
+      const pub = (imgId) => `${base}/api/pub-image?id=${encodeURIComponent(imgId)}`;
+      const caption = clean(body.caption, 2200) || item.topic || '';
+      try {
+        let mediaId;
+        if (item.type === 'carousel') {
+          const urls = (item.slides || []).map(s => pub(s.id));
+          mediaId = await publishCarousel(user.meta.igUserId, user.meta.token, caption, urls);
+        } else if (item.type === 'image') {
+          mediaId = await publishImage(user.meta.igUserId, user.meta.token, caption, pub(item.id));
+        } else {
+          res.status(400).json({ error: 'Only images and carousels can be posted to Instagram.' }); return;
+        }
+        item.postedToInstagram = { mediaId, at: new Date().toISOString() };
+        await saveCustomer(user);
+        res.status(200).json({ ok: true, mediaId });
+      } catch (e) {
+        console.error('Instagram publish error:', e.message);
+        res.status(500).json({ error: e.message || 'Posting to Instagram failed. Please try again.' });
+      }
+      return;
     }
 
     // ---- MESSAGING: log a sent/scheduled email or SMS the customer records ----
