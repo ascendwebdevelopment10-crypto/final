@@ -38,7 +38,10 @@ export default async function handler(req, res) {
         });
       }
       accounts.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-      res.status(200).json({ total: keys.length, verified, unverified: keys.length - verified, accounts });
+      const day = new Date().toISOString().slice(0, 10);
+      const landingViews = Number((await kv.get('stats:landing:views')) || 0);
+      const landingToday = Number((await kv.get('stats:landing:day:' + day)) || 0);
+      res.status(200).json({ total: keys.length, verified, unverified: keys.length - verified, accounts, landingViews, landingToday });
       return;
     }
 

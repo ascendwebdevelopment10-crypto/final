@@ -31,6 +31,24 @@ async function generate(prompt, maxTokens = 700, model = MODEL) {
   const result = await anthropic.messages.create({ model, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
   return textOf(result);
 }
+// Generate an image via OpenAI. Tries gpt-image-1 first (can render text), falls back to dall-e-3.
+async function genImage(prompt, size) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('Image generation is not set up yet.');
+  const call = (payload) => fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  let r = await call({ model: 'gpt-image-1', prompt, size, n: 1 });
+  let j = await r.json().catch(() => ({}));
+  if (r.ok && j && j.data && j.data[0] && j.data[0].b64_json) return j.data[0].b64_json;
+  const d3 = size === '1536x1024' ? '1792x1024' : size === '1024x1536' ? '1024x1792' : '1024x1024';
+  r = await call({ model: 'dall-e-3', prompt, size: d3, n: 1, response_format: 'b64_json' });
+  j = await r.json().catch(() => ({}));
+  if (r.ok && j && j.data && j.data[0] && j.data[0].b64_json) return j.data[0].b64_json;
+  throw new Error((j && j.error && j.error.message) || 'Image generation failed. Please try again.');
+}
 function ctx(user) {
   return {
     company: clean(user.company?.name || user.companyName || user.onboarding?.data?.companyName || 'the business', 140),
@@ -121,6 +139,24 @@ Requirements:
       await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed }); return;
     }
 
+    // ---- CONTENT: generate an AI image / visual ----
+    if (action === 'generate-image') {
+      const promptText = clean(body.prompt, 1000);
+      if (!promptText) { res.status(400).json({ error: 'Describe the image you want.' }); return; }
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const sizeMap = { square: '1024x1024', landscape: '1536x1024', portrait: '1024x1536' };
+      const size = sizeMap[clean(body.size, 20).toLowerCase()] || '1024x1024';
+      const { company, industry } = ctx(user);
+      const fullPrompt = `${promptText}. Polished, professional marketing visual for ${company} (industry: ${industry}). Modern, clean, high quality, on-brand. Only include text in the image if the request asks for it.`.slice(0, 3800);
+      const b64 = await genImage(fullPrompt, size);
+      const imgId = id('img');
+      try { await kv.set(`customer:img:${imgId}`, b64, { ex: 60 * 60 * 24 * 120 }); } catch {}
+      const item = { id: imgId, type: 'image', topic: promptText.slice(0, 120), prompt: promptText, format: 'image', size, createdAt: new Date().toISOString() };
+      data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
+      user.usage.aiUsed += 1;
+      await saveCustomer(user); res.status(201).json({ ok: true, content: item, dataUrl: `data:image/png;base64,${b64}`, aiUsed: user.usage.aiUsed }); return;
+    }
+
     // ---- ASSISTANT ----
     if (action === 'ask-assistant') {
       const prompt = clean(body.prompt, 1200);
@@ -205,6 +241,7 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
     if (action === 'delete-content') {
       const cid = clean(body.id, 80);
       data.content = data.content.filter(c => c.id !== cid);
+      try { await kv.del(`customer:img:${cid}`); } catch {}
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
     }
     if (action === 'delete-campaign') {
