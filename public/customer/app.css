@@ -245,3 +245,8 @@
 .adv>summary::before{content:'▸ ';color:var(--muted)}
 .adv[open]>summary::before{content:'▾ '}
 .adv-note{font-size:12px;color:var(--muted);margin:6px 0 8px}
+
+/* AI image content items */
+.gen-img{width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);flex-shrink:0}
+.content-image-item{align-items:center;gap:12px}
+.content-sub{color:var(--muted);font-size:12.5px;margin:2px 0 0}
