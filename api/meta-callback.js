@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   if (!customerId || !code) { done('invalid'); return; }
 
   try {
-    const shortToken = await exchangeCode(String(code));
+    const { token: shortToken } = await exchangeCode(String(code));
     const { token, expiresIn } = await longLivedToken(shortToken);
     const account = await getIgAccount(token);
     const user = await loadCustomer(customerId);
