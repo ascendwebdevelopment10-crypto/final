@@ -259,3 +259,7 @@
 .carousel-slide img{display:block;width:96px;height:96px;object-fit:cover}
 .carousel-num{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;width:18px;height:18px;border-radius:50%;display:grid;place-items:center}
 .carousel-slide:hover{border-color:var(--green)}
+
+/* Post to Instagram button */
+.ig-post-btn{background:linear-gradient(120deg,#f09433,#dc2743,#bc1888)!important;color:#fff!important;border-color:transparent!important}
+.ig-post-btn:hover{filter:brightness(1.08)}
