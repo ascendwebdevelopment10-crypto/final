@@ -3,6 +3,18 @@ import { kv } from '@vercel/kv';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
+const MOUNTAIN_TIME_ZONE = 'America/Denver';
+
+function mountainDay(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: MOUNTAIN_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -38,15 +50,34 @@ export default async function handler(req, res) {
         });
       }
       accounts.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-      const day = new Date().toISOString().slice(0, 10);
-      const landingViews = Number((await kv.get('stats:landing:views')) || 0);
-      const landingToday = Number((await kv.get('stats:landing:day:' + day)) || 0);
-      const rawVisitors = await kv.lrange('stats:landing:visitors', 0, 199);
+      const day = mountainDay();
+      const [siteUnique, uniqueToday, siteSessions, sessionsToday, sitePageviews, pageviewsToday] = await Promise.all([
+        kv.get('stats:site:v2:unique'),
+        kv.get(`stats:site:v2:unique:day:${day}`),
+        kv.get('stats:site:v2:sessions'),
+        kv.get(`stats:site:v2:sessions:day:${day}`),
+        kv.get('stats:site:v2:pageviews'),
+        kv.get(`stats:site:v2:pageviews:day:${day}`),
+      ]);
+      const rawVisitors = await kv.lrange('stats:site:v2:visitors', 0, 299);
       const visitors = (rawVisitors || []).map(value => {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
-      res.status(200).json({ total: keys.length, verified, unverified: keys.length - verified, accounts, landingViews, landingToday, visitors });
+      res.status(200).json({
+        total: keys.length,
+        verified,
+        unverified: keys.length - verified,
+        accounts,
+        siteUnique: Number(siteUnique || 0),
+        uniqueToday: Number(uniqueToday || 0),
+        siteSessions: Number(siteSessions || 0),
+        sessionsToday: Number(sessionsToday || 0),
+        sitePageviews: Number(sitePageviews || 0),
+        pageviewsToday: Number(pageviewsToday || 0),
+        analyticsTimeZone: MOUNTAIN_TIME_ZONE,
+        visitors,
+      });
       return;
     }
 
