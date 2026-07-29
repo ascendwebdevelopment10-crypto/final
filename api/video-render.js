@@ -19,9 +19,6 @@ const STORY_SHAPES = [
   'before-and-after contrast told as one cinematic transformation',
   'product-demo journey that travels through the customer experience',
 ];
-const TRANSITIONS = ['soft dissolve', 'slide left', 'slide up', 'whip pan', 'push through', 'light flash', 'hard cut'];
-const TEXT_STYLES = ['minimal', 'kinetic', 'caption', 'statement', 'quote', 'cta'];
-
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
 function normalizedHex(value) {
@@ -59,16 +56,16 @@ function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt))
     caption: `${subject}\n\n${cta}`,
     creative: direction,
     scenes: [
-      { eyebrow: 'LOOK CLOSER', headline: subject, body: 'A fresh way to see what matters.', voiceover: subject, visual: direction.world, camera: direction.camera, transition: 'push through', textStyle: 'statement' },
-      { eyebrow: 'IN MOTION', headline: `See ${company} differently`, body: 'The story moves as quickly as your audience.', voiceover: `${company} turns the idea into action.`, visual: VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)], camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)], transition: 'soft dissolve', textStyle: 'minimal' },
-      { eyebrow: 'YOUR MOVE', headline: cta, body: company, voiceover: `${cta} with ${company}.`, visual: 'product_stage', camera: 'push through', transition: 'light flash', textStyle: 'cta' },
+      { headline: subject, voiceover: subject, visual: direction.world, camera: direction.camera, transition: 'continuous dissolve', textStyle: 'cinematic overlay' },
+      { headline: company, voiceover: `${company} turns the idea into action.`, visual: VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)], camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)], transition: 'continuous dissolve', textStyle: 'cinematic overlay' },
+      { headline: cta, voiceover: `${cta} with ${company}.`, visual: 'product_stage', camera: 'push through', transition: 'continuous dissolve', textStyle: 'cinematic overlay' },
     ],
   };
 }
 async function createPlan({ prompt, company, industry, tone, cta, duration, direction }) {
   const fallback = fallbackPlan(prompt, company, cta, direction);
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
-  const sceneCount = duration === 15 ? 4 : duration === 30 ? 6 : 8;
+  const sceneCount = duration === 15 ? 3 : duration === 30 ? 4 : 5;
   const result = await anthropic.messages.create({
     model: FAST_MODEL,
     max_tokens: 1500,
@@ -86,20 +83,16 @@ Starting camera move: ${direction.camera}
 Random palette seed: ${direction.palette.join(', ')}
 Story shape for this render: ${direction.storyShape}
 
-Create exactly ${sceneCount} fast scenes. Each scene needs:
-- eyebrow: 2-4 uppercase words
-- headline: punchy, maximum 52 characters
-- body: one specific supporting sentence, maximum 95 characters
-- voiceover: natural spoken narration for that scene, maximum 18 words
+Plan exactly ${sceneCount} visual beats that blend into one uninterrupted piece of footage. Each beat needs:
+- headline: a short phrase used only for the opening hook or final CTA, maximum 52 characters
+- voiceover: the next natural phrase in one continuous spoken thought, maximum 30 words
 - visual: choose the most relevant world from ${VISUAL_WORLDS.join(', ')}
-- camera: choose or invent a cinematic camera move
-- transition: choose the most fitting transition from ${TRANSITIONS.join(', ')}
-- textStyle: choose the most fitting treatment from ${TEXT_STYLES.join(', ')}
+- camera: a camera move that continues the direction and energy of the previous beat
 
-Design one continuous visual journey specifically for the request. This is a cinematic ad, not a numbered list, slideshow, or presentation. Never write scene numbers, step labels, "first/second/third," or repeat an identical information-card layout. Let some scenes breathe with only a short phrase while other scenes carry the detail. It may fly through the air, travel inside a computer, orbit a product, show a stylized person working at a desk, move through a city/storefront, or enter an abstract data world when relevant. Do not force every ad into text on a background. Scene 1 must be a hook and the last scene the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Narration must sound like one continuous human thought, use contractions naturally, and never announce scenes or sound like a list. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
+This must feel like a normal cinematic video, not slides with sections. The camera and subject should appear to keep moving through one connected world while imagery blends naturally. Do not create title cards, information panels, section labels, numbered steps, bullet points, or repeated text layouts. Only the opening phrase and final CTA may appear on screen; the middle must be visual footage with narration. Never write "first/second/third" or use a problem/solution/benefits list structure. It may fly through the air, travel inside a computer, follow a person through a real workspace, orbit a product, or move through a city/storefront when relevant. Narration must be one coherent human thought with natural sentence flow and contractions—not isolated lines written for separate scenes. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
 
 Return ONLY valid JSON:
-{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific visual world","camera":"continuous camera concept","music":"specific music mood"},"scenes":[{"eyebrow":"...","headline":"...","body":"...","voiceover":"...","visual":"one allowed visual world","camera":"camera move","transition":"one allowed transition","textStyle":"one allowed text style"}]}`,
+{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific connected visual world","camera":"one continuous camera concept","music":"specific music mood"},"scenes":[{"headline":"...","voiceover":"...","visual":"one allowed visual world","camera":"continuing camera move"}]}`,
     }],
   });
   try {
@@ -120,14 +113,12 @@ Return ONLY valid JSON:
         music: clean(parsed.creative?.music, 120) || 'cinematic electronic pulse',
       },
       scenes: parsed.scenes.slice(0, sceneCount).map(scene => ({
-        eyebrow: clean(scene?.eyebrow, 32).toUpperCase() || company.toUpperCase(),
         headline: clean(scene?.headline, 70) || company,
-        body: clean(scene?.body, 130) || cta,
-        voiceover: clean(scene?.voiceover, 180) || clean(scene?.body, 130) || cta,
+        voiceover: clean(scene?.voiceover, 260) || cta,
         visual: VISUAL_WORLDS.includes(clean(scene?.visual, 40)) ? clean(scene.visual, 40) : direction.world,
         camera: clean(scene?.camera, 80) || direction.camera,
-        transition: TRANSITIONS.includes(clean(scene?.transition, 40)) ? clean(scene.transition, 40) : TRANSITIONS[crypto.randomInt(0, TRANSITIONS.length)],
-        textStyle: TEXT_STYLES.includes(clean(scene?.textStyle, 30)) ? clean(scene.textStyle, 30) : TEXT_STYLES[crypto.randomInt(0, TEXT_STYLES.length)],
+        transition: 'continuous dissolve',
+        textStyle: 'cinematic overlay',
       })),
     };
   } catch {
@@ -192,12 +183,12 @@ async function createSceneArt(plan, prompt, company, tone) {
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gpt-image-2',
-        prompt: `Create scene ${index + 1} of a cohesive vertical social-media commercial for ${company}.
+        prompt: `Create visual beat ${index + 1} of one continuous vertical social-media commercial for ${company}.
 Overall ad request: ${prompt}
-This scene: ${WORLD_PROMPTS[scene.visual] || scene.visual}. Story beat: ${scene.headline}. Camera: ${scene.camera}.
+This moment: ${WORLD_PROMPTS[scene.visual] || scene.visual}. Story beat: ${scene.headline}. Camera: ${scene.camera}.
 Style: ${tone} high-end cinematic advertising, believable depth, sophisticated lighting, richly detailed, polished color grade.
-Use this palette as inspiration: ${palette}. Compose for a 9:16 frame with the main subject away from the upper and lower text-safe zones.
-No words, captions, letters, logos, watermarks, split screens, posters, or flat graphic backgrounds.`,
+Use this palette as inspiration: ${palette}. Keep the same cinematic world, lighting logic, subject continuity, and forward motion as the adjoining moments so long dissolves feel like one connected shot. Compose for a 9:16 frame.
+No words, captions, letters, logos, watermarks, split screens, posters, title cards, presentation panels, or flat graphic backgrounds.`,
         size: '1024x1536',
         quality: 'low',
         output_format: 'jpeg',

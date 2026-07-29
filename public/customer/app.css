@@ -305,7 +305,7 @@
 .reel-preview-modal{width:min(490px,calc(100vw - 28px));text-align:center}.reel-player-shell{width:min(320px,100%);aspect-ratio:9/16;margin:15px auto 3px;border-radius:18px;padding:5px;background:linear-gradient(145deg,#ff8a33,#511d06 45%,#17110e);box-shadow:0 28px 70px #000a}.reel-preview-video{display:block;width:100%;height:100%;object-fit:contain;border-radius:14px;background:#000}.reel-preview-modal .modal-actions{justify-content:center}
 .owner-unlimited{color:#fff3c4;border-color:#f2c45c55;background:linear-gradient(120deg,#4a3515aa,#1d160a)}
 .prompt-reel-callout{background:radial-gradient(circle at 82% 18%,#ff7a0030,transparent 34%),radial-gradient(circle at 15% 100%,#9333ea18,transparent 38%),linear-gradient(135deg,#1a100b,#0d0c0d)}
-.reel-price-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.reel-price-row span{font-size:9px;color:#d5c8bf;border:1px solid #ffffff12;padding:5px 8px;border-radius:999px;background:#ffffff06}
+.reel-price-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:10px}.reel-price-row span{font-size:9px;color:#d5c8bf;border:1px solid #ffffff12;padding:5px 8px;border-radius:999px;background:#ffffff06}.reel-price-row a{font-size:10px;color:#ffad78;font-weight:800;margin-left:3px}
 .prompt-reel-modal{width:min(720px,calc(100vw - 28px));max-height:min(900px,calc(100vh - 30px));overflow:auto}
 .reel-idea-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 13px}
 .reel-idea{appearance:none;text-align:left;padding:11px;border-radius:12px;border:1px solid var(--line);background:#ffffff05;color:#fff;cursor:pointer;transition:.22s ease;min-height:84px}
@@ -313,9 +313,13 @@
 .reel-idea b{display:block;font:750 11px Manrope;margin-bottom:5px}.reel-idea small{display:block;color:var(--muted);font-size:9.5px;line-height:1.35}
 .reel-prompt{min-height:104px;resize:vertical}.field-help{display:block;color:var(--dim);font-size:9.5px;margin-top:5px}
 .reel-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}.credit-breakdown{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1px solid #ff7a0033;border-radius:12px;background:#ff6b000b;font-size:11px;color:var(--muted)}.credit-breakdown b{color:#ffad78}
+.credit-store{margin-bottom:12px;background:radial-gradient(circle at 92% 0,#ff6b0022,transparent 34%),linear-gradient(145deg,#17110e,#0e0c0b)}
+.credit-store-head,.credit-store{display:flex;align-items:center;justify-content:space-between;gap:18px}.credit-store-head{width:100%;margin-bottom:17px}.credit-store:not(:has(.credit-pack-grid)){padding:22px}.credit-store:has(.credit-pack-grid){display:block}
+.credit-store h3{font:800 20px Manrope;margin:5px 0}.credit-store p{color:var(--muted);font-size:12px;line-height:1.55;margin:0}.credit-store p b{color:#f5e8df}
+.credit-pack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.credit-pack{position:relative;padding:17px;border:1px solid var(--line);border-radius:15px;background:#ffffff05;display:flex;flex-direction:column;align-items:flex-start}.credit-pack.recommended{border-color:#ff7a0058;background:#ff6b000b;box-shadow:0 16px 45px #0005}.credit-pack>span{color:#ffad78;font-size:9px;font-weight:900;letter-spacing:.13em}.credit-pack strong{font:850 30px Manrope;margin:8px 0 0}.credit-pack small{color:var(--dim);font-size:9.5px}.credit-pack p{margin:12px 0 16px;font-size:10.5px;flex:1}.credit-pack .btn{width:100%}.credit-note{display:block;color:var(--dim);font-size:9.5px;margin-top:12px}
 @keyframes reelPulse{50%{transform:translateY(-4px) scale(1.035);box-shadow:0 20px 55px #ff6b0044}}
 @keyframes renderWave{0%,100%{height:20px;opacity:.45}50%{height:58px;opacity:1}}
-@media(max-width:760px){.reel-callout{grid-template-columns:auto 1fr}.reel-callout>.btn{grid-column:1/-1;width:100%}.content-actions{justify-content:flex-start}.content-video-item{align-items:flex-start;flex-wrap:wrap}.reel-item-actions{width:100%;justify-content:flex-start}.reel-idea-grid{grid-template-columns:1fr 1fr}.reel-options{grid-template-columns:1fr}}
+@media(max-width:760px){.reel-callout{grid-template-columns:auto 1fr}.reel-callout>.btn{grid-column:1/-1;width:100%}.content-actions{justify-content:flex-start}.content-video-item{align-items:flex-start;flex-wrap:wrap}.reel-item-actions{width:100%;justify-content:flex-start}.reel-idea-grid{grid-template-columns:1fr 1fr}.reel-options{grid-template-columns:1fr}.credit-store-head,.credit-store{align-items:flex-start;flex-direction:column}.credit-pack-grid{grid-template-columns:1fr}}
 
 /* Premium motion system */
 .app-content>*{animation:cardReveal .52s cubic-bezier(.2,.75,.25,1) both}

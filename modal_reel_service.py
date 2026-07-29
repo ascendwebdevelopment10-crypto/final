@@ -80,208 +80,89 @@ def render_prompt_video(payload: dict):
             art_path = temp_dir / f"scene-{art_index}.jpg"
             art_path.write_bytes(base64.b64decode(str(art_data)))
             art_paths.append((art_index, art_path))
-        tone = str(payload.get("tone") or "bold")
         font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         scene_time = duration / len(scenes)
 
         seed = int(hashlib.sha256(job_id.encode()).hexdigest()[:8], 16)
         rng = random.Random(seed)
         base, ink, accent = palette
         art_filters = []
-        art_input_by_scene = {}
         if art_paths:
-            art_filters.append("[0:v]format=yuv420p[bg0]")
+            # Every visual overlaps the next one with a long dissolve. This produces one
+            # moving timeline instead of a stack of independent scene cards.
+            art_filters.append("[0:v]format=rgba[flow0]")
+            overlap = min(1.45, max(0.9, scene_time * 0.32))
             for chain_index, (scene_index, art_path) in enumerate(art_paths):
                 input_index = 1 + chain_index
-                art_input_by_scene[scene_index] = input_index
-                start = scene_index * scene_time
-                end = duration if scene_index == len(scenes) - 1 else (scene_index + 1) * scene_time
+                anchor_start = scene_index * scene_time
+                anchor_end = duration if scene_index == len(scenes) - 1 else (scene_index + 1) * scene_time
+                start = 0 if scene_index == 0 else max(0, anchor_start - overlap)
+                end = duration if scene_index == len(scenes) - 1 else min(duration, anchor_end + overlap)
                 camera = str(scenes[scene_index].get("camera") or "").lower()
+                motion_span = max(scene_time + overlap * 2, 1)
                 motion = scene_index % 5
-                if any(word in camera for word in ("left", "pan")) or motion == 1:
-                    crop_x = f"(iw-ow)*(1-min(t/{scene_time:.3f},1))"
-                    crop_y = f"(ih-oh)/2+18*sin(t*1.1)"
+                if any(word in camera for word in ("left", "pan", "whip")) or motion == 1:
+                    crop_x = f"(iw-ow)*(1-min(t/{motion_span:.3f},1))"
+                    crop_y = f"(ih-oh)/2+22*sin(t*.72)"
                 elif any(word in camera for word in ("crane", "up", "dive")) or motion == 2:
-                    crop_x = f"(iw-ow)/2+16*sin(t*.8)"
-                    crop_y = f"(ih-oh)*min(t/{scene_time:.3f},1)"
+                    crop_x = f"(iw-ow)/2+20*sin(t*.58)"
+                    crop_y = f"(ih-oh)*min(t/{motion_span:.3f},1)"
                 elif any(word in camera for word in ("backward", "pull")) or motion == 3:
-                    crop_x = f"(iw-ow)*min(t/{scene_time:.3f},1)"
-                    crop_y = f"(ih-oh)*(1-min(t/{scene_time:.3f},1))"
+                    crop_x = f"(iw-ow)*min(t/{motion_span:.3f},1)"
+                    crop_y = f"(ih-oh)*(1-min(t/{motion_span:.3f},1))"
                 elif any(word in camera for word in ("orbit", "float")) or motion == 4:
-                    crop_x = f"(iw-ow)/2+(iw-ow)*.42*sin(t*1.05)"
-                    crop_y = f"(ih-oh)/2+(ih-oh)*.42*cos(t*.83)"
+                    crop_x = f"(iw-ow)/2+(iw-ow)*.36*sin(t*.72)"
+                    crop_y = f"(ih-oh)/2+(ih-oh)*.34*cos(t*.61)"
                 else:
-                    crop_x = f"(iw-ow)/2+22*sin(t*.75)"
-                    crop_y = f"(ih-oh)/2+20*cos(t*.62)"
+                    crop_x = f"(iw-ow)/2+30*sin(t*.48)"
+                    crop_y = f"(ih-oh)/2+26*cos(t*.41)"
+                fade_in = 0.01 if scene_index == 0 else overlap * 1.55
+                fade_out_start = duration if scene_index == len(scenes) - 1 else max(start, end - overlap * 1.55)
+                fade_out = 0.01 if scene_index == len(scenes) - 1 else overlap * 1.55
                 art_filters.extend([
-                    f"[{input_index}:v]scale=1400:2100,crop=1080:1920:"
-                    f"x='{crop_x}':y='{crop_y}',eq=saturation=1.08:contrast=1.04,"
-                    f"fade=t=in:st={start}:d=0.24:alpha=1,fade=t=out:st={max(start, end - .22)}:d=0.22:alpha=1,"
+                    f"[{input_index}:v]scale=1450:2200,crop=1080:1920:"
+                    f"x='{crop_x}':y='{crop_y}',eq=saturation=1.06:contrast=1.035,"
+                    f"fade=t=in:st={start}:d={fade_in:.3f}:alpha=1,"
+                    f"fade=t=out:st={fade_out_start:.3f}:d={fade_out:.3f}:alpha=1,"
                     f"format=rgba[art{chain_index}]",
-                    f"[bg{chain_index}][art{chain_index}]overlay=0:0:"
-                    f"enable='between(t,{start},{end})'[bg{chain_index + 1}]",
+                    f"[flow{chain_index}][art{chain_index}]overlay=0:0:"
+                    f"enable='between(t,{start:.3f},{end:.3f})'[flow{chain_index + 1}]",
                 ])
-            video_source = f"[bg{len(art_paths)}]"
+            video_source = f"[flow{len(art_paths)}]"
         else:
             video_source = "[0:v]"
-        filters = [f"{video_source}format=yuv420p"]
+
+        # Text is intentionally sparse: one opening hook and one closing CTA over the
+        # moving footage. There are no per-beat labels, bodies, panels, or progress bars.
+        hook = escape_text(wrapped(scenes[0].get("headline"), 24, 2))
+        cta = escape_text(wrapped(scenes[-1].get("headline"), 24, 2))
+        hook_end = min(3.25, duration * 0.24)
+        cta_start = max(hook_end + 1, duration - 3.0)
+        hook_alpha = (
+            f"if(lt(t\\,0.7)\\,(t-0.3)/0.4\\,"
+            f"if(gt(t\\,{hook_end - .45:.3f})\\,({hook_end:.3f}-t)/0.45\\,1))"
+        )
+        cta_alpha = (
+            f"if(lt(t\\,{cta_start + .45:.3f})\\,(t-{cta_start:.3f})/0.45\\,"
+            f"if(gt(t\\,{duration - .25:.3f})\\,({duration:.3f}-t)/0.25\\,1))"
+        )
+        filters = [
+            f"{video_source}format=yuv420p",
+            "drawbox=x=0:y=0:w=1080:h=1920:color=black@0.10:t=fill",
+        ]
         if not art_paths:
-            filters.append(f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill")
-        filters.extend([
-            f"drawbox=x=70:y=1818:w=940:h=5:color=0x{ink}@0.18:t=fill",
-            f"drawbox=x=70:y=1818:w='940*t/{duration}':h=5:color=0x{accent}:t=fill",
-        ])
-        for index, scene in enumerate(scenes):
-            start = index * scene_time
-            end = duration if index == len(scenes) - 1 else (index + 1) * scene_time
-            fade = (
-                f"if(lt(t\\,{start + 0.35})\\,(t-{start})/0.35\\,"
-                f"if(gt(t\\,{end - 0.3})\\,({end}-t)/0.3\\,1))"
-            )
-            eyebrow = escape_text(str(scene.get("eyebrow") or "NITRO").upper())
-            headline = escape_text(wrapped(scene.get("headline"), 21, 3))
-            body = escape_text(wrapped(scene.get("body"), 37, 3))
-            visual = str(scene.get("visual") or creative.get("world") or "data_stream")
-            text_style = str(scene.get("textStyle") or "statement")
-            transition = str(scene.get("transition") or "soft dissolve")
-            layout = (index + rng.randint(0, 7)) % 4
-            positions = [
-                (76, 1260, 76, 1360, 80, 1640, 68, 28),
-                (110, 150, 110, 255, 114, 535, 74, 29),
-                (80, 1080, 80, 1185, 84, 1510, 70, 28),
-                (170, 190, 170, 305, 174, 620, 66, 28),
-            ]
-            ex, ey, hx, hy, bx, by, headline_size, body_size = positions[layout]
-            enter_x = 0
-            enter_y = 0
-            if transition in ("slide left", "whip pan"):
-                enter_x = 240 if layout in (0, 2) else -240
-            elif transition in ("slide up", "push through"):
-                enter_y = 150
-            elif transition == "light flash":
-                enter_x = 45
-            scene_bg = [base, ink, accent][index % 3]
-            text_color = "F7F7F5"
-            has_scene_art = index in art_input_by_scene
-            filters.append(
-                f"drawbox=x=0:y=0:w=1080:h=1920:"
-                f"color={'black@0.20' if has_scene_art else f'0x{scene_bg}'}:t=fill:"
-                f"enable='between(t,{start},{end})'"
-            )
-            # AI-directed visual worlds. Each uses procedural geometry and camera-like motion,
-            # so the composition is unique even when a world is requested again.
-            if has_scene_art:
-                pass
-            elif visual == "sky_flight":
-                for cloud in range(7):
-                    cy = 190 + cloud * 190 + rng.randint(-70, 70)
-                    filters.append(
-                        f"drawbox=x='{-420 + rng.randint(-200, 180)}+mod(t*{150 + rng.randint(0, 170)}\\,1700)':"
-                        f"y='{cy}+{25 + rng.randint(0, 55)}*sin(t*{.5 + cloud * .09})':w={240 + rng.randint(0, 260)}:"
-                        f"h={55 + rng.randint(0, 80)}:color=white@{.08 + cloud * .018}:t=fill:enable='between(t,{start},{end})'"
-                    )
-            elif visual == "computer_tunnel":
-                for depth in range(7):
-                    inset = 70 + depth * 62
-                    filters.extend([
-                        f"drawbox=x='{inset}-mod(t*{25 + depth * 7}\\,70)':y='{150 + inset}-mod(t*{18 + depth * 5}\\,60)':"
-                        f"w={940 - depth * 115}:h={1500 - depth * 165}:color=0x{accent}@{.05 + depth * .025}:t=12:"
-                        f"enable='between(t,{start},{end})'",
-                        f"drawbox=x={90 + depth * 110}:y='mod(t*{180 + depth * 20}\\,1900)':w=8:h={100 + depth * 18}:"
-                        f"color=0x{ink}@.45:t=fill:enable='between(t,{start},{end})'",
-                    ])
-            elif visual == "desk_person":
-                filters.extend([
-                    f"drawbox=x=95:y=1010:w=890:h=34:color=0x{accent}@.88:t=fill:enable='between(t,{start},{end})'",
-                    f"drawbox=x='380+22*sin(t*1.2)':y=575:w=330:h=250:color=0x{ink}@.92:t=fill:enable='between(t,{start},{end})'",
-                    f"drawbox=x='420+18*sin(t*1.2)':y=615:w=250:h=170:color=0x{base}@.82:t=fill:enable='between(t,{start},{end})'",
-                    f"drawbox=x='190+10*sin(t*.8)':y=670:w=150:h=150:color=0x{accent}@.82:t=fill:enable='between(t,{start},{end})'",
-                    f"drawbox=x='170+14*sin(t*.8)':y=810:w=210:h=270:color=0x{ink}@.72:t=fill:enable='between(t,{start},{end})'",
-                    f"drawbox=x=530:y=825:w=38:h=190:color=0x{ink}@.9:t=fill:enable='between(t,{start},{end})'",
-                ])
-            elif visual in ("city_motion", "storefront"):
-                for building in range(9):
-                    bw = 90 + rng.randint(0, 110)
-                    bh = 280 + rng.randint(0, 620)
-                    filters.append(
-                        f"drawbox=x='{-300 + building * 180}-mod(t*{45 + rng.randint(0, 80)}\\,260)':y={1050 - bh}:"
-                        f"w={bw}:h={bh}:color=0x{[ink, accent, base][building % 3]}@{.35 + (building % 3) * .12}:t=fill:"
-                        f"enable='between(t,{start},{end})'"
-                    )
-            elif visual in ("product_stage", "orbit"):
-                for ring in range(6):
-                    size = 170 + ring * 105
-                    filters.append(
-                        f"drawbox=x='{540 - size / 2}+{35 + ring * 5}*sin(t*{.7 + ring * .08})':"
-                        f"y='{760 - size / 2}+{28 + ring * 4}*cos(t*{.6 + ring * .07})':w={size}:h={size}:"
-                        f"color=0x{[accent, ink, base][ring % 3]}@{.08 + ring * .035}:t={8 + ring * 2}:"
-                        f"enable='between(t,{start},{end})'"
-                    )
-                filters.append(
-                    f"drawbox=x='390+18*sin(t*.9)':y='610+16*cos(t*.8)':w=300:h=300:color=0x{accent}@.82:t=fill:"
-                    f"enable='between(t,{start},{end})'"
-                )
-            elif visual in ("interface_world", "data_stream"):
-                for panel in range(8):
-                    px = 70 + (panel % 2) * 500 + rng.randint(-30, 30)
-                    py = 180 + (panel // 2) * 330 + rng.randint(-45, 45)
-                    filters.extend([
-                        f"drawbox=x='{px}+{30 + panel * 3}*sin(t*{.45 + panel * .05})':y={py}:w={380 + rng.randint(0, 80)}:"
-                        f"h={210 + rng.randint(0, 80)}:color=0x{ink}@.30:t=fill:enable='between(t,{start},{end})'",
-                        f"drawbox=x='{px + 28}+{30 + panel * 3}*sin(t*{.45 + panel * .05})':y={py + 38}:"
-                        f"w={180 + rng.randint(0, 130)}:h=18:color=0x{accent}@.78:t=fill:enable='between(t,{start},{end})'",
-                    ])
-            else:
-                for shape in range(10):
-                    filters.append(
-                        f"drawbox=x='{rng.randint(-200, 900)}+{rng.randint(20, 100)}*sin(t*{rng.uniform(.4, 2):.2f})':"
-                        f"y='{rng.randint(-100, 1700)}+{rng.randint(20, 90)}*cos(t*{rng.uniform(.4, 2):.2f})':"
-                        f"w={rng.randint(90, 420)}:h={rng.randint(60, 360)}:color=0x{[base, ink, accent][shape % 3]}@.18:t=fill:"
-                        f"enable='between(t,{start},{end})'"
-                    )
-            if transition == "light flash":
-                filters.append(
-                    f"drawbox=x=0:y=0:w=1080:h=1920:color=white@.22:t=fill:"
-                    f"enable='between(t,{start},{start + .18})'"
-                )
-            if text_style in ("minimal", "caption"):
-                filters.append(
-                    f"drawtext=fontfile={font_bold}:text='{eyebrow}':fontcolor=0x{accent}:fontsize=21:"
-                    f"x='{ex}+{enter_x}*(1-{fade})':y='{ey}+{enter_y}*(1-{fade})':"
-                    f"alpha='{fade}':enable='between(t,{start},{end})'"
-                )
-            elif text_style in ("kinetic", "quote"):
-                filters.extend([
-                    f"drawbox=x='{ex}+{enter_x}*(1-{fade})':y='{ey}+{enter_y}*(1-{fade})':w=9:h=56:"
-                    f"color=0x{accent}@0.96:t=fill:enable='between(t,{start},{end})'",
-                    f"drawtext=fontfile={font_bold}:text='{eyebrow}':fontcolor=0x{accent}:fontsize=20:"
-                    f"x='{ex + 26}+{enter_x}*(1-{fade})':y='{ey + 15}+{enter_y}*(1-{fade})':"
-                    f"alpha='{fade}':enable='between(t,{start},{end})'",
-                ])
-            else:
-                filters.extend([
-                    f"drawbox=x='{ex}+{enter_x}*(1-{fade})':y='{ey}+{enter_y}*(1-{fade})':w={180 + layout * 24}:h=52:"
-                    f"color=0x{accent}@0.96:t=fill:enable='between(t,{start},{end})'",
-                    f"drawtext=fontfile={font_bold}:text='{eyebrow}':fontcolor=0x{base}:fontsize=20:"
-                    f"x='{ex + 18}+{enter_x}*(1-{fade})':y='{ey + 15}+{enter_y}*(1-{fade})':"
-                    f"alpha='{fade}':enable='between(t,{start},{end})'",
-                ])
             filters.extend([
-                f"drawtext=fontfile={font_bold}:text='{headline}':fontcolor=0x{text_color}:fontsize={headline_size}:"
-                f"line_spacing=16:x='{hx}+{enter_x}*(1-{fade})':y='{hy}+{enter_y}*(1-{fade})':alpha='{fade}':"
-                f"enable='between(t,{start},{end})'",
-                f"drawtext=fontfile={font_regular}:text='{body}':fontcolor=0x{text_color}@0.76:fontsize={body_size}:"
-                f"line_spacing=11:x='{bx}+{enter_x * .55}*(1-{fade})':y='{by}+{enter_y * .55}*(1-{fade})':alpha='{fade}':"
-                f"enable='between(t,{start},{end})'",
+                f"drawbox=x='-280+mod(t*95\\,1500)':y='180+90*sin(t*.55)':w=720:h=720:color=0x{accent}@.16:t=fill",
+                f"drawbox=x='760-mod(t*72\\,1500)':y='980+120*cos(t*.42)':w=640:h=640:color=0x{ink}@.24:t=fill",
             ])
-        final_start = (len(scenes) - 1) * scene_time
         filters.extend([
-            f"drawbox=x='120+12*sin(t*{rng.uniform(2, 4):.2f})':y=1480:w=840:h=116:color=0x{accent}@0.98:t=fill:"
-            f"enable='gte(t,{final_start})'",
-            f"drawtext=fontfile={font_bold}:text='LEARN MORE  →':fontcolor=0x{base}:fontsize=34:"
-            f"x=(w-text_w)/2:y=1518:enable='gte(t,{final_start})'",
-            "vignette=PI/5[outv]"
+            f"drawtext=fontfile={font_bold}:text='{hook}':fontcolor=white:fontsize=72:"
+            f"line_spacing=15:x=76:y=270:shadowcolor=black@0.58:shadowx=4:shadowy=5:"
+            f"alpha='{hook_alpha}':enable='between(t,0.3,{hook_end:.3f})'",
+            f"drawtext=fontfile={font_bold}:text='{cta}':fontcolor=white:fontsize=66:"
+            f"line_spacing=14:x=(w-text_w)/2:y=1480:shadowcolor=black@0.62:shadowx=4:shadowy=5:"
+            f"alpha='{cta_alpha}':enable='between(t,{cta_start:.3f},{duration})'",
+            "vignette=PI/6[outv]",
         ])
         root_note = rng.choice([55.0, 61.7, 65.4, 73.4, 82.4, 98.0, 110.0])
         beat = rng.choice([0.36, 0.42, 0.48, 0.58, 0.68, 0.75])

@@ -25,6 +25,7 @@ export default async function handler(req, res) {
 
   const pack = PACKS[String(req.body?.pack || '').toLowerCase()];
   if (!pack) { res.status(400).json({ error: 'Choose a valid video credit pack.' }); return; }
+  const returnTo = req.body?.returnTo === 'billing' ? 'billing' : 'content';
   const origin = requestOrigin(req);
   try {
     const url = await createVideoCreditCheckoutSession({
@@ -32,8 +33,8 @@ export default async function handler(req, res) {
       email: user.email,
       credits: pack.credits,
       amountCents: pack.amountCents,
-      successUrl: `${origin}/app?videoCredits=success#content`,
-      cancelUrl: `${origin}/app#content`,
+      successUrl: `${origin}/app?videoCredits=success#${returnTo}`,
+      cancelUrl: `${origin}/app#${returnTo}`,
     });
     res.status(200).json({ url });
   } catch (error) {
