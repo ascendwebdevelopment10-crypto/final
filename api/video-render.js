@@ -1,13 +1,98 @@
 import crypto from 'node:crypto';
+import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
 import { currentCustomer, rateLimit, requestOrigin, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 
+export const config = { maxDuration: 60 };
+
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
+const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
+const CREATIVE_DIRECTIONS = [
+  { id: 'editorial', palette: ['F4EDE1', '17233B', 'E95D45'], layout: 'luxury magazine editorial', motion: 'measured wipes, split screens, and elegant reveals', music: 'warm cinematic pulse' },
+  { id: 'kinetic', palette: ['101820', 'FEE715', 'F7F7F2'], layout: 'high-energy sports campaign', motion: 'hard cuts, diagonal impacts, and rapid punch-ins', music: 'fast percussion and bass' },
+  { id: 'future', palette: ['120B2E', '6C4DFF', '27E0D1'], layout: 'polished technology launch', motion: 'gliding panels, light sweeps, and depth shifts', music: 'airy electronic groove' },
+  { id: 'minimal', palette: ['F7F7F5', '111111', 'A3FF12'], layout: 'Swiss minimalist product ad', motion: 'precise type builds, clean masks, and negative-space cuts', music: 'minimal click-and-bass rhythm' },
+  { id: 'sunset', palette: ['2D142C', 'FF6B5E', 'FFC857'], layout: 'bold lifestyle campaign', motion: 'soft zooms, rounded cards, and flowing color transitions', music: 'upbeat warm synth-pop' },
+  { id: 'collage', palette: ['F2C14E', '5B2333', 'F7F4EA'], layout: 'tactile cut-paper collage', motion: 'staggered scraps, stop-motion jumps, and playful rotations', music: 'playful organic percussion' },
+];
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
 function signJob(jobId, customerId) {
   return crypto.createHmac('sha256', renderSecret()).update(`${jobId}:${customerId}`).digest('hex');
+}
+function textOf(message) {
+  return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || '';
+}
+function chooseDirection(lastStyle = '') {
+  const choices = CREATIVE_DIRECTIONS.filter(item => item.id !== lastStyle);
+  return choices[crypto.randomInt(0, choices.length)];
+}
+function fallbackPlan(prompt, company, cta, direction = CREATIVE_DIRECTIONS[0]) {
+  const subject = clean(prompt, 90) || `See what ${company} can do`;
+  return {
+    title: subject,
+    caption: `${subject}\n\n${cta}`,
+    creative: direction,
+    scenes: [
+      { eyebrow: 'A BETTER WAY', headline: subject, body: 'See the idea from a fresh angle.' },
+      { eyebrow: 'MAKE IT SIMPLE', headline: `Built around ${company}`, body: 'Clear benefits, memorable visuals, and one focused message.' },
+      { eyebrow: 'MOVE FORWARD', headline: cta, body: company },
+    ],
+  };
+}
+async function createPlan({ prompt, company, industry, tone, cta, duration, direction }) {
+  const fallback = fallbackPlan(prompt, company, cta, direction);
+  if (!process.env.ANTHROPIC_API_KEY) return fallback;
+  const sceneCount = duration === 15 ? 4 : duration === 30 ? 6 : 8;
+  const result = await anthropic.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 1500,
+    temperature: 0.7,
+    messages: [{
+      role: 'user',
+      content: `You are a direct-response video ad creative director. Write a ${duration}-second vertical Reel ad for:
+Business: ${company}
+Industry: ${industry}
+User request: ${prompt}
+Tone: ${tone}
+Final CTA: ${cta}
+Creative direction: ${direction.layout}
+Palette: ${direction.palette.join(', ')}
+Motion language: ${direction.motion}
+Music direction: ${direction.music}
+
+Create exactly ${sceneCount} fast scenes. Each scene needs:
+- eyebrow: 2-4 uppercase words
+- headline: punchy, maximum 52 characters
+- body: one specific supporting sentence, maximum 95 characters
+
+Scene 1 must be a scroll-stopping hook. Middle scenes must make a clear argument and may use a story, contrast, demonstration, list, question, transformation, or product reveal. Last scene must be the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this request.
+
+Return ONLY valid JSON:
+{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","scenes":[{"eyebrow":"...","headline":"...","body":"..."}]}`,
+    }],
+  });
+  try {
+    const raw = textOf(result);
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : raw);
+    if (!Array.isArray(parsed.scenes) || parsed.scenes.length < 3) return fallback;
+    return {
+      title: clean(parsed.title, 90) || fallback.title,
+      caption: clean(parsed.caption, 1800) || fallback.caption,
+      creative: direction,
+      scenes: parsed.scenes.slice(0, sceneCount).map(scene => ({
+        eyebrow: clean(scene?.eyebrow, 32).toUpperCase() || company.toUpperCase(),
+        headline: clean(scene?.headline, 70) || company,
+        body: clean(scene?.body, 130) || cta,
+      })),
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export default async function handler(req, res) {
@@ -20,63 +105,91 @@ export default async function handler(req, res) {
       res.status(200).json({
         configured: Boolean(process.env.MODAL_RENDER_URL && renderSecret()),
         balance: Number(user.usage?.videoCredits || 0),
+        ownerUnlimited: String(user.email || '').toLowerCase() === OWNER_EMAIL,
+        pricing: CREDIT_COST,
       });
       return;
     }
-    const job = await kv.get(`video:job:${jobId}`);
-    const parsed = typeof job === 'string' ? JSON.parse(job) : job;
-    if (!parsed || parsed.customerId !== user.id) { res.status(404).json({ error: 'Render not found' }); return; }
-    res.status(200).json({ job: parsed }); return;
+    const stored = await kv.get(`video:job:${jobId}`);
+    const job = typeof stored === 'string' ? JSON.parse(stored) : stored;
+    if (!job || job.customerId !== user.id) { res.status(404).json({ error: 'Render not found' }); return; }
+    res.status(200).json({ job }); return;
   }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
   if (!sameOrigin(req)) { res.status(403).json({ error: 'Invalid request origin' }); return; }
   if (!process.env.MODAL_RENDER_URL || !renderSecret()) {
     res.status(503).json({ error: 'The Reel renderer is being connected. Try again shortly.' }); return;
   }
-  if (!await rateLimit(`video-render:${user.id}`, 1, 10)) {
+  if (!await rateLimit(`video-render:${user.id}`, 2, 30)) {
     res.status(429).json({ error: 'Please wait before starting another render.' }); return;
   }
 
+  const prompt = clean(req.body?.prompt, 1200);
+  if (!prompt) { res.status(400).json({ error: 'Describe the Reel you want Nitro to create.' }); return; }
+  const duration = [15, 30, 45].includes(Number(req.body?.duration)) ? Number(req.body.duration) : 15;
+  const creditCost = CREDIT_COST[duration];
   const isOwner = String(user.email || '').toLowerCase() === OWNER_EMAIL;
   user.usage = user.usage || {};
   const balance = Number(user.usage.videoCredits || 0);
-  if (!isOwner && balance < 1) {
-    res.status(402).json({ error: 'Buy a Video Credit before exporting your Reel.', needsCredits: true }); return;
+  if (!isOwner && balance < creditCost) {
+    res.status(402).json({
+      error: `This ${duration}-second Reel uses ${creditCost} credit${creditCost === 1 ? '' : 's'}. Add credits to continue.`,
+      needsCredits: true,
+      creditCost,
+    });
+    return;
   }
 
-  const title = clean(req.body?.title, 80) || 'Built with Nitro Outreach';
-  const subtitle = clean(req.body?.subtitle, 120) || 'Automate your outreach. Grow faster.';
-  const style = ['clean', 'bold', 'minimal'].includes(clean(req.body?.style, 20)) ? clean(req.body.style, 20) : 'clean';
+  const company = clean(user.company?.name || user.companyName || user.onboarding?.data?.companyName, 100) || 'Your Business';
+  const industry = clean(user.company?.industry || user.onboarding?.data?.industry, 100) || 'business';
+  const tone = ['bold', 'premium', 'energetic', 'minimal'].includes(clean(req.body?.tone, 20))
+    ? clean(req.body.tone, 20) : 'bold';
+  const cta = clean(req.body?.cta, 70) || 'Start today';
+  const direction = chooseDirection(clean(user.usage?.lastReelStyle, 30));
+  let plan;
+  try {
+    plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
+  } catch (error) {
+    console.error('Reel plan generation error:', error.message);
+    plan = fallbackPlan(prompt, company, cta, direction);
+  }
+
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
   const now = new Date().toISOString();
   const job = {
     id: jobId,
     customerId: user.id,
-    status: 'awaiting_upload',
-    progress: 5,
-    title,
-    subtitle,
-    style,
-    chargedCredit: !isOwner,
+    status: 'ready_to_render',
+    progress: 10,
+    title: plan.title,
+    prompt,
+    caption: plan.caption,
+    duration,
+    tone,
+    creditCost,
+    chargedCredits: isOwner ? 0 : creditCost,
     createdAt: now,
     updatedAt: now,
   };
-  if (!isOwner) user.usage.videoCredits = balance - 1;
+  user.usage.lastReelStyle = direction.id;
+  if (!isOwner) user.usage.videoCredits = balance - creditCost;
   await saveCustomer(user);
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
   res.status(201).json({
     job,
-    uploadUrl: `${process.env.MODAL_RENDER_URL.replace(/\/$/, '')}/render`,
+    renderUrl: `${process.env.MODAL_RENDER_URL.replace(/\/$/, '')}/render-prompt`,
     fields: {
       jobId,
       customerId: user.id,
       token: signJob(jobId, user.id),
       callbackUrl: `${requestOrigin(req)}/api/video-render-callback`,
       downloadBase: process.env.MODAL_RENDER_URL.replace(/\/$/, ''),
-      title,
-      subtitle,
-      style,
+      plan: JSON.stringify(plan),
+      duration: String(duration),
+      tone,
+      creative: JSON.stringify(direction),
     },
     balance: Number(user.usage.videoCredits || 0),
+    ownerUnlimited: isOwner,
   });
 }
