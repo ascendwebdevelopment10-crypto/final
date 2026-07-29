@@ -26,9 +26,11 @@ function signJob(jobId, customerId) {
 function textOf(message) {
   return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || '';
 }
-function chooseDirection(lastStyle = '') {
-  const choices = CREATIVE_DIRECTIONS.filter(item => item.id !== lastStyle);
-  return choices[crypto.randomInt(0, choices.length)];
+function chooseDirection(styleHistory = []) {
+  const recent = new Set(Array.isArray(styleHistory) ? styleHistory.slice(-5) : []);
+  const choices = CREATIVE_DIRECTIONS.filter(item => !recent.has(item.id));
+  const pool = choices.length ? choices : CREATIVE_DIRECTIONS;
+  return { ...pool[crypto.randomInt(0, pool.length)], variant: crypto.randomBytes(6).toString('hex') };
 }
 function fallbackPlan(prompt, company, cta, direction = CREATIVE_DIRECTIONS[0]) {
   const subject = clean(prompt, 90) || `See what ${company} can do`;
@@ -145,7 +147,7 @@ export default async function handler(req, res) {
   const tone = ['bold', 'premium', 'energetic', 'minimal'].includes(clean(req.body?.tone, 20))
     ? clean(req.body.tone, 20) : 'bold';
   const cta = clean(req.body?.cta, 70) || 'Start today';
-  const direction = chooseDirection(clean(user.usage?.lastReelStyle, 30));
+  const direction = chooseDirection(user.usage?.reelStyleHistory);
   let plan;
   try {
     plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
@@ -172,6 +174,7 @@ export default async function handler(req, res) {
     updatedAt: now,
   };
   user.usage.lastReelStyle = direction.id;
+  user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), direction.id].slice(-5);
   if (!isOwner) user.usage.videoCredits = balance - creditCost;
   await saveCustomer(user);
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
