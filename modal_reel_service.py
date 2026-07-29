@@ -79,6 +79,10 @@ def render_prompt_video(payload: dict):
 
         seed = int(hashlib.sha256(job_id.encode()).hexdigest()[:8], 16)
         rng = random.Random(seed)
+        phase_a = rng.randint(0, 240)
+        phase_b = rng.randint(0, 360)
+        drift_a = rng.randint(45, 125)
+        drift_b = rng.randint(35, 105)
         base, ink, accent = palette
         style_number = ["editorial", "kinetic", "future", "minimal", "sunset", "collage"].index(style) if style in ["editorial", "kinetic", "future", "minimal", "sunset", "collage"] else 0
         filters = [f"[0:v]format=yuv420p"]
@@ -86,32 +90,32 @@ def render_prompt_video(payload: dict):
             "editorial": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
                 f"drawbox=x=70:y=120:w=8:h=1680:color=0x{accent}:t=fill",
-                f"drawbox=x='760+35*sin(t*.7)':y=70:w=250:h=250:color=0x{ink}@0.08:t=fill",
+                f"drawbox=x='{720 + phase_a}+{drift_a}*sin(t*.7)':y={50 + phase_b % 160}:w=250:h=250:color=0x{ink}@0.08:t=fill",
             ],
             "kinetic": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
-                f"drawbox=x='-500+mod(t*420\\,1900)':y=0:w=420:h=1920:color=0x{accent}@0.16:t=fill",
+                f"drawbox=x='{-620 + phase_a}+mod(t*{350 + drift_a}\\,1900)':y=0:w={350 + phase_b % 160}:h=1920:color=0x{accent}@0.16:t=fill",
                 f"drawgrid=w=90:h=90:t=2:c=0x{accent}@0.08",
             ],
             "future": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
-                f"drawbox=x='-180+80*sin(t*.8)':y='1250+90*cos(t*.6)':w=720:h=720:color=0x{accent}@0.16:t=fill",
-                f"drawbox=x='720+60*cos(t*.5)':y='-160+80*sin(t*.7)':w=520:h=520:color=0x{ink}@0.18:t=fill",
+                f"drawbox=x='{-240 + phase_a}+{drift_a}*sin(t*.8)':y='{1160 + phase_b}+{drift_b}*cos(t*.6)':w=720:h=720:color=0x{accent}@0.16:t=fill",
+                f"drawbox=x='{620 + phase_b}+{drift_b}*cos(t*.5)':y='{-220 + phase_a}+{drift_a}*sin(t*.7)':w=520:h=520:color=0x{ink}@0.18:t=fill",
             ],
             "minimal": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
-                f"drawbox=x=0:y='1500+55*sin(t)':w=1080:h=420:color=0x{ink}:t=fill",
-                f"drawbox=x=80:y=110:w=180:h=18:color=0x{accent}:t=fill",
+                f"drawbox=x=0:y='{1420 + phase_a}+{drift_b}*sin(t)':w=1080:h={360 + phase_b % 180}:color=0x{ink}:t=fill",
+                f"drawbox=x={60 + phase_b % 160}:y={80 + phase_a % 160}:w={150 + phase_a % 170}:h=18:color=0x{accent}:t=fill",
             ],
             "sunset": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
-                f"drawbox=x='-260+100*sin(t*.5)':y=1060:w=880:h=880:color=0x{accent}@0.30:t=fill",
-                f"drawbox=x='650+80*cos(t*.6)':y=-130:w=600:h=600:color=0x{ink}@0.25:t=fill",
+                f"drawbox=x='{-340 + phase_a}+{drift_a}*sin(t*.5)':y={960 + phase_b}:w=880:h=880:color=0x{accent}@0.30:t=fill",
+                f"drawbox=x='{560 + phase_b}+{drift_b}*cos(t*.6)':y={-220 + phase_a}:w=600:h=600:color=0x{ink}@0.25:t=fill",
             ],
             "collage": [
                 f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill",
-                f"drawbox=x='-40+18*sin(t*2)':y=220:w=560:h=330:color=0x{ink}@0.20:t=fill",
-                f"drawbox=x='610+22*cos(t*1.7)':y=1260:w=520:h=410:color=0x{accent}@0.24:t=fill",
+                f"drawbox=x='{-90 + phase_a}+{18 + drift_a // 5}*sin(t*2)':y={150 + phase_b}:w={480 + phase_a % 180}:h=330:color=0x{ink}@0.20:t=fill",
+                f"drawbox=x='{520 + phase_b}+{22 + drift_b // 4}*cos(t*1.7)':y={1130 + phase_a}:w=520:h={350 + phase_b % 150}:color=0x{accent}@0.24:t=fill",
             ],
         }
         filters.extend(ambience.get(style, ambience["editorial"]))
@@ -174,13 +178,15 @@ def render_prompt_video(payload: dict):
             f"{'vignette=PI/5' if style in ('future', 'sunset') else 'null'}[outv]"
         ])
         filter_graph = ",".join(filters)
+        root_note = rng.choice([55.0, 61.7, 65.4, 73.4, 82.4, 98.0, 110.0])
+        beat = rng.choice([0.36, 0.42, 0.48, 0.58, 0.68, 0.75])
         music_variants = {
-            "editorial": f"aevalsrc=0.016*sin(2*PI*82.4*t)+0.012*sin(2*PI*164.8*t)*(0.5+0.5*cos(2*PI*.25*t)):s=44100:d={duration}",
-            "kinetic": f"aevalsrc=0.032*sin(2*PI*55*t)*gt(mod(t\\,.42)\\,.32)+0.018*sin(2*PI*220*t)*gt(mod(t\\,.21)\\,.18):s=44100:d={duration}",
-            "future": f"aevalsrc=0.014*sin(2*PI*110*t)+0.012*sin(2*PI*277.2*t)*(0.5+0.5*sin(2*PI*.4*t)):s=44100:d={duration}",
-            "minimal": f"aevalsrc=0.022*sin(2*PI*73.4*t)*gt(mod(t\\,.75)\\,.66)+0.009*sin(2*PI*146.8*t):s=44100:d={duration}",
-            "sunset": f"aevalsrc=0.018*sin(2*PI*98*t)+0.014*sin(2*PI*196*t)+0.010*sin(2*PI*293.7*t)*(0.6+0.4*sin(2*PI*.5*t)):s=44100:d={duration}",
-            "collage": f"aevalsrc=0.026*sin(2*PI*65.4*t)*gt(mod(t\\,.58)\\,.46)+0.014*sin(2*PI*392*t)*gt(mod(t\\,.29)\\,.25):s=44100:d={duration}",
+            "editorial": f"aevalsrc=0.016*sin(2*PI*{root_note}*t)+0.012*sin(2*PI*{root_note * 2}*t)*(0.5+0.5*cos(2*PI*.25*t)):s=44100:d={duration}",
+            "kinetic": f"aevalsrc=0.032*sin(2*PI*{root_note}*t)*gt(mod(t\\,{beat})\\,{beat * .76})+0.018*sin(2*PI*{root_note * 4}*t)*gt(mod(t\\,{beat / 2})\\,{beat * .44}):s=44100:d={duration}",
+            "future": f"aevalsrc=0.014*sin(2*PI*{root_note * 2}*t)+0.012*sin(2*PI*{root_note * 2.52}*t)*(0.5+0.5*sin(2*PI*.4*t)):s=44100:d={duration}",
+            "minimal": f"aevalsrc=0.022*sin(2*PI*{root_note}*t)*gt(mod(t\\,{beat})\\,{beat * .88})+0.009*sin(2*PI*{root_note * 2}*t):s=44100:d={duration}",
+            "sunset": f"aevalsrc=0.018*sin(2*PI*{root_note}*t)+0.014*sin(2*PI*{root_note * 2}*t)+0.010*sin(2*PI*{root_note * 3}*t)*(0.6+0.4*sin(2*PI*.5*t)):s=44100:d={duration}",
+            "collage": f"aevalsrc=0.026*sin(2*PI*{root_note}*t)*gt(mod(t\\,{beat})\\,{beat * .79})+0.014*sin(2*PI*{root_note * 6}*t)*gt(mod(t\\,{beat / 2})\\,{beat * .43}):s=44100:d={duration}",
         }
         music = music_variants.get(style, music_variants["editorial"])
         cmd = [
