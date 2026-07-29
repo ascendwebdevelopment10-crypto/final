@@ -243,7 +243,6 @@ def render_prompt_video(payload: dict):
             if transition == "light flash":
                 filters.append(
                     f"drawbox=x=0:y=0:w=1080:h=1920:color=white@.22:t=fill:"
-                    f"alpha='if(lt(t\\,{start + .18})\\,1-(t-{start})/.18\\,0)':"
                     f"enable='between(t,{start},{start + .18})'"
                 )
             if text_style in ("minimal", "caption"):
