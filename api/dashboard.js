@@ -3,7 +3,7 @@ import path from 'path';
 import { hasValidSession } from '../lib/auth.js';
 
 const LOGIN_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Nitro Outreach — Login</title>
-<meta name="theme-color" content="#1c0f06"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Nitro"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#1c0f06"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Nitro"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" href="/icons/icon-192.png?v=nitro-20260728b"><link rel="shortcut icon" type="image/png" href="/icons/icon-192.png?v=nitro-20260728b"><link rel="apple-touch-icon" href="/icons/icon-192.png?v=nitro-20260728b">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
