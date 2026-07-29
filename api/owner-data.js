@@ -41,7 +41,12 @@ export default async function handler(req, res) {
       const day = new Date().toISOString().slice(0, 10);
       const landingViews = Number((await kv.get('stats:landing:views')) || 0);
       const landingToday = Number((await kv.get('stats:landing:day:' + day)) || 0);
-      res.status(200).json({ total: keys.length, verified, unverified: keys.length - verified, accounts, landingViews, landingToday });
+      const rawVisitors = await kv.lrange('stats:landing:visitors', 0, 199);
+      const visitors = (rawVisitors || []).map(value => {
+        if (typeof value === 'object' && value) return value;
+        try { return JSON.parse(value); } catch { return null; }
+      }).filter(Boolean);
+      res.status(200).json({ total: keys.length, verified, unverified: keys.length - verified, accounts, landingViews, landingToday, visitors });
       return;
     }
 
