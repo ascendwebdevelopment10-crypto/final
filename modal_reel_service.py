@@ -72,6 +72,14 @@ def render_prompt_video(payload: dict):
         palette = [safe_color(value) for value in list(creative.get("palette") or [])[:3]]
         if len(palette) < 3:
             palette = ["F4EDE1", "17233B", "E95D45"]
+        scene_art = json.loads(payload.get("sceneArt") or "[]")
+        art_paths = []
+        for art_index, art_data in enumerate(list(scene_art)[:len(scenes)]):
+            if not art_data:
+                continue
+            art_path = temp_dir / f"scene-{art_index}.jpg"
+            art_path.write_bytes(base64.b64decode(str(art_data)))
+            art_paths.append((art_index, art_path))
         tone = str(payload.get("tone") or "bold")
         font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
         font_regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -80,7 +88,29 @@ def render_prompt_video(payload: dict):
         seed = int(hashlib.sha256(job_id.encode()).hexdigest()[:8], 16)
         rng = random.Random(seed)
         base, ink, accent = palette
-        filters = [f"[0:v]format=yuv420p", f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill"]
+        art_filters = []
+        art_input_by_scene = {}
+        if art_paths:
+            art_filters.append("[0:v]format=yuv420p[bg0]")
+            for chain_index, (scene_index, art_path) in enumerate(art_paths):
+                input_index = 1 + chain_index
+                art_input_by_scene[scene_index] = input_index
+                start = scene_index * scene_time
+                end = duration if scene_index == len(scenes) - 1 else (scene_index + 1) * scene_time
+                pan = 45 + (scene_index % 3) * 18
+                art_filters.extend([
+                    f"[{input_index}:v]scale=-2:1920,crop=1080:1920:"
+                    f"x='(iw-ow)/2+{pan}*sin(t*{0.38 + scene_index * .05:.2f})':y=0,"
+                    f"eq=saturation=1.08:contrast=1.04,format=yuv420p[art{chain_index}]",
+                    f"[bg{chain_index}][art{chain_index}]overlay=0:0:"
+                    f"enable='between(t,{start},{end})'[bg{chain_index + 1}]",
+                ])
+            video_source = f"[bg{len(art_paths)}]"
+        else:
+            video_source = "[0:v]"
+        filters = [f"{video_source}format=yuv420p"]
+        if not art_paths:
+            filters.append(f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{base}:t=fill")
         filters.extend([
             f"drawbox=x=70:y=1818:w=940:h=5:color=0x{ink}@0.18:t=fill",
             f"drawbox=x=70:y=1818:w='940*t/{duration}':h=5:color=0x{accent}:t=fill",
@@ -108,12 +138,17 @@ def render_prompt_video(payload: dict):
             enter_x = 110 if layout in (0, 2) else -90
             scene_bg = [base, ink, accent][index % 3]
             text_color = "F7F7F5"
+            has_scene_art = index in art_input_by_scene
             filters.append(
-                f"drawbox=x=0:y=0:w=1080:h=1920:color=0x{scene_bg}:t=fill:enable='between(t,{start},{end})'"
+                f"drawbox=x=0:y=0:w=1080:h=1920:"
+                f"color={'black@0.20' if has_scene_art else f'0x{scene_bg}'}:t=fill:"
+                f"enable='between(t,{start},{end})'"
             )
             # AI-directed visual worlds. Each uses procedural geometry and camera-like motion,
             # so the composition is unique even when a world is requested again.
-            if visual == "sky_flight":
+            if has_scene_art:
+                pass
+            elif visual == "sky_flight":
                 for cloud in range(7):
                     cy = 190 + cloud * 190 + rng.randint(-70, 70)
                     filters.append(
@@ -214,21 +249,26 @@ def render_prompt_video(payload: dict):
         has_voice = bool(voice_data)
         if has_voice:
             voice_path.write_bytes(base64.b64decode(voice_data))
-        filter_graph = ",".join(filters)
+        filter_graph = ";".join(art_filters + [",".join(filters)])
         cmd = [
             "ffmpeg", "-y",
             "-f", "lavfi", "-i", f"color=c=0x{base}:s=1080x1920:r=30:d={duration}",
-            "-f", "lavfi", "-i", music,
         ]
+        for _, art_path in art_paths:
+            cmd.extend(["-loop", "1", "-framerate", "30", "-i", str(art_path)])
+        music_input = 1 + len(art_paths)
+        cmd.extend(["-f", "lavfi", "-i", music])
         if has_voice:
             cmd.extend(["-i", str(voice_path)])
+            voice_input = music_input + 1
             filter_graph += (
-                f";[1:a]volume=0.20[bgm];[2:a]volume=1.0,apad,atrim=0:{duration}[voice];"
+                f";[{music_input}:a]volume=0.20[bgm];"
+                f"[{voice_input}:a]volume=1.0,apad,atrim=0:{duration}[voice];"
                 "[bgm][voice]amix=inputs=2:duration=longest:dropout_transition=2[outa]"
             )
         cmd.extend([
             "-filter_complex", filter_graph,
-            "-map", "[outv]", "-map", "[outa]" if has_voice else "1:a",
+            "-map", "[outv]", "-map", "[outa]" if has_voice else f"{music_input}:a",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "19",
             "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
             "-t", str(duration), str(output_path),
@@ -298,13 +338,19 @@ def web():
         tone: str = Form("bold"),
         creative: str = Form("{}"),
         voiceover: str = Form(""),
+        sceneArt: str = Form("[]"),
         downloadBase: str = Form(...),
     ):
         secret = os.environ["MODAL_SHARED_SECRET"]
         expected = signature(secret, f"{jobId}:{customerId}")
         if not hmac.compare_digest(token, expected):
             raise HTTPException(403, "Invalid render token")
-        if len(plan) > 24000 or len(voiceover) > 8_000_000 or duration not in (15, 30, 45):
+        if (
+            len(plan) > 24000
+            or len(voiceover) > 8_000_000
+            or len(sceneArt) > 16_000_000
+            or duration not in (15, 30, 45)
+        ):
             raise HTTPException(400, "Invalid Reel plan")
         await render_prompt_video.spawn.aio({
             "jobId": jobId,
@@ -315,6 +361,7 @@ def web():
             "tone": tone,
             "creative": creative,
             "voiceover": voiceover,
+            "sceneArt": sceneArt,
             "downloadBase": downloadBase,
         })
         return {"ok": True, "jobId": jobId}
