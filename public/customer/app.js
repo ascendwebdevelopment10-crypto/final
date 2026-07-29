@@ -51,7 +51,7 @@ async function api(url,options={}){
 }
 
 function brand(){return `<a class="brand" href="/"><span class="brand-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="#fff" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-13h-7z"/></svg></span><span>Nitro Outreach<small>Marketing platform</small></span></a>`;}
-function publicNav(){return `<header class="topnav">${brand()}<nav class="nav-links"><a href="/#platform">Platform</a><a href="/pricing">Pricing</a><a href="/#solutions">Solutions</a></nav><div class="nav-actions">${state.session?'<a class="btn btn-ghost" href="/app">Open workspace</a>':'<a class="btn btn-ghost" href="/login">Log in</a><a class="btn btn-primary" href="/signup">Start free</a>'}</div></header>`;}
+function publicNav(){return `<header class="topnav">${brand()}<nav class="nav-links"><a href="/#platform">Platform</a><a href="/pricing">Pricing</a><a href="/#solutions">Solutions</a></nav><div class="nav-actions"><a class="btn btn-ghost" href="/login">Log in</a>${state.session?'<a class="btn btn-primary" href="/app">Open workspace</a>':'<a class="btn btn-primary" href="/signup">Start free</a>'}</div></header>`;}
 function footer(){return `<footer class="public-footer"><div class="footer-inner">${brand()}<span>© ${new Date().getFullYear()} Nitro Outreach. Built for small teams doing their own marketing.</span><span><a href="/pricing">Pricing</a> · Privacy · Terms</span></div></footer>`;}
 
 function renderLanding(){
