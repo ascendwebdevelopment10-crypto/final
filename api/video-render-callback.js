@@ -30,11 +30,11 @@ export default async function handler(req, res) {
   job.outputUrl = job.status === 'completed' ? outputUrl : '';
   job.error = job.status === 'failed' ? clean(req.body?.error, 500) || 'Rendering failed' : '';
   job.updatedAt = new Date().toISOString();
-  if (job.status === 'failed' && job.chargedCredit && !job.refunded) {
+  if (job.status === 'failed' && Number(job.chargedCredits || (job.chargedCredit ? 1 : 0)) > 0 && !job.refunded) {
     const user = await getCustomer(job.customerId);
     if (user) {
       user.usage = user.usage || {};
-      user.usage.videoCredits = Number(user.usage.videoCredits || 0) + 1;
+      user.usage.videoCredits = Number(user.usage.videoCredits || 0) + Number(job.chargedCredits || 1);
       await saveCustomer(user);
       job.refunded = true;
     }
@@ -48,7 +48,10 @@ export default async function handler(req, res) {
         id: job.id,
         type: 'video',
         topic: job.title,
-        subtitle: job.subtitle,
+        prompt: job.prompt,
+        caption: job.caption,
+        duration: job.duration,
+        creditCost: job.creditCost,
         mediaUrl: outputUrl,
         format: 'reel',
         createdAt: job.updatedAt,
