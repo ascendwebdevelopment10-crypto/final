@@ -1,14 +1,7 @@
-"""Nitro Outreach pay-per-render Reel worker.
-
-Deploy with:
-  modal secret create nitro-reel-secrets MODAL_SHARED_SECRET=... NITRO_CALLBACK_SECRET=...
-  modal deploy modal_reel_service.py
-
-Set the resulting web URL as MODAL_RENDER_URL in Vercel and use the same
-MODAL_SHARED_SECRET in both services.
-"""
+"""Nitro Outreach prompt-to-Reel worker."""
 import hashlib
 import hmac
+import json
 import os
 import shutil
 import subprocess
@@ -31,6 +24,26 @@ def signature(secret: str, value: str) -> str:
     return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()
 
 
+def safe_color(value: str) -> str:
+    raw = str(value or "").strip().lstrip("#")
+    return raw if len(raw) in (6, 8) and all(c in "0123456789abcdefABCDEF" for c in raw) else "ff6b00"
+
+
+def escape_text(value: str) -> str:
+    return (
+        str(value or "")
+        .replace("\\", "\\\\")
+        .replace(":", "\\:")
+        .replace("'", "\\'")
+        .replace("%", "\\%")
+        .replace(",", "\\,")
+    )
+
+
+def wrapped(value: str, width: int, lines: int) -> str:
+    return "\n".join(textwrap.wrap(str(value or ""), width=width)[:lines])
+
+
 @app.function(
     image=image,
     cpu=2,
@@ -39,78 +52,118 @@ def signature(secret: str, value: str) -> str:
     volumes={"/outputs": volume},
     secrets=[modal.Secret.from_name("nitro-reel-secrets")],
 )
-def render_video(input_bytes: bytes, payload: dict):
+def render_prompt_video(payload: dict):
     import httpx
 
     job_id = payload["jobId"]
     callback = payload["callbackUrl"]
-    title = str(payload.get("title") or "Built with Nitro Outreach")[:80]
-    subtitle = str(payload.get("subtitle") or "Automate your outreach. Grow faster.")[:120]
     secret = os.environ["MODAL_SHARED_SECRET"]
     output_path = Path("/outputs") / f"{job_id}.mp4"
-    temp_dir = Path(tempfile.mkdtemp(prefix="nitro-"))
-    source = temp_dir / "source.mp4"
-    source.write_bytes(input_bytes)
-
-    def escape_text(value: str) -> str:
-        return value.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-
+    temp_dir = Path(tempfile.mkdtemp(prefix="nitro-prompt-"))
     try:
-        title_lines = textwrap.wrap(title, width=34)[:2] or ["Built with Nitro Outreach"]
-        title_text = escape_text("\n".join(title_lines))
-        subtitle_text = escape_text(subtitle)
-        title_size = 52 if max(map(len, title_lines)) <= 28 else 44
-        font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        # A vertical ad treatment: blurred full-frame ambience, floating product
-        # screen, gentle cinematic motion, title/CTA, normalized audio and H.264.
-        filters = (
-            "[0:v]split=2[bgsrc][fgsrc];"
-            "[bgsrc]scale=1080:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920,boxblur=30:12,eq=brightness=-0.25:saturation=1.15[bg];"
-            "[fgsrc]scale=980:1100:force_original_aspect_ratio=decrease,"
-            "pad=980:1100:(ow-iw)/2:(oh-ih)/2:color=0x0b0b0b,"
-            "zoompan=z='min(zoom+0.00045,1.055)':x='iw/2-(iw/zoom/2)':"
-            "y='ih/2-(ih/zoom/2)':d=1:s=980x1100:fps=30[screen];"
-            "[bg][screen]overlay=x='(W-w)/2+8*sin(t*1.2)':y='(H-h)/2+35+6*sin(t*1.8)',"
-            "drawbox=x=45:y=105:w=990:h=210:color=black@0.55:t=fill,"
-            f"drawtext=fontfile={font}:text='{title_text}':fontcolor=white:fontsize={title_size}:"
-            "line_spacing=8:x=(w-text_w)/2:y=130:enable='between(t,0,6)',"
-            f"drawtext=fontfile={font}:text='{subtitle_text}':fontcolor=0xff8a33:fontsize=29:"
-            "x=(w-text_w)/2:y=265:enable='between(t,0,6)',"
-            "drawbox=x=160:y=1715:w=760:h=92:color=0xff6b00@0.94:t=fill:"
-            "enable='gte(t,5)',"
-            f"drawtext=fontfile={font}:text='TRY NITRO OUTREACH':fontcolor=white:fontsize=38:"
-            "x=(w-text_w)/2:y=1740:enable='gte(t,5)',"
-            "format=yuv420p[outv]"
+        plan = json.loads(payload.get("plan") or "{}")
+        scenes = list(plan.get("scenes") or [])[:10]
+        if len(scenes) < 3:
+            raise ValueError("The ad plan did not contain enough scenes")
+        duration = max(15, min(45, int(payload.get("duration") or 15)))
+        accent = safe_color(payload.get("accent"))
+        tone = str(payload.get("tone") or "bold")
+        font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        font_regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        scene_time = duration / len(scenes)
+
+        # A native vertical motion-ad template: animated brand ambience, fast
+        # scene changes, oversized hooks, benefit cards, progress, and CTA.
+        filters = [
+            f"[0:v]format=yuv420p,"
+            f"drawbox=x='-240+mod(t*95\\,1500)':y=1180:w=760:h=760:color=0x{accent}@0.10:t=fill,"
+            f"drawbox=x='900-mod(t*70\\,1450)':y=80:w=540:h=540:color=0x{accent}@0.13:t=fill,"
+            "drawgrid=w=120:h=120:t=1:c=white@0.025,"
+            "drawbox=x=70:y=72:w=12:h=44:color=white@0.92:t=fill,"
+            f"drawtext=fontfile={font_bold}:text='NITRO  /  AI REEL':fontcolor=white@0.92:fontsize=25:x=104:y=80,"
+            f"drawtext=fontfile={font_regular}:text='MADE TO STOP THE SCROLL':fontcolor=white@0.38:fontsize=16:x=104:y=116,"
+            f"drawbox=x=70:y=1818:w=940:h=5:color=white@0.12:t=fill,"
+            f"drawbox=x=70:y=1818:w='940*t/{duration}':h=5:color=0x{accent}:t=fill"
+        ]
+        for index, scene in enumerate(scenes):
+            start = index * scene_time
+            end = duration if index == len(scenes) - 1 else (index + 1) * scene_time
+            fade = (
+                f"if(lt(t\\,{start + 0.35})\\,(t-{start})/0.35\\,"
+                f"if(gt(t\\,{end - 0.3})\\,({end}-t)/0.3\\,1))"
+            )
+            eyebrow = escape_text(str(scene.get("eyebrow") or "NITRO").upper())
+            headline = escape_text(wrapped(scene.get("headline"), 21, 3))
+            body = escape_text(wrapped(scene.get("body"), 37, 3))
+            count = f"{index + 1:02d}"
+            filters.extend([
+                f"drawtext=fontfile={font_bold}:text='{count}':fontcolor=0x{accent}@0.22:"
+                f"fontsize=280:x=750:y=210:alpha='{fade}':enable='between(t,{start},{end})'",
+                f"drawbox=x='70+28*(1-{fade})':y=455:w=205:h=52:color=0x{accent}@0.96:t=fill:"
+                f"enable='between(t,{start},{end})'",
+                f"drawtext=fontfile={font_bold}:text='{eyebrow}':fontcolor=white:fontsize=20:"
+                f"x='91+28*(1-{fade})':y=470:alpha='{fade}':enable='between(t,{start},{end})'",
+                f"drawtext=fontfile={font_bold}:text='{headline}':fontcolor=white:fontsize=72:"
+                f"line_spacing=16:x='70+70*(1-{fade})':y=570:alpha='{fade}':"
+                f"enable='between(t,{start},{end})'",
+                f"drawtext=fontfile={font_regular}:text='{body}':fontcolor=white@0.70:fontsize=31:"
+                f"line_spacing=11:x='74+42*(1-{fade})':y=900:alpha='{fade}':"
+                f"enable='between(t,{start},{end})'",
+            ])
+            # Three animated proof/benefit cards make middle scenes visually active.
+            if index not in (0, len(scenes) - 1):
+                for card in range(3):
+                    y = 1190 + card * 135
+                    filters.extend([
+                        f"drawbox=x='{90 + card * 18}+55*(1-{fade})':y={y}:w={900 - card * 36}:h=104:"
+                        f"color=white@{0.075 + card * 0.015}:t=fill:enable='between(t,{start},{end})'",
+                        f"drawbox=x='{112 + card * 18}+55*(1-{fade})':y={y + 28}:w=48:h=48:"
+                        f"color=0x{accent}@{0.85 - card * 0.14}:t=fill:enable='between(t,{start},{end})'",
+                    ])
+        # Final CTA gains a dedicated animated button.
+        final_start = (len(scenes) - 1) * scene_time
+        filters.extend([
+            f"drawbox=x='110+12*sin(t*3)':y=1280:w=860:h=118:color=0x{accent}@0.98:t=fill:"
+            f"enable='gte(t,{final_start})'",
+            f"drawtext=fontfile={font_bold}:text='TAKE THE NEXT STEP  →':fontcolor=white:fontsize=34:"
+            f"x=(w-text_w)/2:y=1320:enable='gte(t,{final_start})'",
+            "vignette=PI/5[outv]"
+        ])
+        filter_graph = ",".join(filters)
+        music = (
+            f"aevalsrc=0.025*sin(2*PI*110*t)*(0.35+0.65*gt(mod(t\\,0.5)\\,0.40))"
+            f"+0.016*sin(2*PI*220*t)+0.010*sin(2*PI*330*t):s=44100:d={duration}"
         )
         cmd = [
-            "ffmpeg", "-y", "-i", str(source), "-filter_complex", filters,
-            "-map", "[outv]", "-map", "0:a?",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-            "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-            "-movflags", "+faststart", "-r", "30", "-t", "90", str(output_path),
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", f"color=c=0x070708:s=1080x1920:r=30:d={duration}",
+            "-f", "lavfi", "-i", music,
+            "-filter_complex", filter_graph,
+            "-map", "[outv]", "-map", "1:a",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "19",
+            "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
+            "-t", str(duration), str(output_path),
         ]
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(result.stderr[-1200:])
         volume.commit()
         base_url = str(payload.get("downloadBase") or "").rstrip("/")
         output_url = f"{base_url}/download/{job_id}"
-        status = "completed"
         body = {
             "jobId": job_id,
-            "status": status,
+            "status": "completed",
             "outputUrl": output_url,
-            "signature": signature(secret, f"{job_id}:{status}:{output_url}"),
+            "signature": signature(secret, f"{job_id}:completed:{output_url}"),
         }
         httpx.post(callback, json=body, timeout=30).raise_for_status()
     except Exception as exc:
-        status = "failed"
-        output_url = ""
         body = {
             "jobId": job_id,
-            "status": status,
-            "outputUrl": output_url,
+            "status": "failed",
+            "outputUrl": "",
             "error": str(exc)[-500:],
-            "signature": signature(secret, f"{job_id}:{status}:{output_url}"),
+            "signature": signature(secret, f"{job_id}:failed:"),
         }
         try:
             httpx.post(callback, json=body, timeout=30)
@@ -132,7 +185,7 @@ def render_video(input_bytes: bytes, payload: dict):
 )
 @modal.asgi_app()
 def web():
-    from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+    from fastapi import FastAPI, Form, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse
 
@@ -144,28 +197,33 @@ def web():
         allow_headers=["*"],
     )
 
-    @api.post("/render", status_code=202)
-    async def render(
-        video: UploadFile = File(...),
+    @api.post("/render-prompt", status_code=202)
+    async def render_prompt(
         jobId: str = Form(...),
         customerId: str = Form(...),
         token: str = Form(...),
         callbackUrl: str = Form(...),
-        title: str = Form("Built with Nitro Outreach"),
-        subtitle: str = Form("Automate your outreach. Grow faster."),
-        style: str = Form("clean"),
+        plan: str = Form(...),
+        duration: int = Form(15),
+        tone: str = Form("bold"),
+        accent: str = Form("#ff6b00"),
         downloadBase: str = Form(...),
     ):
         secret = os.environ["MODAL_SHARED_SECRET"]
         expected = signature(secret, f"{jobId}:{customerId}")
         if not hmac.compare_digest(token, expected):
             raise HTTPException(403, "Invalid render token")
-        data = await video.read()
-        if not data or len(data) > 250 * 1024 * 1024:
-            raise HTTPException(400, "Use a video under 250 MB")
-        await render_video.spawn.aio(data, {
-            "jobId": jobId, "customerId": customerId, "callbackUrl": callbackUrl,
-            "title": title, "subtitle": subtitle, "style": style, "downloadBase": downloadBase,
+        if len(plan) > 24000 or duration not in (15, 30, 45):
+            raise HTTPException(400, "Invalid Reel plan")
+        await render_prompt_video.spawn.aio({
+            "jobId": jobId,
+            "customerId": customerId,
+            "callbackUrl": callbackUrl,
+            "plan": plan,
+            "duration": duration,
+            "tone": tone,
+            "accent": accent,
+            "downloadBase": downloadBase,
         })
         return {"ok": True, "jobId": jobId}
 
@@ -174,6 +232,6 @@ def web():
         path = Path("/outputs") / f"{job_id}.mp4"
         if not path.exists():
             raise HTTPException(404, "Video expired or was not found")
-        return FileResponse(path, media_type="video/mp4", filename="nitro-reel.mp4")
+        return FileResponse(path, media_type="video/mp4", filename="nitro-ai-reel.mp4")
 
     return api
