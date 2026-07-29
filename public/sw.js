@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nitro-static-v1';
+const CACHE_NAME = 'nitro-static-v2';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
