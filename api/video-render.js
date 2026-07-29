@@ -9,39 +9,48 @@ const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toL
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
-const CREATIVE_DIRECTIONS = [
-  { id: 'editorial', palette: ['F4EDE1', '17233B', 'E95D45'], layout: 'luxury magazine editorial', motion: 'measured wipes, split screens, and elegant reveals', music: 'warm cinematic pulse' },
-  { id: 'kinetic', palette: ['101820', 'FEE715', 'F7F7F2'], layout: 'high-energy sports campaign', motion: 'hard cuts, diagonal impacts, and rapid punch-ins', music: 'fast percussion and bass' },
-  { id: 'future', palette: ['120B2E', '6C4DFF', '27E0D1'], layout: 'polished technology launch', motion: 'gliding panels, light sweeps, and depth shifts', music: 'airy electronic groove' },
-  { id: 'minimal', palette: ['F7F7F5', '111111', 'A3FF12'], layout: 'Swiss minimalist product ad', motion: 'precise type builds, clean masks, and negative-space cuts', music: 'minimal click-and-bass rhythm' },
-  { id: 'sunset', palette: ['2D142C', 'FF6B5E', 'FFC857'], layout: 'bold lifestyle campaign', motion: 'soft zooms, rounded cards, and flowing color transitions', music: 'upbeat warm synth-pop' },
-  { id: 'collage', palette: ['F2C14E', '5B2333', 'F7F4EA'], layout: 'tactile cut-paper collage', motion: 'staggered scraps, stop-motion jumps, and playful rotations', music: 'playful organic percussion' },
-];
+const VISUAL_WORLDS = ['sky_flight', 'computer_tunnel', 'desk_person', 'city_motion', 'product_stage', 'data_stream', 'orbit', 'paper_world', 'storefront', 'interface_world'];
+const CAMERA_MOVES = ['dive forward', 'orbit clockwise', 'crane upward', 'push through', 'whip left', 'float backward', 'rapid zoom', 'slow parallax'];
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
+function normalizedHex(value) {
+  const color = clean(value, 12).replace(/[^0-9a-f]/gi, '').toUpperCase();
+  return /^[0-9A-F]{6}$/.test(color) ? color : hexColor();
+}
 function signJob(jobId, customerId) {
   return crypto.createHmac('sha256', renderSecret()).update(`${jobId}:${customerId}`).digest('hex');
 }
 function textOf(message) {
   return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || '';
 }
-function chooseDirection(styleHistory = []) {
-  const recent = new Set(Array.isArray(styleHistory) ? styleHistory.slice(-5) : []);
-  const choices = CREATIVE_DIRECTIONS.filter(item => !recent.has(item.id));
-  const pool = choices.length ? choices : CREATIVE_DIRECTIONS;
-  return { ...pool[crypto.randomInt(0, pool.length)], variant: crypto.randomBytes(6).toString('hex') };
+function hexColor() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
+function chooseDirection(prompt = '') {
+  const lower = prompt.toLowerCase();
+  let world = VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)];
+  if (/(computer|software|app|dashboard|technology|automation)/.test(lower)) world = 'computer_tunnel';
+  else if (/(desk|office|work|employee|business owner)/.test(lower)) world = 'desk_person';
+  else if (/(fly|air|sky|travel|freedom)/.test(lower)) world = 'sky_flight';
+  else if (/(shop|store|restaurant|local|location)/.test(lower)) world = 'storefront';
+  return {
+    id: crypto.randomBytes(8).toString('hex'),
+    palette: [hexColor(), hexColor(), hexColor()],
+    world,
+    camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)],
+    geometrySeed: crypto.randomBytes(8).toString('hex'),
+    musicSeed: crypto.randomBytes(8).toString('hex'),
+  };
 }
-function fallbackPlan(prompt, company, cta, direction = CREATIVE_DIRECTIONS[0]) {
+function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt)) {
   const subject = clean(prompt, 90) || `See what ${company} can do`;
   return {
     title: subject,
     caption: `${subject}\n\n${cta}`,
     creative: direction,
     scenes: [
-      { eyebrow: 'A BETTER WAY', headline: subject, body: 'See the idea from a fresh angle.' },
-      { eyebrow: 'MAKE IT SIMPLE', headline: `Built around ${company}`, body: 'Clear benefits, memorable visuals, and one focused message.' },
-      { eyebrow: 'MOVE FORWARD', headline: cta, body: company },
+      { eyebrow: 'LOOK CLOSER', headline: subject, body: 'A fresh way to see what matters.', voiceover: subject, visual: direction.world, camera: direction.camera },
+      { eyebrow: 'IN MOTION', headline: `See ${company} differently`, body: 'The story moves as quickly as your audience.', voiceover: `${company} turns the idea into action.`, visual: VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)], camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)] },
+      { eyebrow: 'YOUR MOVE', headline: cta, body: company, voiceover: `${cta} with ${company}.`, visual: 'product_stage', camera: 'push through' },
     ],
   };
 }
@@ -61,20 +70,22 @@ Industry: ${industry}
 User request: ${prompt}
 Tone: ${tone}
 Final CTA: ${cta}
-Creative direction: ${direction.layout}
-Palette: ${direction.palette.join(', ')}
-Motion language: ${direction.motion}
-Music direction: ${direction.music}
+Starting visual idea: ${direction.world}
+Starting camera move: ${direction.camera}
+Random palette seed: ${direction.palette.join(', ')}
 
 Create exactly ${sceneCount} fast scenes. Each scene needs:
 - eyebrow: 2-4 uppercase words
 - headline: punchy, maximum 52 characters
 - body: one specific supporting sentence, maximum 95 characters
+- voiceover: natural spoken narration for that scene, maximum 18 words
+- visual: choose the most relevant world from ${VISUAL_WORLDS.join(', ')}
+- camera: choose or invent a cinematic camera move
 
-Scene 1 must be a scroll-stopping hook. Middle scenes must make a clear argument and may use a story, contrast, demonstration, list, question, transformation, or product reveal. Last scene must be the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this request.
+Design one continuous visual journey specifically for the request. It may fly through the air, travel inside a computer, orbit a product, show a stylized person working at a desk, move through a city/storefront, or enter an abstract data world when relevant. Do not force every ad into text on a background. Scene 1 must be a hook and the last scene the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
 
 Return ONLY valid JSON:
-{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","scenes":[{"eyebrow":"...","headline":"...","body":"..."}]}`,
+{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific visual world","camera":"continuous camera concept","music":"specific music mood"},"scenes":[{"eyebrow":"...","headline":"...","body":"...","voiceover":"...","visual":"one allowed visual world","camera":"camera move"}]}`,
     }],
   });
   try {
@@ -85,15 +96,51 @@ Return ONLY valid JSON:
     return {
       title: clean(parsed.title, 90) || fallback.title,
       caption: clean(parsed.caption, 1800) || fallback.caption,
-      creative: direction,
+      creative: {
+        ...direction,
+        palette: Array.isArray(parsed.creative?.palette) && parsed.creative.palette.length >= 3
+          ? parsed.creative.palette.slice(0, 3).map(normalizedHex)
+          : direction.palette,
+        world: clean(parsed.creative?.world, 80) || direction.world,
+        camera: clean(parsed.creative?.camera, 120) || direction.camera,
+        music: clean(parsed.creative?.music, 120) || 'cinematic electronic pulse',
+      },
       scenes: parsed.scenes.slice(0, sceneCount).map(scene => ({
         eyebrow: clean(scene?.eyebrow, 32).toUpperCase() || company.toUpperCase(),
         headline: clean(scene?.headline, 70) || company,
         body: clean(scene?.body, 130) || cta,
+        voiceover: clean(scene?.voiceover, 180) || clean(scene?.body, 130) || cta,
+        visual: VISUAL_WORLDS.includes(clean(scene?.visual, 40)) ? clean(scene.visual, 40) : direction.world,
+        camera: clean(scene?.camera, 80) || direction.camera,
       })),
     };
   } catch {
     return fallback;
+  }
+}
+
+async function createVoiceover(plan, tone) {
+  if (!process.env.OPENAI_API_KEY) return '';
+  const input = plan.scenes.map(scene => clean(scene.voiceover, 180)).filter(Boolean).join(' ');
+  if (!input) return '';
+  try {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini-tts',
+        voice: tone === 'energetic' ? 'coral' : 'alloy',
+        input: input.slice(0, 4000),
+        instructions: tone === 'premium'
+          ? 'Speak like a polished premium commercial narrator: confident, warm, natural, and unhurried.'
+          : 'Speak like a modern social video narrator: clear, engaging, natural, and conversational.',
+        response_format: 'mp3',
+      }),
+    });
+    if (!response.ok) return '';
+    return Buffer.from(await response.arrayBuffer()).toString('base64');
+  } catch {
+    return '';
   }
 }
 
@@ -147,7 +194,7 @@ export default async function handler(req, res) {
   const tone = ['bold', 'premium', 'energetic', 'minimal'].includes(clean(req.body?.tone, 20))
     ? clean(req.body.tone, 20) : 'bold';
   const cta = clean(req.body?.cta, 70) || 'Start today';
-  const direction = chooseDirection(user.usage?.reelStyleHistory);
+  const direction = chooseDirection(prompt);
   let plan;
   try {
     plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
@@ -156,6 +203,7 @@ export default async function handler(req, res) {
     plan = fallbackPlan(prompt, company, cta, direction);
   }
 
+  const voiceover = await createVoiceover(plan, tone);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
   const now = new Date().toISOString();
   const job = {
@@ -168,13 +216,14 @@ export default async function handler(req, res) {
     caption: plan.caption,
     duration,
     tone,
+    voiceoverIncluded: Boolean(voiceover),
     creditCost,
     chargedCredits: isOwner ? 0 : creditCost,
     createdAt: now,
     updatedAt: now,
   };
-  user.usage.lastReelStyle = direction.id;
-  user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), direction.id].slice(-5);
+  user.usage.lastReelStyle = plan.creative?.id || direction.id;
+  user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), plan.creative?.id || direction.id].slice(-8);
   if (!isOwner) user.usage.videoCredits = balance - creditCost;
   await saveCustomer(user);
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
@@ -190,7 +239,8 @@ export default async function handler(req, res) {
       plan: JSON.stringify(plan),
       duration: String(duration),
       tone,
-      creative: JSON.stringify(direction),
+      creative: JSON.stringify(plan.creative || direction),
+      voiceover,
     },
     balance: Number(user.usage.videoCredits || 0),
     ownerUnlimited: isOwner,
