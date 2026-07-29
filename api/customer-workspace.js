@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomBytes } from 'node:crypto';
 import { currentCustomer, sameOrigin, saveCustomer, rateLimit, requestOrigin } from '../lib/customer-auth.js';
-import { publishImage, publishCarousel } from '../lib/meta.js';
+import { publishImage, publishCarousel, publishReel } from '../lib/meta.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
 
@@ -309,13 +309,15 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       const caption = clean(body.caption, 2200) || item.topic || '';
       try {
         let mediaId;
-        if (item.type === 'carousel') {
+        if (item.type === 'video') {
+          mediaId = await publishReel(user.meta.igUserId, user.meta.token, caption, item.mediaUrl);
+        } else if (item.type === 'carousel') {
           const urls = (item.slides || []).map(s => pub(s.id));
           mediaId = await publishCarousel(user.meta.igUserId, user.meta.token, caption, urls);
         } else if (item.type === 'image') {
           mediaId = await publishImage(user.meta.igUserId, user.meta.token, caption, pub(item.id));
         } else {
-          res.status(400).json({ error: 'Only images and carousels can be posted to Instagram.' }); return;
+          res.status(400).json({ error: 'Only images, carousels, and Reels can be posted to Instagram.' }); return;
         }
         item.postedToInstagram = { mediaId, at: new Date().toISOString() };
         await saveCustomer(user);
