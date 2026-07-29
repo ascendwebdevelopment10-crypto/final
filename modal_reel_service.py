@@ -229,6 +229,7 @@ def web():
 
     @api.get("/download/{job_id}")
     async def download(job_id: str):
+        volume.reload()
         path = Path("/outputs") / f"{job_id}.mp4"
         if not path.exists():
             raise HTTPException(404, "Video expired or was not found")
