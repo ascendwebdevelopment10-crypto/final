@@ -35,7 +35,7 @@ def escape_text(value: str) -> str:
         str(value or "")
         .replace("\\", "\\\\")
         .replace(":", "\\:")
-        .replace("'", "\\'")
+        .replace("'", "’")
         .replace("%", "\\%")
         .replace(",", "\\,")
     )
