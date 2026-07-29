@@ -6,6 +6,7 @@ const PACKS = {
   creator: { id: 'creator', credits: 15, amountCents: 1200, label: '15 Reel exports' },
   studio: { id: 'studio', credits: 40, amountCents: 2800, label: '40 Reel exports' },
 };
+const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -21,6 +22,9 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
   if (!sameOrigin(req)) { res.status(403).json({ error: 'Invalid request origin' }); return; }
+  if (String(user.email || '').toLowerCase() === OWNER_EMAIL) {
+    res.status(403).json({ error: 'Your owner account already has unlimited Reel rendering and does not need credits.' }); return;
+  }
   if (!stripeConfigured()) { res.status(503).json({ error: 'Video credit checkout is not configured yet.' }); return; }
 
   const pack = PACKS[String(req.body?.pack || '').toLowerCase()];
@@ -31,6 +35,7 @@ export default async function handler(req, res) {
     const url = await createVideoCreditCheckoutSession({
       customerId: user.id,
       email: user.email,
+      stripeCustomerId: user.subscription?.stripeCustomerId || null,
       credits: pack.credits,
       amountCents: pack.amountCents,
       successUrl: `${origin}/app?videoCredits=success#${returnTo}`,
