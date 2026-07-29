@@ -79,9 +79,6 @@ def render_prompt_video(payload: dict):
             f"drawbox=x='-240+mod(t*95\\,1500)':y=1180:w=760:h=760:color=0x{accent}@0.10:t=fill,"
             f"drawbox=x='900-mod(t*70\\,1450)':y=80:w=540:h=540:color=0x{accent}@0.13:t=fill,"
             "drawgrid=w=120:h=120:t=1:c=white@0.025,"
-            "drawbox=x=70:y=72:w=12:h=44:color=white@0.92:t=fill,"
-            f"drawtext=fontfile={font_bold}:text='NITRO  /  AI REEL':fontcolor=white@0.92:fontsize=25:x=104:y=80,"
-            f"drawtext=fontfile={font_regular}:text='MADE TO STOP THE SCROLL':fontcolor=white@0.38:fontsize=16:x=104:y=116,"
             f"drawbox=x=70:y=1818:w=940:h=5:color=white@0.12:t=fill,"
             f"drawbox=x=70:y=1818:w='940*t/{duration}':h=5:color=0x{accent}:t=fill"
         ]
