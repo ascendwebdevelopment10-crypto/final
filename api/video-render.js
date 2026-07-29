@@ -11,6 +11,16 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
 const VISUAL_WORLDS = ['sky_flight', 'computer_tunnel', 'desk_person', 'city_motion', 'product_stage', 'data_stream', 'orbit', 'paper_world', 'storefront', 'interface_world'];
 const CAMERA_MOVES = ['dive forward', 'orbit clockwise', 'crane upward', 'push through', 'whip left', 'float backward', 'rapid zoom', 'slow parallax'];
+const STORY_SHAPES = [
+  'cold open, surprising reveal, rising momentum, satisfying payoff',
+  'mini day-in-the-life, interruption, discovery, transformed ending',
+  'visual metaphor, escalating journey, product reveal, emotional payoff',
+  'question-led hook, immersive demonstration, proof through action, invitation',
+  'before-and-after contrast told as one cinematic transformation',
+  'product-demo journey that travels through the customer experience',
+];
+const TRANSITIONS = ['soft dissolve', 'slide left', 'slide up', 'whip pan', 'push through', 'light flash', 'hard cut'];
+const TEXT_STYLES = ['minimal', 'kinetic', 'caption', 'statement', 'quote', 'cta'];
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
@@ -37,6 +47,7 @@ function chooseDirection(prompt = '') {
     palette: [hexColor(), hexColor(), hexColor()],
     world,
     camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)],
+    storyShape: STORY_SHAPES[crypto.randomInt(0, STORY_SHAPES.length)],
     geometrySeed: crypto.randomBytes(8).toString('hex'),
     musicSeed: crypto.randomBytes(8).toString('hex'),
   };
@@ -48,9 +59,9 @@ function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt))
     caption: `${subject}\n\n${cta}`,
     creative: direction,
     scenes: [
-      { eyebrow: 'LOOK CLOSER', headline: subject, body: 'A fresh way to see what matters.', voiceover: subject, visual: direction.world, camera: direction.camera },
-      { eyebrow: 'IN MOTION', headline: `See ${company} differently`, body: 'The story moves as quickly as your audience.', voiceover: `${company} turns the idea into action.`, visual: VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)], camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)] },
-      { eyebrow: 'YOUR MOVE', headline: cta, body: company, voiceover: `${cta} with ${company}.`, visual: 'product_stage', camera: 'push through' },
+      { eyebrow: 'LOOK CLOSER', headline: subject, body: 'A fresh way to see what matters.', voiceover: subject, visual: direction.world, camera: direction.camera, transition: 'push through', textStyle: 'statement' },
+      { eyebrow: 'IN MOTION', headline: `See ${company} differently`, body: 'The story moves as quickly as your audience.', voiceover: `${company} turns the idea into action.`, visual: VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)], camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)], transition: 'soft dissolve', textStyle: 'minimal' },
+      { eyebrow: 'YOUR MOVE', headline: cta, body: company, voiceover: `${cta} with ${company}.`, visual: 'product_stage', camera: 'push through', transition: 'light flash', textStyle: 'cta' },
     ],
   };
 }
@@ -73,6 +84,7 @@ Final CTA: ${cta}
 Starting visual idea: ${direction.world}
 Starting camera move: ${direction.camera}
 Random palette seed: ${direction.palette.join(', ')}
+Story shape for this render: ${direction.storyShape}
 
 Create exactly ${sceneCount} fast scenes. Each scene needs:
 - eyebrow: 2-4 uppercase words
@@ -81,11 +93,13 @@ Create exactly ${sceneCount} fast scenes. Each scene needs:
 - voiceover: natural spoken narration for that scene, maximum 18 words
 - visual: choose the most relevant world from ${VISUAL_WORLDS.join(', ')}
 - camera: choose or invent a cinematic camera move
+- transition: choose the most fitting transition from ${TRANSITIONS.join(', ')}
+- textStyle: choose the most fitting treatment from ${TEXT_STYLES.join(', ')}
 
-Design one continuous visual journey specifically for the request. It may fly through the air, travel inside a computer, orbit a product, show a stylized person working at a desk, move through a city/storefront, or enter an abstract data world when relevant. Do not force every ad into text on a background. Scene 1 must be a hook and the last scene the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
+Design one continuous visual journey specifically for the request. This is a cinematic ad, not a numbered list, slideshow, or presentation. Never write scene numbers, step labels, "first/second/third," or repeat an identical information-card layout. Let some scenes breathe with only a short phrase while other scenes carry the detail. It may fly through the air, travel inside a computer, orbit a product, show a stylized person working at a desk, move through a city/storefront, or enter an abstract data world when relevant. Do not force every ad into text on a background. Scene 1 must be a hook and the last scene the CTA. Do not automatically use the tired "problem / solution / why it works" sequence. Narration must sound like one continuous human thought, use contractions naturally, and never announce scenes or sound like a list. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
 
 Return ONLY valid JSON:
-{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific visual world","camera":"continuous camera concept","music":"specific music mood"},"scenes":[{"eyebrow":"...","headline":"...","body":"...","voiceover":"...","visual":"one allowed visual world","camera":"camera move"}]}`,
+{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific visual world","camera":"continuous camera concept","music":"specific music mood"},"scenes":[{"eyebrow":"...","headline":"...","body":"...","voiceover":"...","visual":"one allowed visual world","camera":"camera move","transition":"one allowed transition","textStyle":"one allowed text style"}]}`,
     }],
   });
   try {
@@ -112,6 +126,8 @@ Return ONLY valid JSON:
         voiceover: clean(scene?.voiceover, 180) || clean(scene?.body, 130) || cta,
         visual: VISUAL_WORLDS.includes(clean(scene?.visual, 40)) ? clean(scene.visual, 40) : direction.world,
         camera: clean(scene?.camera, 80) || direction.camera,
+        transition: TRANSITIONS.includes(clean(scene?.transition, 40)) ? clean(scene.transition, 40) : TRANSITIONS[crypto.randomInt(0, TRANSITIONS.length)],
+        textStyle: TEXT_STYLES.includes(clean(scene?.textStyle, 30)) ? clean(scene.textStyle, 30) : TEXT_STYLES[crypto.randomInt(0, TEXT_STYLES.length)],
       })),
     };
   } catch {
@@ -119,21 +135,31 @@ Return ONLY valid JSON:
   }
 }
 
-async function createVoiceover(plan, tone) {
+async function createVoiceover(plan, tone, voiceMode, customVoiceover) {
   if (!process.env.OPENAI_API_KEY) return '';
-  const input = plan.scenes.map(scene => clean(scene.voiceover, 180)).filter(Boolean).join(' ');
+  if (voiceMode === 'none') return '';
+  const input = voiceMode === 'custom'
+    ? clean(customVoiceover, 1600)
+    : plan.scenes.map(scene => clean(scene.voiceover, 180)).filter(Boolean).join(' ');
   if (!input) return '';
+  const voice = voiceMode === 'commercial' || tone === 'bold' ? 'cedar' : 'marin';
+  const delivery = {
+    recommended: 'Sound like a confident founder naturally explaining something useful to one person.',
+    founder: 'Sound like a real founder recording a relaxed voice note: grounded, personal, and quietly confident.',
+    warm: 'Sound warm, thoughtful, and human, like a trusted storyteller speaking to one person.',
+    commercial: 'Sound polished and assured, but restrained and believable—not like a radio announcer.',
+    custom: 'Honor the writer’s wording while making it feel spoken, spontaneous, and emotionally believable.',
+  }[voiceMode] || 'Sound conversational, grounded, and human.';
   try {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gpt-4o-mini-tts',
-        voice: tone === 'energetic' ? 'coral' : 'alloy',
+        voice,
         input: input.slice(0, 4000),
-        instructions: tone === 'premium'
-          ? 'Speak like a polished premium commercial narrator: confident, warm, natural, and unhurried.'
-          : 'Speak like a modern social video narrator: clear, engaging, natural, and conversational.',
+        instructions: `${delivery} Read it as one continuous take. Use contractions, varied sentence rhythm, subtle breaths, and short meaningful pauses. Never announce scene numbers or sound like a list. Avoid sing-song intonation, exaggerated enthusiasm, over-enunciation, and the predictable AI narrator cadence. ${tone === 'energetic' ? 'Keep the energy alive through pacing, not shouting.' : 'Keep the pace unhurried but never sleepy.'}`,
+        speed: 0.97,
         response_format: 'mp3',
       }),
     });
@@ -236,6 +262,12 @@ export default async function handler(req, res) {
   const tone = ['bold', 'premium', 'energetic', 'minimal'].includes(clean(req.body?.tone, 20))
     ? clean(req.body.tone, 20) : 'bold';
   const cta = clean(req.body?.cta, 70) || 'Start today';
+  const voiceMode = ['recommended', 'founder', 'warm', 'commercial', 'custom', 'none'].includes(clean(req.body?.voiceMode, 30))
+    ? clean(req.body.voiceMode, 30) : 'recommended';
+  const customVoiceover = clean(req.body?.customVoiceover, 1600);
+  if (voiceMode === 'custom' && !customVoiceover) {
+    res.status(400).json({ error: 'Add your voiceover text or choose a recommended voice style.' }); return;
+  }
   const direction = chooseDirection(prompt);
   let plan;
   try {
@@ -246,7 +278,7 @@ export default async function handler(req, res) {
   }
 
   const [voiceover, sceneArt] = await Promise.all([
-    createVoiceover(plan, tone),
+    createVoiceover(plan, tone, voiceMode, customVoiceover),
     createSceneArt(plan, prompt, company, tone),
   ]);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
@@ -261,6 +293,7 @@ export default async function handler(req, res) {
     caption: plan.caption,
     duration,
     tone,
+    voiceMode,
     voiceoverIncluded: Boolean(voiceover),
     generatedSceneCount: sceneArt.filter(Boolean).length,
     creditCost,
