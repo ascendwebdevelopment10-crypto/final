@@ -28,7 +28,9 @@ export default async function handler(req, res) {
   job.status = status === 'completed' ? 'completed' : 'failed';
   job.progress = job.status === 'completed' ? 100 : 0;
   job.outputUrl = job.status === 'completed' ? outputUrl : '';
-  job.error = job.status === 'failed' ? clean(req.body?.error, 500) || 'Rendering failed' : '';
+  job.error = job.status === 'failed'
+    ? 'Nitro could not finish this Reel. Your credits were refunded—please try again with the same prompt.'
+    : '';
   job.updatedAt = new Date().toISOString();
   if (job.status === 'failed' && Number(job.chargedCredits || (job.chargedCredit ? 1 : 0)) > 0 && !job.refunded) {
     const user = await getCustomer(job.customerId);
