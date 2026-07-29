@@ -263,3 +263,41 @@
 /* Post to Instagram button */
 .ig-post-btn{background:linear-gradient(120deg,#f09433,#dc2743,#bc1888)!important;color:#fff!important;border-color:transparent!important}
 .ig-post-btn:hover{filter:brightness(1.08)}
+
+/* Reel editor */
+.content-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.video-credit-pill{display:inline-flex;align-items:center;height:36px;padding:0 12px;border:1px solid #ff6b0040;border-radius:999px;background:#ff6b0010;color:#ffad78;font-size:11px;font-weight:800;letter-spacing:.02em}
+.btn-reel{color:#fff;border-color:#ff6b0060;background:linear-gradient(120deg,#29150b,#6e2d0b);box-shadow:0 10px 30px #ff6b0018}
+.btn-reel:hover{border-color:#ff8a33;background:linear-gradient(120deg,#3c1c0c,#913a0b)}
+.reel-callout{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:20px;padding:22px;margin-bottom:14px;overflow:hidden;position:relative;background:radial-gradient(circle at 85% 30%,#ff6b0024,transparent 32%),linear-gradient(135deg,#18100c,#100d0b)}
+.reel-callout:after{content:'';position:absolute;width:210px;height:210px;border:1px solid #ff8a3322;border-radius:50%;right:-90px;top:-120px;box-shadow:0 0 0 28px #ff6b0008,0 0 0 58px #ff6b0005}
+.reel-callout>*{position:relative;z-index:1}.reel-callout h3{margin:4px 0 5px;font:800 20px Manrope;letter-spacing:-.025em}.reel-callout p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.55}
+.reel-orb{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,#ff8a33,#ff5a00);box-shadow:0 15px 40px #ff6b0033;color:#fff;animation:reelPulse 2.8s ease-in-out infinite}
+.eyebrow{font-size:9px;letter-spacing:.16em;color:#ff9b5c;font-weight:900}
+.reel-modal{width:min(610px,calc(100vw - 28px))}
+.video-drop{display:grid;place-items:center;text-align:center;min-height:155px;border:1px dashed #ff8a3355;border-radius:15px;background:#ff6b0009;cursor:pointer;transition:.25s}
+.video-drop:hover{border-color:#ff8a33;background:#ff6b0012;transform:translateY(-2px)}
+.video-drop input{position:absolute;opacity:0;pointer-events:none}.video-drop-icon{font-size:26px;color:#ff8a33;margin-bottom:5px}.video-drop b{font-size:14px}.video-drop small{color:var(--muted);margin-top:4px}
+.video-picked{margin:-4px 0 13px;text-align:center;font-size:11px;color:var(--dim)}.video-picked.ready{color:#70d99b}
+.reel-features{display:flex;gap:8px;flex-wrap:wrap;margin:5px 0 14px}.reel-features span{font-size:10px;color:#b9b0aa;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#ffffff05}
+.render-progress{text-align:center}.render-spinner{height:84px;display:flex;align-items:center;justify-content:center;gap:7px}.render-spinner i{width:8px;border-radius:9px;background:linear-gradient(#ffae78,#ff5a00);animation:renderWave 1s ease-in-out infinite}.render-spinner i:nth-child(2){animation-delay:.13s}.render-spinner i:nth-child(3){animation-delay:.26s}.render-progress h3{margin:10px 0 6px}.render-track{height:7px;border-radius:10px;background:#24160e;overflow:hidden;margin:22px 0 8px}.render-track i{display:block;width:5%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff5a00,#ffb177);transition:width .45s ease}.render-progress>small{color:#ff9b5c;font-weight:800}
+.gen-video{width:52px;height:78px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#080808}.content-video-item{align-items:center}
+@keyframes reelPulse{50%{transform:translateY(-4px) scale(1.035);box-shadow:0 20px 55px #ff6b0044}}
+@keyframes renderWave{0%,100%{height:20px;opacity:.45}50%{height:58px;opacity:1}}
+@media(max-width:760px){.reel-callout{grid-template-columns:auto 1fr}.reel-callout>.btn{grid-column:1/-1;width:100%}.content-actions{justify-content:flex-start}.content-video-item{align-items:flex-start;flex-wrap:wrap}}
+
+/* Premium motion system */
+.app-content>*{animation:cardReveal .52s cubic-bezier(.2,.75,.25,1) both}
+.app-content>*:nth-child(2){animation-delay:.055s}.app-content>*:nth-child(3){animation-delay:.1s}.app-content>*:nth-child(4){animation-delay:.145s}
+.glass-card,.stat-card,.module-card,.quick-action,.activity-item{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease,background .25s ease}
+.glass-card:hover{border-color:#ffffff16}.stat-card:hover,.module-card:hover,.quick-action:hover{transform:translateY(-4px);box-shadow:0 22px 55px #0007}
+.btn{position:relative;overflow:hidden}.btn:after{content:'';position:absolute;inset:-2px auto -2px -40%;width:34%;background:linear-gradient(90deg,transparent,#fff3,transparent);transform:skewX(-18deg);transition:left .52s ease}.btn:hover:after{left:112%}.btn:active{transform:translateY(1px) scale(.985)}
+.side-link{transition:color .2s ease,background .2s ease,transform .2s ease}.side-link:hover{transform:translateX(3px)}
+.render-enter{animation:pageIn .28s cubic-bezier(.2,.75,.25,1) both}
+.skeleton{position:relative;overflow:hidden;background:#17120f!important;color:transparent!important;border-color:#211914!important}.skeleton:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 25%,#ffffff0b 45%,transparent 65%);animation:shimmer 1.25s linear infinite}
+.skeleton-boot{width:min(720px,calc(100vw - 40px));margin:auto}.skeleton-title{width:260px;height:28px;border-radius:9px;margin:4px auto 0}.skeleton-copy{width:min(430px,80%);height:13px;border-radius:7px;margin:auto}.skeleton-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}.skeleton-row i{display:block;height:92px;border-radius:15px}
+.stat-value[data-counting]{font-variant-numeric:tabular-nums}
+@keyframes cardReveal{from{opacity:0;transform:translateY(14px) scale(.992)}to{opacity:1;transform:none}}
+@keyframes pageIn{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes shimmer{to{transform:translateX(110%)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
