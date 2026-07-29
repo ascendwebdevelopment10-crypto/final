@@ -58,6 +58,24 @@
 @media(max-width:1050px){.pricing-grid{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr;padding-top:55px}.hero-copy{max-width:700px}.product-window{max-width:700px}.auth-wrap{grid-template-columns:1fr}.auth-aside{display:none}.auth-panel{min-height:100vh}.stat-grid{grid-template-columns:repeat(2,1fr)}.module-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){:root{--sidebar:0px}.topnav{height:66px;padding:0 18px}.nav-links{display:none}.hero{padding:55px 18px 75px;gap:45px}.hero h1{font-size:43px}.hero-copy{font-size:14px}.hero-actions{flex-direction:column}.hero-actions .btn{width:100%}.trust-row{flex-wrap:wrap;gap:10px}.window-grid{grid-template-columns:50px 1fr;padding:10px;gap:8px}.mini-stats{grid-template-columns:1fr 1fr}.mini-card:last-child{display:none}.float-pill{display:none}.feature-section,.pricing-section{padding:75px 18px}.feature-grid,.pricing-grid{grid-template-columns:1fr}.price-desc{min-height:auto}.auth-panel{padding:22px 19px}.auth-card h1{font-size:29px}.field-row,.color-grid,.choice-grid{grid-template-columns:1fr}.checkout-main{padding:10px 16px 60px}.checkout-grid{grid-template-columns:1fr}.checkout-steps{transform:scale(.9)}.checkout-line{width:35px}.onboarding-shell{display:block}.onboarding-side{padding:20px;border:0;border-bottom:1px solid var(--line)}.onboarding-side .brand{margin-bottom:22px}.onboarding-side h2,.onboarding-side p{display:none}.onboarding-main{padding:38px 18px}.onboarding-card h1{font-size:30px}.sidebar{width:245px;transform:translateX(-105%);transition:.25s}.customer-shell.menu-open .sidebar{transform:translateX(0);box-shadow:30px 0 80px #000b}.mobile-menu{display:grid}.main-area{margin-left:0}.app-topbar{height:62px;padding:0 15px}.app-content{padding:20px 14px 40px}.top-actions .btn{display:none}.stat-grid{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:1fr}.welcome-row{align-items:flex-start}.module-grid{grid-template-columns:1fr}.settings-layout{grid-template-columns:1fr}.settings-nav{display:flex;overflow:auto}.settings-link{white-space:nowrap}.billing-hero{align-items:flex-start;gap:18px;flex-direction:column}.footer-inner{flex-direction:column;gap:12px}.card-fields{grid-template-columns:1fr 1fr}.card-fields .input:first-child{grid-column:1/-1}}@media(max-width:430px){.hero h1{font-size:37px}.stat-grid{grid-template-columns:1fr}.quick-grid{grid-template-columns:1fr}.onboard-actions{gap:10px}.onboard-actions .btn{flex:1}.page-title p{display:none}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
+/* Nitro identity, narration controls, and owner visitor detail */
+.brand-mark img{width:100%;height:100%;display:block;border-radius:inherit;object-fit:cover}
+.custom-voice-field[hidden]{display:none!important}
+.custom-voice-field{padding:12px;border:1px solid #ff7a0030;border-radius:12px;background:#ff6b0008;animation:cardReveal .25s ease both}
+.owner-visitors{margin-bottom:16px}
+.owner-visitors .panel-head{align-items:flex-start;gap:16px}
+.owner-visitors .panel-head h3{margin-bottom:4px}
+.owner-visitors .panel-head p{margin:0;color:var(--dim);font-size:10.5px;line-height:1.45}
+.owner-visitors .panel-head>span{color:#ffad78;font-size:11px;white-space:nowrap}
+.owner-table-wrap{overflow-x:auto}
+.owner-visitors table{width:100%;border-collapse:collapse;font-size:12px;min-width:850px}
+.owner-visitors th{text-align:left;padding:10px;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#6f665d;border-bottom:1px solid var(--line)}
+.owner-visitors td{color:#a49a90}
+.owner-visitors td:first-child{color:#f4f1ee}
+.owner-visitors td b{display:block;font-size:11.5px}
+.owner-visitors td small{display:block;margin-top:2px;color:var(--dim)}
+.owner-visitors td[colspan]{padding:30px;text-align:center;color:#6f665d}
+
 /* AI Assistant page — larger, more prominent wording */
 .assistant-page .section-toolbar{margin-bottom:24px}
 .assistant-page .section-toolbar h2{font-size:32px;letter-spacing:-.04em}
