@@ -117,7 +117,7 @@ def render_prompt_video(payload: dict):
                 art_filters.extend([
                     f"[{input_index}:v]scale=1400:2100,crop=1080:1920:"
                     f"x='{crop_x}':y='{crop_y}',eq=saturation=1.08:contrast=1.04,"
-                    f"fade=t=in:st={start}:d=.24:alpha=1,fade=t=out:st={max(start, end - .22)}:d=.22:alpha=1,"
+                    f"fade=t=in:st={start}:d=0.24:alpha=1,fade=t=out:st={max(start, end - .22)}:d=0.22:alpha=1,"
                     f"format=rgba[art{chain_index}]",
                     f"[bg{chain_index}][art{chain_index}]overlay=0:0:"
                     f"enable='between(t,{start},{end})'[bg{chain_index + 1}]",
