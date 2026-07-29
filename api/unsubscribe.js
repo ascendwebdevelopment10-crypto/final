@@ -6,6 +6,8 @@ import { tokenValid } from "../lib/sign.js";
 function page(title, msg) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/png" href="/icons/icon-192.png?v=nitro-20260728b">
+<link rel="shortcut icon" type="image/png" href="/icons/icon-192.png?v=nitro-20260728b">
 <title>${title}</title>
 <style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#0d1322;color:#e9eefb;
 display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:440px;padding:40px;text-align:center}
