@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
 import { currentCustomer, rateLimit, requestOrigin, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
@@ -144,6 +144,48 @@ async function createVoiceover(plan, tone) {
   }
 }
 
+const WORLD_PROMPTS = {
+  sky_flight: 'an exhilarating aerial flight above sculpted clouds with dramatic depth and forward momentum',
+  computer_tunnel: 'a cinematic camera journey through the glowing interior of a computer into a digital business network',
+  desk_person: 'a real small-business owner working at a modern desk, monitor glow, authentic office details and human emotion',
+  city_motion: 'a dynamic street-level camera move through a modern city where local businesses come alive',
+  product_stage: 'a premium product reveal on a sculptural advertising set with dramatic studio lighting',
+  data_stream: 'a flowing world of luminous customer signals, lead paths and connected data particles',
+  orbit: 'a sweeping orbital camera move around a central product or service represented as a premium physical object',
+  paper_world: 'a tactile handcrafted paper world with dimensional layers, shadows and playful physical motion',
+  storefront: 'a welcoming real-world storefront with customers arriving and energetic local-business atmosphere',
+  interface_world: 'a dimensional software world with floating glass panels and visual workflow elements, without readable UI text',
+};
+
+async function createSceneArt(plan, prompt, company, tone) {
+  if (!process.env.OPENAI_API_KEY) return [];
+  const palette = (plan.creative?.palette || []).map(color => `#${color}`).join(', ');
+  const jobs = plan.scenes.map(async (scene, index) => {
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-image-2',
+        prompt: `Create scene ${index + 1} of a cohesive vertical social-media commercial for ${company}.
+Overall ad request: ${prompt}
+This scene: ${WORLD_PROMPTS[scene.visual] || scene.visual}. Story beat: ${scene.headline}. Camera: ${scene.camera}.
+Style: ${tone} high-end cinematic advertising, believable depth, sophisticated lighting, richly detailed, polished color grade.
+Use this palette as inspiration: ${palette}. Compose for a 9:16 frame with the main subject away from the upper and lower text-safe zones.
+No words, captions, letters, logos, watermarks, split screens, posters, or flat graphic backgrounds.`,
+        size: '1024x1536',
+        quality: 'low',
+        output_format: 'jpeg',
+        output_compression: 55,
+      }),
+    });
+    if (!response.ok) return '';
+    const data = await response.json();
+    return clean(data?.data?.[0]?.b64_json, 2_500_000);
+  });
+  const results = await Promise.allSettled(jobs);
+  return results.map(result => result.status === 'fulfilled' ? result.value : '');
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const user = await currentCustomer(req);
@@ -203,7 +245,10 @@ export default async function handler(req, res) {
     plan = fallbackPlan(prompt, company, cta, direction);
   }
 
-  const voiceover = await createVoiceover(plan, tone);
+  const [voiceover, sceneArt] = await Promise.all([
+    createVoiceover(plan, tone),
+    createSceneArt(plan, prompt, company, tone),
+  ]);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
   const now = new Date().toISOString();
   const job = {
@@ -217,6 +262,7 @@ export default async function handler(req, res) {
     duration,
     tone,
     voiceoverIncluded: Boolean(voiceover),
+    generatedSceneCount: sceneArt.filter(Boolean).length,
     creditCost,
     chargedCredits: isOwner ? 0 : creditCost,
     createdAt: now,
@@ -241,6 +287,7 @@ export default async function handler(req, res) {
       tone,
       creative: JSON.stringify(plan.creative || direction),
       voiceover,
+      sceneArt: JSON.stringify(sceneArt),
     },
     balance: Number(user.usage.videoCredits || 0),
     ownerUnlimited: isOwner,
