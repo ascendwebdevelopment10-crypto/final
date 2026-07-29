@@ -9,6 +9,7 @@ const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toL
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
+const VOICE_WORD_RANGE = { 15: [22, 26], 30: [48, 56], 45: [74, 84] };
 const VISUAL_WORLDS = ['sky_flight', 'computer_tunnel', 'desk_person', 'city_motion', 'product_stage', 'data_stream', 'orbit', 'paper_world', 'storefront', 'interface_world'];
 const CAMERA_MOVES = ['dive forward', 'orbit clockwise', 'crane upward', 'push through', 'whip left', 'float backward', 'rapid zoom', 'slow parallax'];
 const STORY_SHAPES = [
@@ -30,6 +31,18 @@ function signJob(jobId, customerId) {
 }
 function textOf(message) {
   return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || '';
+}
+function wordCount(value) {
+  return String(value || '').trim().split(/\s+/).filter(Boolean).length;
+}
+function narrationOf(plan) {
+  return clean(plan?.narration, 1800)
+    || (plan?.scenes || []).map(scene => clean(scene?.voiceover, 260)).filter(Boolean).join(' ');
+}
+function clippedNarration(value, maxWords) {
+  const words = String(value || '').trim().split(/\s+/).filter(Boolean).slice(0, maxWords);
+  if (!words.length) return '';
+  return `${words.join(' ').replace(/[,:;–—-]+$/, '').replace(/[.!?]+$/, '')}.`;
 }
 function hexColor() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
 function chooseDirection(prompt = '') {
@@ -54,6 +67,7 @@ function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt))
   return {
     title: subject,
     caption: `${subject}\n\n${cta}`,
+    narration: `${subject}. Honestly, ${company} turns that idea into action—without making it complicated. ${cta} with ${company}.`,
     creative: direction,
     scenes: [
       { headline: subject, voiceover: subject, visual: direction.world, camera: direction.camera, transition: 'continuous dissolve', textStyle: 'cinematic overlay' },
@@ -66,6 +80,7 @@ async function createPlan({ prompt, company, industry, tone, cta, duration, dire
   const fallback = fallbackPlan(prompt, company, cta, direction);
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
   const sceneCount = duration === 15 ? 3 : duration === 30 ? 4 : 5;
+  const [minimumWords, maximumWords] = VOICE_WORD_RANGE[duration];
   const result = await anthropic.messages.create({
     model: FAST_MODEL,
     max_tokens: 1500,
@@ -85,14 +100,16 @@ Story shape for this render: ${direction.storyShape}
 
 Plan exactly ${sceneCount} visual beats that blend into one uninterrupted piece of footage. Each beat needs:
 - headline: a short phrase used only for the opening hook or final CTA, maximum 52 characters
-- voiceover: the next natural phrase in one continuous spoken thought, maximum 30 words
+- voiceover: the short narration phrase associated with this visual beat
 - visual: choose the most relevant world from ${VISUAL_WORLDS.join(', ')}
 - camera: a camera move that continues the direction and energy of the previous beat
 
 This must feel like a normal cinematic video, not slides with sections. The camera and subject should appear to keep moving through one connected world while imagery blends naturally. Do not create title cards, information panels, section labels, numbered steps, bullet points, or repeated text layouts. Only the opening phrase and final CTA may appear on screen; the middle must be visual footage with narration. Never write "first/second/third" or use a problem/solution/benefits list structure. It may fly through the air, travel inside a computer, follow a person through a real workspace, orbit a product, or move through a city/storefront when relevant. Narration must be one coherent human thought with natural sentence flow and contractions—not isolated lines written for separate scenes. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
 
+Write one complete narration script totaling ${minimumWords}-${maximumWords} words across the entire Reel. Make it sound spoken rather than written: use contractions, varied sentence lengths, and at most one or two natural filler phrases such as "honestly," "you know," or "kinda" only where they genuinely fit. Break it into a few thought beats using punctuation, an em dash, or an ellipsis so the voice naturally pauses instead of racing through one uninterrupted paragraph. Do not number anything.
+
 Return ONLY valid JSON:
-{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific connected visual world","camera":"one continuous camera concept","music":"specific music mood"},"scenes":[{"headline":"...","voiceover":"...","visual":"one allowed visual world","camera":"continuing camera move"}]}`,
+{"title":"short project title","caption":"Instagram caption with 3-5 hashtags","narration":"the complete ${minimumWords}-${maximumWords} word spoken script","creative":{"palette":["6-digit hex","6-digit hex","6-digit hex"],"world":"specific connected visual world","camera":"one continuous camera concept","music":"specific music mood"},"scenes":[{"headline":"...","voiceover":"the matching phrase from narration","visual":"one allowed visual world","camera":"continuing camera move"}]}`,
     }],
   });
   try {
@@ -103,6 +120,7 @@ Return ONLY valid JSON:
     return {
       title: clean(parsed.title, 90) || fallback.title,
       caption: clean(parsed.caption, 1800) || fallback.caption,
+      narration: clean(parsed.narration, 1800),
       creative: {
         ...direction,
         palette: Array.isArray(parsed.creative?.palette) && parsed.creative.palette.length >= 3
@@ -126,13 +144,45 @@ Return ONLY valid JSON:
   }
 }
 
-async function createVoiceover(plan, tone, voiceMode, customVoiceover) {
+async function fitNarration(plan, duration, company, cta) {
+  const source = narrationOf(plan);
+  const [minimumWords, maximumWords] = VOICE_WORD_RANGE[duration];
+  if (wordCount(source) >= minimumWords && wordCount(source) <= maximumWords) return source;
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const result = await anthropic.messages.create({
+        model: FAST_MODEL,
+        max_tokens: 500,
+        temperature: 0.55,
+        messages: [{
+          role: 'user',
+          content: `Rewrite this Reel voiceover into ${minimumWords}-${maximumWords} total words.
+Keep the business meaning, company name (${company}), and CTA (${cta}).
+Make it sound like a real person speaking: contractions, varied sentence rhythm, one natural filler phrase only if it fits, and two or three brief thought breaks marked with punctuation, an em dash, or an ellipsis.
+No numbered points, list structure, scene labels, quotes, notes, or explanation. Return only the finished narration.
+
+VOICEOVER:
+${source}`,
+        }],
+      });
+      const rewritten = clean(textOf(result).replace(/^["']|["']$/g, ''), 1800);
+      if (wordCount(rewritten) >= minimumWords && wordCount(rewritten) <= maximumWords) return rewritten;
+      if (wordCount(rewritten) > maximumWords) return clippedNarration(rewritten, maximumWords);
+    } catch (error) {
+      console.error('Reel narration fitting error:', error.message);
+    }
+  }
+  return clippedNarration(source, maximumWords);
+}
+
+async function createVoiceover(plan, tone, voiceMode, customVoiceover, duration) {
   if (!process.env.OPENAI_API_KEY) return '';
   if (voiceMode === 'none') return '';
   const input = voiceMode === 'custom'
     ? clean(customVoiceover, 1600)
-    : plan.scenes.map(scene => clean(scene.voiceover, 180)).filter(Boolean).join(' ');
+    : narrationOf(plan);
   if (!input) return '';
+  const spokenInput = input.replace(/([.!?])\s+/g, '$1\n\n');
   const voice = voiceMode === 'commercial' || tone === 'bold' ? 'cedar' : 'marin';
   const delivery = {
     recommended: 'Sound like a confident founder naturally explaining something useful to one person.',
@@ -148,8 +198,8 @@ async function createVoiceover(plan, tone, voiceMode, customVoiceover) {
       body: JSON.stringify({
         model: 'gpt-4o-mini-tts',
         voice,
-        input: input.slice(0, 4000),
-        instructions: `${delivery} Read it as one continuous take. Use contractions, varied sentence rhythm, subtle breaths, and short meaningful pauses. Never announce scene numbers or sound like a list. Avoid sing-song intonation, exaggerated enthusiasm, over-enunciation, and the predictable AI narrator cadence. ${tone === 'energetic' ? 'Keep the energy alive through pacing, not shouting.' : 'Keep the pace unhurried but never sleepy.'}`,
+        input: spokenInput.slice(0, 4000),
+        instructions: `${delivery} Fit this naturally inside a ${duration}-second ad without rushing. Treat each paragraph or punctuation break as a brief human pause, with tiny breaths between thought beats. Use conversational contractions and let filler words sound casual rather than emphasized. Vary the pace and sentence endings. Never announce scene numbers or sound like a list. Avoid sing-song intonation, exaggerated enthusiasm, over-enunciation, and the predictable AI narrator cadence. ${tone === 'energetic' ? 'Keep the energy alive through pacing, not shouting.' : 'Keep the pace relaxed but purposeful.'}`,
         speed: 0.97,
         response_format: 'mp3',
       }),
@@ -259,6 +309,13 @@ export default async function handler(req, res) {
   if (voiceMode === 'custom' && !customVoiceover) {
     res.status(400).json({ error: 'Add your voiceover text or choose a recommended voice style.' }); return;
   }
+  const maximumCustomWords = VOICE_WORD_RANGE[duration][1];
+  if (voiceMode === 'custom' && wordCount(customVoiceover) > maximumCustomWords) {
+    res.status(400).json({
+      error: `That voiceover is ${wordCount(customVoiceover)} words. Keep a ${duration}-second Reel under ${maximumCustomWords} words or choose a longer duration so it can finish naturally.`,
+    });
+    return;
+  }
   const direction = chooseDirection(prompt);
   let plan;
   try {
@@ -267,9 +324,12 @@ export default async function handler(req, res) {
     console.error('Reel plan generation error:', error.message);
     plan = fallbackPlan(prompt, company, cta, direction);
   }
+  if (voiceMode !== 'custom' && voiceMode !== 'none') {
+    plan.narration = await fitNarration(plan, duration, company, cta);
+  }
 
   const [voiceover, sceneArt] = await Promise.all([
-    createVoiceover(plan, tone, voiceMode, customVoiceover),
+    createVoiceover(plan, tone, voiceMode, customVoiceover, duration),
     createSceneArt(plan, prompt, company, tone),
   ]);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;

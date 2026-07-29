@@ -28,6 +28,9 @@ export default async function handler(req, res) {
   job.status = status === 'completed' ? 'completed' : 'failed';
   job.progress = job.status === 'completed' ? 100 : 0;
   job.outputUrl = job.status === 'completed' ? outputUrl : '';
+  job.actualDuration = job.status === 'completed'
+    ? Math.max(1, Number(req.body?.actualDuration || job.duration))
+    : job.duration;
   job.error = job.status === 'failed'
     ? 'Nitro could not finish this Reel. Your credits were refunded—please try again with the same prompt.'
     : '';
@@ -52,7 +55,7 @@ export default async function handler(req, res) {
         topic: job.title,
         prompt: job.prompt,
         caption: job.caption,
-        duration: job.duration,
+        duration: job.actualDuration || job.duration,
         creditCost: job.creditCost,
         mediaUrl: outputUrl,
         format: 'reel',

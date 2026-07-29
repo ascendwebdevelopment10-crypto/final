@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import textwrap
 import random
+import math
 from pathlib import Path
 
 import modal
@@ -46,6 +47,23 @@ def wrapped(value: str, width: int, lines: int) -> str:
     return "\n".join(textwrap.wrap(str(value or ""), width=width)[:lines])
 
 
+def media_duration(path: Path) -> float:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", str(path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not measure narration duration: {result.stderr[-400:]}")
+    duration = float(result.stdout.strip())
+    if not math.isfinite(duration) or duration <= 0:
+        raise RuntimeError("Narration duration was invalid")
+    return duration
+
+
 @app.function(
     image=image,
     cpu=2,
@@ -67,7 +85,20 @@ def render_prompt_video(payload: dict):
         scenes = list(plan.get("scenes") or [])[:10]
         if len(scenes) < 3:
             raise ValueError("The ad plan did not contain enough scenes")
-        duration = max(15, min(45, int(payload.get("duration") or 15)))
+        requested_duration = max(15, min(45, int(payload.get("duration") or 15)))
+        duration = float(requested_duration)
+        voice_path = temp_dir / "voice.mp3"
+        voice_data = str(payload.get("voiceover") or "")
+        has_voice = bool(voice_data)
+        voice_duration = 0.0
+        if has_voice:
+            voice_path.write_bytes(base64.b64decode(voice_data))
+            voice_duration = media_duration(voice_path)
+            # The narration starts after a short visual lead-in and always gets a clean
+            # breath plus music tail after its final word. Most scripts fit the selected
+            # length; this only extends the timeline when speech would otherwise be cut.
+            minimum_timeline = voice_duration + 1.35
+            duration = max(duration, math.ceil(minimum_timeline * 10) / 10)
         creative = json.loads(payload.get("creative") or "{}")
         palette = [safe_color(value) for value in list(creative.get("palette") or [])[:3]]
         if len(palette) < 3:
@@ -170,11 +201,6 @@ def render_prompt_video(payload: dict):
             f"aevalsrc=0.020*sin(2*PI*{root_note}*t)+0.012*sin(2*PI*{root_note * 2}*t)"
             f"+0.020*sin(2*PI*{root_note / 2}*t)*gt(mod(t\\,{beat})\\,{beat * .78}):s=44100:d={duration}"
         )
-        voice_path = temp_dir / "voice.mp3"
-        voice_data = str(payload.get("voiceover") or "")
-        has_voice = bool(voice_data)
-        if has_voice:
-            voice_path.write_bytes(base64.b64decode(voice_data))
         filter_graph = ";".join(art_filters + [",".join(filters)])
         cmd = [
             "ffmpeg", "-y",
@@ -184,17 +210,30 @@ def render_prompt_video(payload: dict):
             cmd.extend(["-loop", "1", "-framerate", "30", "-i", str(art_path)])
         music_input = 1 + len(art_paths)
         cmd.extend(["-f", "lavfi", "-i", music])
+        ambient_input = music_input + 1
+        ambient = f"anoisesrc=color=pink:amplitude=0.025:r=44100:d={duration}"
+        cmd.extend(["-f", "lavfi", "-i", ambient])
+        fade_start = max(0.0, duration - 0.75)
         if has_voice:
             cmd.extend(["-i", str(voice_path)])
-            voice_input = music_input + 1
+            voice_input = ambient_input + 1
             filter_graph += (
-                f";[{music_input}:a]volume=0.20[bgm];"
-                f"[{voice_input}:a]volume=1.0,apad,atrim=0:{duration}[voice];"
-                "[bgm][voice]amix=inputs=2:duration=longest:dropout_transition=2[outa]"
+                f";[{music_input}:a]volume=0.15[bgm];"
+                f"[{ambient_input}:a]highpass=f=110,lowpass=f=5200,volume=0.045[amb];"
+                f"[{voice_input}:a]volume=1.0,adelay=450|450[voice];"
+                f"[bgm][amb][voice]amix=inputs=3:duration=longest:dropout_transition=1.5:"
+                f"normalize=0,atrim=0:{duration},afade=t=out:st={fade_start}:d=0.75[outa]"
+            )
+        else:
+            filter_graph += (
+                f";[{music_input}:a]volume=0.18[bgm];"
+                f"[{ambient_input}:a]highpass=f=110,lowpass=f=5200,volume=0.05[amb];"
+                f"[bgm][amb]amix=inputs=2:duration=longest:normalize=0,"
+                f"atrim=0:{duration},afade=t=out:st={fade_start}:d=0.75[outa]"
             )
         cmd.extend([
             "-filter_complex", filter_graph,
-            "-map", "[outv]", "-map", "[outa]" if has_voice else f"{music_input}:a",
+            "-map", "[outv]", "-map", "[outa]",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "19",
             "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
             "-t", str(duration), str(output_path),
@@ -209,6 +248,7 @@ def render_prompt_video(payload: dict):
             "jobId": job_id,
             "status": "completed",
             "outputUrl": output_url,
+            "actualDuration": round(duration, 2),
             "signature": signature(secret, f"{job_id}:completed:{output_url}"),
         }
         httpx.post(callback, json=body, timeout=30).raise_for_status()
