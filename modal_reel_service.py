@@ -155,6 +155,7 @@ def render_prompt_video(payload: dict):
         }
         httpx.post(callback, json=body, timeout=30).raise_for_status()
     except Exception as exc:
+        print(f"Prompt Reel render failed for {job_id}: {exc}", flush=True)
         body = {
             "jobId": job_id,
             "status": "failed",
