@@ -67,7 +67,7 @@ def render_video(input_bytes: bytes, payload: dict):
             "[0:v]split=2[bgsrc][fgsrc];"
             "[bgsrc]scale=1080:1920:force_original_aspect_ratio=increase,"
             "crop=1080:1920,boxblur=30:12,eq=brightness=-0.25:saturation=1.15[bg];"
-            "[fgsrc]scale=980:-2:force_original_aspect_ratio=decrease,"
+            "[fgsrc]scale=980:1100:force_original_aspect_ratio=decrease,"
             "pad=980:1100:(ow-iw)/2:(oh-ih)/2:color=0x0b0b0b,"
             "zoompan=z='min(zoom+0.00045,1.055)':x='iw/2-(iw/zoom/2)':"
             "y='ih/2-(ih/zoom/2)':d=1:s=980x1100:fps=30[screen];"
@@ -163,7 +163,7 @@ def web():
         data = await video.read()
         if not data or len(data) > 250 * 1024 * 1024:
             raise HTTPException(400, "Use a video under 250 MB")
-        render_video.spawn(data, {
+        await render_video.spawn.aio(data, {
             "jobId": jobId, "customerId": customerId, "callbackUrl": callbackUrl,
             "title": title, "subtitle": subtitle, "style": style, "downloadBase": downloadBase,
         })
