@@ -306,6 +306,16 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       if (gone && Array.isArray(gone.slides)) { for (const s of gone.slides) { try { await kv.del(`customer:img:${s.id}`); } catch {} } }
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
     }
+    if (action === 'update-content-caption') {
+      const cid = clean(body.id, 80);
+      const item = data.content.find(c => c.id === cid);
+      if (!item || !['image', 'carousel', 'video'].includes(item.type)) {
+        res.status(404).json({ error: 'That content was not found.' }); return;
+      }
+      item.caption = clean(body.caption, 2200);
+      await saveCustomer(user);
+      res.status(200).json({ ok: true, item }); return;
+    }
     if (action === 'delete-campaign') {
       const cid = clean(body.id, 80);
       data.campaigns = data.campaigns.filter(c => c.id !== cid);
@@ -327,7 +337,7 @@ Be specific and practical. Do not invent fake performance numbers.`, 1600);
       }
       const base = requestOrigin(req) || 'https://nitrooutreach.com';
       const pub = (imgId) => `${base}/api/pub-image?id=${encodeURIComponent(imgId)}`;
-      const caption = clean(body.caption, 2200) || item.topic || '';
+      const caption = clean(body.caption, 2200) || item.caption || item.topic || '';
       try {
         let mediaId;
         if (item.type === 'video') {
