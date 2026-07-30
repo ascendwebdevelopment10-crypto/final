@@ -91,6 +91,27 @@ export default async function handler(req, res) {
   const creditsLeft = () => plan.aiCredits === null || user.usage.aiUsed < plan.aiCredits;
 
   try {
+    // ---- UPLOAD: add a customer's finished image to Content Studio ----
+    if (action === 'upload-image') {
+      if (data.content.length >= 200) { res.status(403).json({ error: 'Your content library is full. Delete an older item before uploading another.' }); return; }
+      const title = clean(body.title, 140) || 'Uploaded image';
+      const imageData = String(body.imageData || '');
+      const match = imageData.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=\s]+)$/);
+      if (!match) { res.status(400).json({ error: 'Upload a PNG, JPG, or WebP image.' }); return; }
+      const mime = `image/${match[1]}`;
+      const raw = match[2].replace(/\s/g, '');
+      const bytes = Buffer.from(raw, 'base64');
+      if (bytes.length < 100) { res.status(400).json({ error: 'That image file is empty or invalid.' }); return; }
+      if (bytes.length > 5 * 1024 * 1024) { res.status(413).json({ error: 'Keep each image under 5 MB.' }); return; }
+      const imageId = id('img');
+      await kv.set(`customer:img:${imageId}`, JSON.stringify({ data: raw, mime }));
+      const item = { id: imageId, type: 'image', topic: title, size: 'Portrait', source: 'upload', mime, createdAt: new Date().toISOString() };
+      data.content.unshift(item);
+      await saveCustomer(user);
+      res.status(201).json({ ok: true, item });
+      return;
+    }
+
     // ---- WEBSITES: generate a real, complete one-page site ----
     if (action === 'generate-website' || action === 'create-website') {
       if (plan.websites !== null && data.websites.length >= plan.websites) {
