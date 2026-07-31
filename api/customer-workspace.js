@@ -11,6 +11,8 @@ const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
 const WEBSITE_MODEL = process.env.ANTHROPIC_WEBSITE_MODEL || 'claude-sonnet-5';
 const WEBSITE_FALLBACK_MODEL = process.env.ANTHROPIC_WEBSITE_FALLBACK_MODEL || 'claude-sonnet-4-6';
+const ADS_MODEL = process.env.ANTHROPIC_ADS_MODEL || 'claude-sonnet-5';
+const ADS_FALLBACK_MODEL = process.env.ANTHROPIC_ADS_FALLBACK_MODEL || 'claude-sonnet-4-6';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function clean(value, max = 1000) { return String(value || '').trim().slice(0, max); }
@@ -52,6 +54,24 @@ async function generateWebsite(prompt) {
     if (!unsupported || WEBSITE_MODEL === WEBSITE_FALLBACK_MODEL) throw error;
     const result = await anthropic.messages.create(request(WEBSITE_FALLBACK_MODEL));
     return { html: textOf(result), model: WEBSITE_FALLBACK_MODEL };
+  }
+}
+async function generateCampaign(prompt) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
+  const request = model => ({
+    model,
+    max_tokens: 2600,
+    system: 'You are Nitro Ads Strategist, a senior direct-response media buyer and conversion strategist. Build specific, usable campaign launch kits from the supplied facts. Never fabricate proof, results, reviews, or business details.',
+    messages: [{ role: 'user', content: prompt }],
+  });
+  try {
+    const result = await anthropic.messages.create({ ...request(ADS_MODEL), thinking: { type: 'disabled' } });
+    return { text: textOf(result), model: ADS_MODEL };
+  } catch (error) {
+    const unsupported = /model|thinking|not found|not available|unsupported|invalid_request/i.test(error.message || '');
+    if (!unsupported || ADS_MODEL === ADS_FALLBACK_MODEL) throw error;
+    const result = await anthropic.messages.create(request(ADS_FALLBACK_MODEL));
+    return { text: textOf(result), model: ADS_FALLBACK_MODEL };
   }
 }
 // Generate an image via OpenAI. Tries gpt-image-1 first (can render text), falls back to dall-e-3.
@@ -315,27 +335,69 @@ DESIGN QUALITY
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
       const objective = clean(body.objective, 500) || 'get more leads';
       const budget = clean(body.budget, 40) || 'a small monthly budget';
+      const offer = clean(body.offer, 700) || 'the business offer';
+      const platform = clean(body.platform, 80) || 'Nitro recommends';
+      const audience = clean(body.audience, 700) || 'the business’s ideal customer';
+      const location = clean(body.location, 160) || 'the business service area';
+      const destination = clean(body.destination, 600) || 'the most relevant website or landing page';
+      const notes = clean(body.notes, 700);
       const { company, industry } = ctx(user);
-      const plan_text = await generate(`You are a senior paid-media strategist. Build a concrete, ready-to-launch ad campaign plan for this business.
+      const generated = await generateCampaign(`Build a concrete, ready-to-launch paid advertising launch kit for this business.
 
 Business: ${company} (${industry})
 Campaign name: ${name}
+Offer: ${offer}
 Objective: ${objective}
+Preferred channel: ${platform}
+Ideal customer: ${audience}
+Target location: ${location}
 Budget: ${budget}
+Destination: ${destination}
+Additional context: ${notes || 'None supplied'}
 
-Write a clear, well-structured plan in Markdown with these sections:
-1. Recommended platform(s) and why (Meta, Google, etc.)
-2. Target audience (specific demographics, interests, locations)
-3. Budget breakdown and suggested daily spend
-4. Three ad copy variants (each with a headline, primary text, and CTA)
-5. Creative direction (what the image/video should show)
-6. A step-by-step launch checklist the owner can follow themselves.
+Write a sharp, skimmable plan in Markdown with exactly these sections:
+## Campaign decision
+Choose the best channel and campaign type. Explain the choice in 2–3 sentences.
+## Conversion path
+Map click → landing page → primary action. Flag any missing piece without inventing it.
+## Audience and targeting
+Give specific location, intent, demographic, interest, keyword, negative-keyword, or exclusion guidance appropriate to the chosen platform.
+## Budget and bidding
+Turn the stated budget into a daily amount, recommend a starting bid strategy, and explain how to control waste. Do not promise results.
+## Messaging angles
+Give three meaningfully different angles, each with the customer pain, promise, proof needed, and CTA.
+## Ready-to-paste ads
+For Google: provide 12 headlines under 30 characters, 4 descriptions under 90 characters, sitelink ideas, and a keyword starter list. For Meta/Instagram: provide 3 primary-text variants, 5 headlines, CTAs, and placements. If multiple platforms are recommended, include usable assets for each.
+## Creative brief
+Describe 3 distinct image or video concepts with hook, opening frame, visual progression, on-screen message, and CTA.
+## Tracking
+List conversion events, URL/UTM setup, and the exact signals to review after launch.
+## Launch checklist
+Give an ordered checklist from account setup through final QA.
+## First optimization cycle
+Explain what to inspect after enough traffic arrives, what not to change too early, and how to decide the first test.
 
-Be specific and practical. Do not invent fake performance numbers.`, 1600);
-      const campaign = { id: id('campaign'), name, objective, budget, status: 'planned', plan: clean(plan_text, 12000), createdAt: new Date().toISOString() };
+Be specific to the supplied business and offer. Do not invent performance numbers, testimonials, discounts, guarantees, or contact details.`, 2600);
+      const campaign = {
+        id: id('campaign'), name, offer, objective, platform, audience, location, budget,
+        destination, notes, status: 'planned', plan: clean(generated.text, 18000),
+        model: generated.model, createdAt: new Date().toISOString(),
+      };
       data.campaigns.unshift(campaign);
       user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(201).json({ ok: true, campaign, aiUsed: user.usage.aiUsed }); return;
+    }
+
+    if (action === 'update-campaign-status') {
+      const campaignId = clean(body.id, 80);
+      const status = clean(body.status, 20).toLowerCase();
+      if (!['planned', 'ready', 'active', 'paused'].includes(status)) { res.status(400).json({ error: 'Choose a valid campaign status.' }); return; }
+      const campaign = data.campaigns.find(item => item.id === campaignId);
+      if (!campaign) { res.status(404).json({ error: 'Campaign not found.' }); return; }
+      campaign.status = status;
+      campaign.updatedAt = new Date().toISOString();
+      await saveCustomer(user);
+      res.status(200).json({ ok: true, campaign }); return;
     }
 
     // ---- DELETE items (frees up plan slots / lets users start over) ----
