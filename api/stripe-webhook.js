@@ -25,10 +25,14 @@ function unixDate(value) {
   return Number(value) > 0 ? new Date(Number(value) * 1000).toISOString() : null;
 }
 
+function stripeId(value) {
+  return typeof value === 'string' ? value : value?.id || null;
+}
+
 async function customerIdForStripeObject(object) {
   const direct = object?.metadata?.customerId;
   if (direct) return String(direct);
-  const stripeCustomerId = typeof object?.customer === 'string' ? object.customer : object?.customer?.id;
+  const stripeCustomerId = stripeId(object?.customer);
   if (!stripeCustomerId) return '';
   const mapped = await kv.get(`stripe:customer:${stripeCustomerId}`);
   return mapped ? String(mapped) : '';
@@ -48,14 +52,23 @@ export default async function handler(req, res) {
       const interval = s.metadata?.interval || 'monthly';
       const purchaseType = s.metadata?.purchaseType;
       if (purchaseType === 'video_credits' && customerId) {
+        if (s.payment_status !== 'paid') {
+          res.status(200).json({ received: true, fulfilled: false });
+          return;
+        }
         const fulfilledKey = `stripe:fulfilled:${event.id}`;
         const alreadyFulfilled = await kv.get(fulfilledKey);
         if (!alreadyFulfilled) {
           const user = await loadCustomer(customerId);
           const credits = Math.max(0, Math.min(1000, Number(s.metadata?.credits || 0)));
           if (user && credits) {
+            const stripeCustomerId = stripeId(s.customer);
             user.usage = user.usage || {};
             user.usage.videoCredits = Number(user.usage.videoCredits || 0) + credits;
+            user.subscription = {
+              ...(user.subscription || {}),
+              stripeCustomerId: stripeCustomerId || user.subscription?.stripeCustomerId || null,
+            };
             user.videoCreditPurchases = Array.isArray(user.videoCreditPurchases) ? user.videoCreditPurchases : [];
             user.videoCreditPurchases.unshift({
               stripeSessionId: s.id,
@@ -64,8 +77,8 @@ export default async function handler(req, res) {
               purchasedAt: new Date().toISOString(),
             });
             user.videoCreditPurchases = user.videoCreditPurchases.slice(0, 50);
-            await kv.set(`customer:user:${customerId}`, user);
-            if (s.customer) await kv.set(`stripe:customer:${s.customer}`, customerId);
+            await saveCustomer(user);
+            if (stripeCustomerId) await kv.set(`stripe:customer:${stripeCustomerId}`, customerId);
             await kv.set(fulfilledKey, '1', { ex: 365 * 24 * 60 * 60 });
           }
         }
@@ -75,17 +88,19 @@ export default async function handler(req, res) {
       if (customerId && plan) {
         const user = await loadCustomer(customerId);
         if (user) {
+          const stripeCustomerId = stripeId(s.customer);
+          const stripeSubscriptionId = stripeId(s.subscription);
           user.subscription = {
             ...(user.subscription || {}),
-            plan, interval, status: 'active', billingMode: 'stripe',
+            plan, interval, status: 'trialing', billingMode: 'stripe',
             cancelAtPeriodEnd: false,
-            stripeCustomerId: s.customer || null,
-            stripeSubscriptionId: s.subscription || null,
+            stripeCustomerId,
+            stripeSubscriptionId,
             startedAt: new Date().toISOString(),
           };
           await saveCustomer(user);
-          if (s.customer) await kv.set(`stripe:customer:${s.customer}`, customerId);
-          if (s.subscription) await kv.set(`stripe:subscription:${s.subscription}`, customerId);
+          if (stripeCustomerId) await kv.set(`stripe:customer:${stripeCustomerId}`, customerId);
+          if (stripeSubscriptionId) await kv.set(`stripe:subscription:${stripeSubscriptionId}`, customerId);
         }
       }
     } else if (event.type === 'customer.subscription.updated') {
