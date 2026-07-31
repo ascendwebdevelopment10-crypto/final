@@ -2,9 +2,12 @@ import { currentCustomer, requestOrigin, sameOrigin } from '../lib/customer-auth
 import { createVideoCreditCheckoutSession, stripeConfigured } from '../lib/stripe.js';
 
 const PACKS = {
-  starter: { id: 'starter', credits: 5, amountCents: 500, label: '5 Reel exports' },
-  creator: { id: 'creator', credits: 15, amountCents: 1200, label: '15 Reel exports' },
-  studio: { id: 'studio', credits: 40, amountCents: 2800, label: '40 Reel exports' },
+  starter: { id: 'starter', credits: 5, amountCents: 499, label: '5 Reel credits' },
+  creator: { id: 'creator', credits: 15, amountCents: 1199, label: '15 Reel credits' },
+  studio: { id: 'studio', credits: 50, amountCents: 3499, label: '50 Reel credits' },
+  growth: { id: 'growth', credits: 100, amountCents: 6499, label: '100 Reel credits' },
+  scale: { id: 'scale', credits: 200, amountCents: 11999, label: '200 Reel credits' },
+  agency: { id: 'agency', credits: 500, amountCents: 24999, label: '500 Reel credits' },
 };
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 
