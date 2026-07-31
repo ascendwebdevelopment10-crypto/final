@@ -11,7 +11,14 @@ export default async function handler(req, res) {
   if (!user) { res.status(401).json({ error: 'Customer sign-in required' }); return; }
   const stripeConfigured = hasStripe();
   if (req.method === 'GET') {
-    res.status(200).json({ subscription: user.subscription, plan: planFor(user.subscription?.plan), plans: publicPlans(), invoices: user.invoices || [], stripeConfigured });
+    res.status(200).json({
+      subscription: user.subscription,
+      plan: planFor(user.subscription?.plan),
+      plans: publicPlans(),
+      invoices: user.invoices || [],
+      creditPurchases: user.videoCreditPurchases || [],
+      stripeConfigured,
+    });
     return;
   }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -27,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'activate-demo') {
-    if (stripeConfigured) { res.status(409).json({ error: 'Stripe is detected. Add Stripe price IDs before enabling live checkout.', code: 'STRIPE_SETUP_REQUIRED' }); return; }
+    if (stripeConfigured) { res.status(409).json({ error: 'Stripe Checkout is enabled. Continue through the secure payment screen.', code: 'STRIPE_CHECKOUT_ENABLED' }); return; }
     const now = new Date().toISOString();
     user.subscription = plan.id === 'free'
       ? { plan: 'free', interval, status: 'active', billingMode: 'free', cancelAtPeriodEnd: false, startedAt: now }
