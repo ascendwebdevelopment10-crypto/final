@@ -9,6 +9,8 @@ export const config = { maxDuration: 300 };
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
+const WEBSITE_MODEL = process.env.ANTHROPIC_WEBSITE_MODEL || 'claude-sonnet-5';
+const WEBSITE_FALLBACK_MODEL = process.env.ANTHROPIC_WEBSITE_FALLBACK_MODEL || 'claude-sonnet-4-6';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function clean(value, max = 1000) { return String(value || '').trim().slice(0, max); }
@@ -31,6 +33,26 @@ async function generate(prompt, maxTokens = 700, model = MODEL) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
   const result = await anthropic.messages.create({ model, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
   return textOf(result);
+}
+async function generateWebsite(prompt) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
+  const request = model => ({
+    model,
+    max_tokens: 5600,
+    system: 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Produce compact, production-ready single-file websites. Follow the supplied business facts exactly and never invent proof.',
+    messages: [{ role: 'user', content: prompt }],
+  });
+  try {
+    // Sonnet 5 uses adaptive thinking by default. Disabling it keeps this
+    // generation path fast while retaining the stronger writing/design model.
+    const result = await anthropic.messages.create({ ...request(WEBSITE_MODEL), thinking: { type: 'disabled' } });
+    return { html: textOf(result), model: WEBSITE_MODEL };
+  } catch (error) {
+    const unsupported = /model|thinking|not found|not available|unsupported|invalid_request/i.test(error.message || '');
+    if (!unsupported || WEBSITE_MODEL === WEBSITE_FALLBACK_MODEL) throw error;
+    const result = await anthropic.messages.create(request(WEBSITE_FALLBACK_MODEL));
+    return { html: textOf(result), model: WEBSITE_FALLBACK_MODEL };
+  }
 }
 // Generate an image via OpenAI. Tries gpt-image-1 first (can render text), falls back to dall-e-3.
 async function genImage(prompt, size) {
@@ -122,28 +144,55 @@ export default async function handler(req, res) {
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
       const about = clean(body.about || body.description, 800);
       const industry = clean(body.industry, 120) || ctx(user).industry;
-      const prompt = `You are an expert web designer. Build a COMPLETE, modern, responsive one-page marketing website as a single HTML file for this business.
+      const audience = clean(body.audience, 500);
+      const action = clean(body.primaryAction, 180);
+      const contact = clean(body.contact, 300);
+      const prompt = `Build a polished, conversion-focused one-page website as one self-contained HTML file.
 
-Business name: ${name}
-Industry: ${industry}
-What they do / details: ${about || 'A local business that wants more customers.'}
+BUSINESS BRIEF
+- Name: ${name}
+- Industry: ${industry}
+- Services, offer, and differentiators: ${about || 'A quality local business serving customers in its market.'}
+- Ideal customer and service area: ${audience || 'People looking for a reliable, professional provider.'}
+- Primary action visitors should take: ${action || 'Contact the business to get started.'}
+- Contact details supplied by the business: ${contact || 'None supplied. Use a Contact us button that links to #contact; do not invent details.'}
 
-Requirements:
-- Return ONLY the HTML document, starting with <!DOCTYPE html>. No explanation, no markdown fences.
-- Everything inline in ONE file: put all CSS inside a <style> tag in the head. No external files, no frameworks, no JS required.
-- Sections: a sticky header with the business name + nav, a hero with a strong headline and a call-to-action button, a services/offer section (3-4 items), an about section, a simple contact section with a placeholder email/phone, and a footer.
-- Clean, professional, mobile-responsive design with a LIGHT, readable background (light or white sections with dark text). Good typography, spacing, and hover states. A tasteful accent color that fits the industry.
-- Keep the CSS compact so the whole document fits in one response and every tag is properly closed. The page MUST end with </body></html>.
-- Use realistic, specific copy written for this business (not lorem ipsum). Do not invent fake reviews, awards, or statistics.`;
-      const html = repairHtml(extractHtml(await generate(prompt, 8000)));
+OUTPUT RULES
+- Return only the HTML document, beginning with <!DOCTYPE html> and ending with </body></html>. No markdown.
+- Put all CSS in one <style> block. No frameworks, external assets, external fonts, or JavaScript.
+- Keep the code compact enough to finish reliably while making the page feel detailed and complete.
+- Write business-specific copy using the brief's actual wording and implications. Avoid generic filler.
+- Never invent prices, statistics, years in business, customer counts, reviews, awards, certifications, addresses, phone numbers, emails, or guarantees.
+
+PAGE CONTENT
+1. Sticky header with brand name, compact navigation, and primary CTA.
+2. Hero with an industry-specific eyebrow, concrete outcome-led headline, supporting copy, primary CTA, secondary anchor, and a polished CSS/inline-SVG visual related to the business.
+3. A short credibility/value strip using qualitative claims supported by the brief—no fabricated numbers.
+4. Services section with 3–5 distinct cards. Give each service a useful two-sentence description.
+5. "Why choose us" section with three specific benefits tied to the audience's needs.
+6. Simple three-step process showing what happens after the visitor takes action.
+7. About/differentiator section that feels human without inventing a founder story.
+8. FAQ with four practical questions and concise answers based only on the brief.
+9. Strong final CTA/contact section using the supplied contact details, followed by a complete footer.
+
+DESIGN QUALITY
+- Choose a premium color palette and visual personality appropriate for ${industry}; do not default every site to blue.
+- Use strong typography hierarchy, generous spacing, layered cards, subtle gradients, tasteful shadows, hover states, and one or two restrained decorative details.
+- Responsive at mobile, tablet, and desktop widths. Use semantic HTML, visible focus styles, accessible contrast, descriptive link text, and reduced-motion support.
+- Include a specific <title> and meta description.`;
+      const startedAt = Date.now();
+      const generated = await generateWebsite(prompt);
+      const html = repairHtml(extractHtml(generated.html));
       if (!html || html.length < 600 || !/<body/i.test(html)) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
       const siteId = id('site');
-      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, createdAt: new Date().toISOString() };
+      const generationMs = Date.now() - startedAt;
+      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, createdAt: new Date().toISOString(), generationMs };
       data.websites.unshift(website);
       user.usage.websites = data.websites.length;
       user.usage.aiUsed += 1;
       await kv.set(`site:${siteId}`, { html, name, owner: user.id, createdAt: website.createdAt });
       await saveCustomer(user);
+      console.log(JSON.stringify({ level: 'info', msg: 'website_generated', siteId, model: generated.model, generationMs, htmlBytes: Buffer.byteLength(html) }));
       res.status(201).json({ ok: true, website, aiUsed: user.usage.aiUsed }); return;
     }
 
