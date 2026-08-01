@@ -25,27 +25,34 @@ export default async function handler(req, res) {
   if (!job) { res.status(404).json({ error: 'Render not found' }); return; }
   if (['completed', 'failed'].includes(job.status)) { res.status(200).json({ ok: true }); return; }
 
-  job.status = status === 'completed' ? 'completed' : 'failed';
+  const qualityPassed = req.body?.qualityPassed !== false;
+  job.status = status === 'completed' && qualityPassed ? 'completed' : 'failed';
   job.progress = job.status === 'completed' ? 100 : 0;
   job.outputUrl = job.status === 'completed' ? outputUrl : '';
   job.actualDuration = job.status === 'completed'
     ? Math.max(1, Number(req.body?.actualDuration || job.duration))
     : job.duration;
   job.error = job.status === 'failed'
-    ? 'Nitro could not finish this Reel. Your credits were refunded—please try again with the same prompt.'
+    ? 'Nitro did not approve this Reel’s quality. No credit was charged—please try again.'
     : '';
+  job.quality = req.body?.quality && typeof req.body.quality === 'object' ? req.body.quality : null;
   job.updatedAt = new Date().toISOString();
-  if (job.status === 'failed' && Number(job.chargedCredits || (job.chargedCredit ? 1 : 0)) > 0 && !job.refunded) {
-    const user = await getCustomer(job.customerId);
-    if (user) {
-      user.usage = user.usage || {};
+  const user = await getCustomer(job.customerId);
+  if (user) {
+    user.usage = user.usage || {};
+    const reservation = Number(job.reservedCredits || 0);
+    user.usage.reservedVideoCredits = Math.max(0, Number(user.usage.reservedVideoCredits || 0) - reservation);
+    if (job.status === 'failed' && Number(job.chargedCredits || (job.chargedCredit ? 1 : 0)) > 0 && !job.refunded) {
       user.usage.videoCredits = Number(user.usage.videoCredits || 0) + Number(job.chargedCredits || 1);
-      await saveCustomer(user);
       job.refunded = true;
+    }
+    if (job.status === 'completed' && reservation > 0) {
+      user.usage.videoCredits = Math.max(0, Number(user.usage.videoCredits || 0) - reservation);
+      job.chargedCredits = reservation;
+      job.reservedCredits = 0;
     }
   }
   if (job.status === 'completed') {
-    const user = await getCustomer(job.customerId);
     if (user) {
       user.workspace = user.workspace || {};
       user.workspace.content = Array.isArray(user.workspace.content) ? user.workspace.content : [];
@@ -64,6 +71,9 @@ export default async function handler(req, res) {
       user.workspace.content = user.workspace.content.slice(0, 100);
       await saveCustomer(user);
     }
+  } else if (user) {
+    job.reservedCredits = 0;
+    await saveCustomer(user);
   }
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
   res.status(200).json({ ok: true });
