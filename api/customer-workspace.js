@@ -31,10 +31,31 @@ function workspace(user) {
 }
 function usageError(plan) { return `You've used all ${plan.aiCredits} AI credits on the ${plan.name} plan. Upgrade to continue.`; }
 function textOf(message) { return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || ''; }
+async function generateOpenAI(prompt, maxTokens, system = 'You are Nitro Outreach, a practical small-business growth assistant.') {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OpenAI generation is not configured.');
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini',
+      messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
+      max_completion_tokens: Math.max(500, Math.ceil(maxTokens * 1.4)),
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `OpenAI HTTP ${response.status}`);
+  return clean(data?.choices?.[0]?.message?.content, 30000);
+}
 async function generate(prompt, maxTokens = 700, model = MODEL) {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
-  const result = await anthropic.messages.create({ model, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
-  return textOf(result);
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const result = await anthropic.messages.create({ model, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
+      return textOf(result);
+    } catch (error) {
+      console.error('Anthropic text generation failed; using failover:', error.message);
+    }
+  }
+  return generateOpenAI(prompt, maxTokens);
 }
 async function generateWebsite(prompt) {
   const request = model => ({
@@ -88,22 +109,28 @@ async function generateWebsite(prompt) {
   throw anthropicError || new Error('No website-generation provider is available.');
 }
 async function generateCampaign(prompt) {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
   const request = model => ({
     model,
     max_tokens: 2600,
     system: 'You are Nitro Ads Strategist, a senior direct-response media buyer and conversion strategist. Build specific, usable campaign launch kits from the supplied facts. Never fabricate proof, results, reviews, or business details.',
     messages: [{ role: 'user', content: prompt }],
   });
-  try {
-    const result = await anthropic.messages.create({ ...request(ADS_MODEL), thinking: { type: 'disabled' } });
-    return { text: textOf(result), model: ADS_MODEL };
-  } catch (error) {
-    const unsupported = /model|thinking|not found|not available|unsupported|invalid_request/i.test(error.message || '');
-    if (!unsupported || ADS_MODEL === ADS_FALLBACK_MODEL) throw error;
-    const result = await anthropic.messages.create(request(ADS_FALLBACK_MODEL));
-    return { text: textOf(result), model: ADS_FALLBACK_MODEL };
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const result = await anthropic.messages.create({ ...request(ADS_MODEL), thinking: { type: 'disabled' } });
+      return { text: textOf(result), model: ADS_MODEL };
+    } catch (error) {
+      try {
+        if (ADS_MODEL !== ADS_FALLBACK_MODEL) {
+          const result = await anthropic.messages.create(request(ADS_FALLBACK_MODEL));
+          return { text: textOf(result), model: ADS_FALLBACK_MODEL };
+        }
+      } catch (fallbackError) {
+        console.error('Anthropic campaign generation failed; using failover:', fallbackError.message);
+      }
+    }
   }
+  return { text: await generateOpenAI(prompt, 3200, request(ADS_FALLBACK_MODEL).system), model: process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini' };
 }
 // Generate an image via OpenAI. Tries gpt-image-1 first (can render text), falls back to dall-e-3.
 async function genImage(prompt, size) {
