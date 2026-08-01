@@ -1,0 +1,5 @@
+# Production-critical outreach engine
+/api/cron.js @ascendwebdevelopment10-crypto
+/api/email-cron.js @ascendwebdevelopment10-crypto
+/lib/leads.js @ascendwebdevelopment10-crypto
+/lib/store.js @ascendwebdevelopment10-crypto
