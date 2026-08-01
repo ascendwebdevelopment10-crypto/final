@@ -64,6 +64,39 @@ def media_duration(path: Path) -> float:
     return duration
 
 
+def inspect_output(path: Path, minimum_duration: float, require_voice: bool) -> dict:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-show_streams", "-show_format",
+            "-of", "json", str(path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not inspect finished Reel: {result.stderr[-400:]}")
+    probe = json.loads(result.stdout or "{}")
+    streams = list(probe.get("streams") or [])
+    video = next((stream for stream in streams if stream.get("codec_type") == "video"), {})
+    audio = next((stream for stream in streams if stream.get("codec_type") == "audio"), {})
+    actual_duration = float((probe.get("format") or {}).get("duration") or 0)
+    size_bytes = int((probe.get("format") or {}).get("size") or path.stat().st_size)
+    checks = {
+        "portrait1080x1920": int(video.get("width") or 0) == 1080 and int(video.get("height") or 0) == 1920,
+        "durationComplete": actual_duration >= minimum_duration - 0.35,
+        "videoPresent": bool(video),
+        "audioPresent": bool(audio),
+        "fileHealthy": size_bytes >= 250_000,
+        "voiceAllowedToFinish": (not require_voice) or actual_duration >= minimum_duration - 0.35,
+    }
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+        "duration": round(actual_duration, 2),
+        "sizeBytes": size_bytes,
+    }
+
+
 @app.function(
     image=image,
     cpu=2,
@@ -241,6 +274,9 @@ def render_prompt_video(payload: dict):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode:
             raise RuntimeError(result.stderr[-1200:])
+        quality = inspect_output(output_path, duration, has_voice)
+        if not quality["passed"]:
+            raise RuntimeError(f"Finished Reel failed quality checks: {json.dumps(quality['checks'])}")
         volume.commit()
         base_url = str(payload.get("downloadBase") or "").rstrip("/")
         output_url = f"{base_url}/download/{job_id}"
@@ -249,6 +285,8 @@ def render_prompt_video(payload: dict):
             "status": "completed",
             "outputUrl": output_url,
             "actualDuration": round(duration, 2),
+            "qualityPassed": True,
+            "quality": quality,
             "signature": signature(secret, f"{job_id}:completed:{output_url}"),
         }
         httpx.post(callback, json=body, timeout=30).raise_for_status()
