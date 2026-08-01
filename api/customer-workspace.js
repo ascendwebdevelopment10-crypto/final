@@ -37,24 +37,55 @@ async function generate(prompt, maxTokens = 700, model = MODEL) {
   return textOf(result);
 }
 async function generateWebsite(prompt) {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
   const request = model => ({
     model,
     max_tokens: 5600,
     system: 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Produce compact, production-ready single-file websites. Follow the supplied business facts exactly and never invent proof.',
     messages: [{ role: 'user', content: prompt }],
   });
-  try {
-    // Sonnet 5 uses adaptive thinking by default. Disabling it keeps this
-    // generation path fast while retaining the stronger writing/design model.
-    const result = await anthropic.messages.create({ ...request(WEBSITE_MODEL), thinking: { type: 'disabled' } });
-    return { html: textOf(result), model: WEBSITE_MODEL };
-  } catch (error) {
-    const unsupported = /model|thinking|not found|not available|unsupported|invalid_request/i.test(error.message || '');
-    if (!unsupported || WEBSITE_MODEL === WEBSITE_FALLBACK_MODEL) throw error;
-    const result = await anthropic.messages.create(request(WEBSITE_FALLBACK_MODEL));
-    return { html: textOf(result), model: WEBSITE_FALLBACK_MODEL };
+  let anthropicError = null;
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      // Sonnet 5 uses adaptive thinking by default. Disabling it keeps this
+      // generation path fast while retaining the stronger writing/design model.
+      const result = await anthropic.messages.create({ ...request(WEBSITE_MODEL), thinking: { type: 'disabled' } });
+      return { html: textOf(result), model: WEBSITE_MODEL };
+    } catch (error) {
+      anthropicError = error;
+      try {
+        if (WEBSITE_MODEL !== WEBSITE_FALLBACK_MODEL) {
+          const result = await anthropic.messages.create(request(WEBSITE_FALLBACK_MODEL));
+          return { html: textOf(result), model: WEBSITE_FALLBACK_MODEL };
+        }
+      } catch (fallbackError) {
+        anthropicError = fallbackError;
+      }
+    }
   }
+
+  // Provider failover: a depleted balance or provider outage must not take the
+  // customer-facing builder down. OpenAI receives the same constrained brief.
+  if (process.env.OPENAI_API_KEY) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.OPENAI_WEBSITE_MODEL || 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Return only one compact, complete, self-contained HTML document. Follow supplied business facts exactly and never invent proof.' },
+          { role: 'user', content: prompt },
+        ],
+        max_completion_tokens: 7200,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      const html = clean(data?.choices?.[0]?.message?.content, 120000);
+      if (html) return { html, model: data.model || process.env.OPENAI_WEBSITE_MODEL || 'gpt-5-mini' };
+    }
+    console.error('OpenAI website failover error:', data?.error?.message || `HTTP ${response.status}`);
+  }
+  throw anthropicError || new Error('No website-generation provider is available.');
 }
 async function generateCampaign(prompt) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI generation is not configured yet. Please try again later.');
