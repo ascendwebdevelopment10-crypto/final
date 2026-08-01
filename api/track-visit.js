@@ -68,6 +68,9 @@ export default async function handler(req, res) {
     const sessionKey = `visit:session:v2:${sessionHash}`;
     const freshSession = await kv.set(sessionKey, '1', { nx: true, ex: 1800 });
     if (!freshSession) await kv.set(sessionKey, '1', { ex: 1800 });
+    const landingKey = `visit:landing:v2:${sessionHash}`;
+    await kv.set(landingKey, path, { nx: true, ex: 1800 });
+    const landingPath = clean(await kv.get(landingKey), 240) || path;
 
     const uniqueKey = `visit:unique:v2:${visitorHash}`;
     const freshVisitor = await kv.set(uniqueKey, viewedAt, { nx: true });
@@ -83,9 +86,12 @@ export default async function handler(req, res) {
         visitedAt: viewedAt,
         visitorId: visitorHash.slice(0, 8).toUpperCase(),
         sessionId: sessionHash.slice(0, 8).toUpperCase(),
+        visitorType: freshVisitor ? 'New' : 'Returning',
+        identityLevel: customer?.email ? 'Signed-in customer' : 'Anonymous browser',
         email: clean(customer?.email, 160),
         name: clean([customer?.firstName, customer?.lastName].filter(Boolean).join(' '), 120),
         path,
+        landingPath,
         pageTitle: clean(req.body?.pageTitle, 160),
         referrer: clean(req.body?.referrer, 240),
         utmSource: clean(req.body?.utmSource, 100),
