@@ -64,6 +64,16 @@ export default async function handler(req, res) {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
+      const auditIds = await kv.lrange('growth:audits', 0, 199);
+      const auditValues = auditIds.length ? await Promise.all(auditIds.map(id => kv.get(`growth:audit:${id}`))) : [];
+      const auditLeads = auditValues.map(value => {
+        if (typeof value === 'object' && value) return value;
+        try { return JSON.parse(value); } catch { return null; }
+      }).filter(Boolean).map(lead => ({
+        id: lead.id, businessName: lead.businessName, website: lead.website, industry: lead.industry,
+        email: lead.email, phone: lead.phone, goal: lead.goal, status: lead.status || 'New',
+        score: Number(lead.report?.overallScore || 0), summary: lead.report?.summary || '', createdAt: lead.createdAt,
+      }));
       res.status(200).json({
         total: keys.length,
         verified,
@@ -77,6 +87,7 @@ export default async function handler(req, res) {
         pageviewsToday: Number(pageviewsToday || 0),
         analyticsTimeZone: MOUNTAIN_TIME_ZONE,
         visitors,
+        auditLeads,
       });
       return;
     }
