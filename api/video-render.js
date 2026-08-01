@@ -10,8 +10,8 @@ const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-2025100
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
 const VOICE_WORD_RANGE = { 15: [22, 26], 30: [48, 56], 45: [74, 84] };
-const VISUAL_WORLDS = ['sky_flight', 'computer_tunnel', 'desk_person', 'city_motion', 'product_stage', 'data_stream', 'orbit', 'paper_world', 'storefront', 'interface_world'];
-const CAMERA_MOVES = ['dive forward', 'orbit clockwise', 'crane upward', 'push through', 'whip left', 'float backward', 'rapid zoom', 'slow parallax'];
+const VISUAL_WORLDS = ['sky_flight', 'computer_tunnel', 'desk_person', 'city_motion', 'product_stage', 'data_stream', 'orbit', 'paper_world', 'storefront', 'interface_world', 'macro_material', 'warehouse_motion', 'nature_path', 'studio_person', 'night_drive', 'architectural_space', 'workshop', 'customer_journey'];
+const CAMERA_MOVES = ['dive forward', 'orbit clockwise', 'crane upward', 'push through', 'whip left', 'float backward', 'rapid zoom', 'slow parallax', 'handheld follow', 'macro pullback', 'ground-level tracking', 'overhead descent', 'rack-focus reveal', 'one-take lateral glide'];
 const STORY_SHAPES = [
   'cold open, surprising reveal, rising momentum, satisfying payoff',
   'mini day-in-the-life, interruption, discovery, transformed ending',
@@ -19,6 +19,10 @@ const STORY_SHAPES = [
   'question-led hook, immersive demonstration, proof through action, invitation',
   'before-and-after contrast told as one cinematic transformation',
   'product-demo journey that travels through the customer experience',
+  'single-subject follow shot where the environment transforms around them',
+  'macro detail that pulls back into a surprising real-world reveal',
+  'quiet emotional opening that accelerates into a kinetic finish',
+  'cause-and-effect chain shown through physical action rather than explanations',
 ];
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
@@ -45,22 +49,21 @@ function clippedNarration(value, maxWords) {
   return `${words.join(' ').replace(/[,:;–—-]+$/, '').replace(/[.!?]+$/, '')}.`;
 }
 function hexColor() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
-function chooseDirection(prompt = '') {
+function directionFingerprint(direction) {
+  return [direction.world, direction.camera, direction.storyShape].join('|').toLowerCase();
+}
+function chooseDirection(prompt = '', recentFingerprints = []) {
   const lower = prompt.toLowerCase();
-  let world = VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)];
-  if (/(computer|software|app|dashboard|technology|automation)/.test(lower)) world = 'computer_tunnel';
-  else if (/(desk|office|work|employee|business owner)/.test(lower)) world = 'desk_person';
-  else if (/(fly|air|sky|travel|freedom)/.test(lower)) world = 'sky_flight';
-  else if (/(shop|store|restaurant|local|location)/.test(lower)) world = 'storefront';
-  return {
-    id: crypto.randomBytes(8).toString('hex'),
-    palette: [hexColor(), hexColor(), hexColor()],
-    world,
-    camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)],
-    storyShape: STORY_SHAPES[crypto.randomInt(0, STORY_SHAPES.length)],
-    geometrySeed: crypto.randomBytes(8).toString('hex'),
-    musicSeed: crypto.randomBytes(8).toString('hex'),
-  };
+  const recent = new Set(recentFingerprints.map(value => clean(value, 400).toLowerCase()));
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    let world = VISUAL_WORLDS[crypto.randomInt(0, VISUAL_WORLDS.length)];
+    if (/(computer|software|app|dashboard|technology|automation)/.test(lower) && Math.random() < .45) world = ['computer_tunnel', 'interface_world', 'customer_journey', 'architectural_space'][crypto.randomInt(0, 4)];
+    else if (/(desk|office|work|employee|business owner)/.test(lower) && Math.random() < .45) world = ['desk_person', 'studio_person', 'workshop', 'customer_journey'][crypto.randomInt(0, 4)];
+    else if (/(shop|store|restaurant|local|location)/.test(lower) && Math.random() < .45) world = ['storefront', 'city_motion', 'workshop', 'customer_journey'][crypto.randomInt(0, 4)];
+    const direction = { id: crypto.randomBytes(8).toString('hex'), palette: [hexColor(), hexColor(), hexColor()], world, camera: CAMERA_MOVES[crypto.randomInt(0, CAMERA_MOVES.length)], storyShape: STORY_SHAPES[crypto.randomInt(0, STORY_SHAPES.length)], geometrySeed: crypto.randomBytes(8).toString('hex'), musicSeed: crypto.randomBytes(8).toString('hex') };
+    direction.fingerprint = directionFingerprint(direction);
+    if (!recent.has(direction.fingerprint) || attempt === 29) return direction;
+  }
 }
 function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt)) {
   const subject = clean(prompt, 90) || `See what ${company} can do`;
@@ -222,6 +225,14 @@ const WORLD_PROMPTS = {
   paper_world: 'a tactile handcrafted paper world with dimensional layers, shadows and playful physical motion',
   storefront: 'a welcoming real-world storefront with customers arriving and energetic local-business atmosphere',
   interface_world: 'a dimensional software world with floating glass panels and visual workflow elements, without readable UI text',
+  macro_material: 'an extreme macro journey across tactile premium materials that pulls back into the product or service in use',
+  warehouse_motion: 'a kinetic tracking shot through a bright modern warehouse or fulfillment space with real physical motion',
+  nature_path: 'a cinematic forward journey through a natural landscape used as a grounded metaphor for progress',
+  studio_person: 'one believable person moving naturally through a premium daylight studio while the camera follows continuously',
+  night_drive: 'a smooth night-driving sequence with practical city light, reflections and purposeful forward momentum',
+  architectural_space: 'a one-take glide through a sculptural architectural space where the environment transforms around the subject',
+  workshop: 'a tactile real-world workshop where hands, tools and materials show the service through action without readable text',
+  customer_journey: 'one customer moving through discovery, decision and a satisfying real-world outcome in a connected environment',
 };
 
 async function createSceneArt(plan, prompt, company, tone) {
@@ -289,7 +300,9 @@ export default async function handler(req, res) {
   const isOwner = String(user.email || '').toLowerCase() === OWNER_EMAIL;
   user.usage = user.usage || {};
   const balance = Number(user.usage.videoCredits || 0);
-  if (!isOwner && balance < creditCost) {
+  const reserved = Number(user.usage.reservedVideoCredits || 0);
+  const availableBalance = Math.max(0, balance - reserved);
+  if (!isOwner && availableBalance < creditCost) {
     res.status(402).json({
       error: `This ${duration}-second Reel uses ${creditCost} credit${creditCost === 1 ? '' : 's'}. Add credits to continue.`,
       needsCredits: true,
@@ -316,7 +329,7 @@ export default async function handler(req, res) {
     });
     return;
   }
-  const direction = chooseDirection(prompt);
+  const direction = chooseDirection(prompt, Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []);
   let plan;
   try {
     plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
@@ -348,13 +361,15 @@ export default async function handler(req, res) {
     voiceoverIncluded: Boolean(voiceover),
     generatedSceneCount: sceneArt.filter(Boolean).length,
     creditCost,
-    chargedCredits: isOwner ? 0 : creditCost,
+    chargedCredits: 0,
+    reservedCredits: isOwner ? 0 : creditCost,
     createdAt: now,
     updatedAt: now,
   };
-  user.usage.lastReelStyle = plan.creative?.id || direction.id;
-  user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), plan.creative?.id || direction.id].slice(-8);
-  if (!isOwner) user.usage.videoCredits = balance - creditCost;
+  const fingerprint = directionFingerprint({ ...direction, ...(plan.creative || {}) });
+  user.usage.lastReelStyle = fingerprint;
+  user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), fingerprint].slice(-12);
+  if (!isOwner) user.usage.reservedVideoCredits = reserved + creditCost;
   await saveCustomer(user);
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
   res.status(201).json({
@@ -373,7 +388,7 @@ export default async function handler(req, res) {
       voiceover,
       sceneArt: JSON.stringify(sceneArt),
     },
-    balance: Number(user.usage.videoCredits || 0),
+    balance: Math.max(0, Number(user.usage.videoCredits || 0) - Number(user.usage.reservedVideoCredits || 0)),
     ownerUnlimited: isOwner,
   });
 }
