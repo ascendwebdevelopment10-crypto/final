@@ -86,6 +86,13 @@ export default async function handler(req, res) {
         sitePageviews: Number(sitePageviews || 0),
         pageviewsToday: Number(pageviewsToday || 0),
         analyticsTimeZone: MOUNTAIN_TIME_ZONE,
+        analyticsQuality: {
+          measurement: 'First-party browser tracking',
+          ownerExcluded: true,
+          botsExcluded: true,
+          identity: 'Signed-in customers are identified by account; anonymous visitors use a privacy-safe browser ID.',
+          limitations: 'Ad blockers, cleared storage, private browsing, VPNs, and approximate IP location can affect counts and location accuracy.',
+        },
         visitors,
         auditLeads,
       });
