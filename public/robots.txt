@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Keep authenticated app + API out of the index
+Disallow: /app
+Disallow: /api/
+Disallow: /welcome
+Disallow: /checkout
+
+Sitemap: https://nitrooutreach.com/sitemap.xml
