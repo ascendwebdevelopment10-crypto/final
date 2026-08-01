@@ -4,21 +4,196 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07100b">
-  <meta name="description" content="Nitro Outreach is the AI-powered growth workspace for websites, content, social media, advertising, and analytics.">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=nitro-20260728b">
-  <link rel="shortcut icon" type="image/png" href="/icons/icon-192.png?v=nitro-20260728b">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png?v=nitro-20260728b">
-  <title>Nitro Outreach — Your growth command center</title>
+  <title>Nitro Outreach — All your marketing in one place</title>
+  <meta name="description" content="Nitro Outreach is the AI-powered growth workspace that replaces your website builder, content tool, post scheduler, and ad manager — one login, one bill, with an assistant that does the busywork.">
+  <link rel="canonical" href="https://nitrooutreach.com/">
+
+  <!-- Icons -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Nitro Outreach">
+  <meta property="og:title" content="Nitro Outreach — All your marketing in one place">
+  <meta property="og:description" content="One login replaces your website builder, content tool, post scheduler, and ad manager — with an AI assistant that does the busywork. Free forever plan, no credit card.">
+  <meta property="og:url" content="https://nitrooutreach.com/">
+  <meta property="og:image" content="https://nitrooutreach.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Nitro Outreach — your whole marketing operation, in one place.">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nitro Outreach — All your marketing in one place">
+  <meta name="twitter:description" content="One login replaces your website builder, content tool, post scheduler, and ad manager — with an AI assistant that does the busywork.">
+  <meta name="twitter:image" content="https://nitrooutreach.com/og-image.png">
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://nitrooutreach.com/#org",
+        "name": "Nitro Outreach",
+        "url": "https://nitrooutreach.com/",
+        "logo": "https://nitrooutreach.com/icons/icon-512.png",
+        "email": "hello@nitrooutreach.com",
+        "description": "AI-powered growth workspace for websites, content, social media, advertising, and outreach.",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "hello@nitrooutreach.com",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Nitro Outreach",
+        "url": "https://nitrooutreach.com/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "All-in-one AI marketing platform: build websites, generate content and Reels, schedule social posts, plan ad campaigns, and track analytics from one login.",
+        "publisher": { "@id": "https://nitrooutreach.com/#org" },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Free forever plan. No credit card required."
+        }
+      }
+    ]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/customer/app.css">
+
+  <!-- Server-rendered fallback styles (self-contained; the app overrides on boot) -->
+  <style>
+    #seo-landing{font-family:'DM Sans',system-ui,sans-serif;color:#e8ece9;max-width:1160px;margin:0 auto;padding:22px 22px 60px;position:relative;z-index:2}
+    #seo-landing a{color:inherit;text-decoration:none}
+    #seo-landing .seo-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:6px 0 46px}
+    #seo-landing .seo-brand{display:flex;align-items:center;gap:12px;font-family:'Manrope',sans-serif;font-weight:800;font-size:20px}
+    #seo-landing .seo-bolt{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#ff6b00,#ffb000);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+    #seo-landing .seo-brand small{display:block;font-size:10px;letter-spacing:.16em;color:#8b938d;font-weight:600}
+    #seo-landing .seo-nav{display:flex;align-items:center;gap:22px;font-size:14px;color:#b9c0ba;flex-wrap:wrap}
+    #seo-landing .seo-nav a:hover{color:#fff}
+    #seo-landing .seo-cta{background:linear-gradient(120deg,#ff6b00,#ffb000);color:#fff;padding:10px 18px;border-radius:11px;font-weight:600}
+    #seo-landing .seo-hero{max-width:760px}
+    #seo-landing .eyebrow{display:inline-block;font-size:12px;letter-spacing:.04em;color:#ffb37a;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.28);padding:7px 13px;border-radius:99px;margin-bottom:22px}
+    #seo-landing h1{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:1.05;margin:0 0 20px;letter-spacing:-.02em}
+    #seo-landing h1 span{background:linear-gradient(120deg,#ff8a3d,#ffc24d);-webkit-background-clip:text;background-clip:text;color:transparent}
+    #seo-landing .lead{font-size:clamp(16px,2vw,19px);line-height:1.6;color:#c1c8c2;margin:0 0 30px}
+    #seo-landing .seo-form{display:flex;gap:10px;flex-wrap:wrap;max-width:520px;margin-bottom:14px}
+    #seo-landing .seo-form input{flex:1 1 240px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px;color:#fff;font-size:15px;font-family:inherit}
+    #seo-landing .seo-form input::placeholder{color:#8b938d}
+    #seo-landing .seo-form button{background:linear-gradient(120deg,#ff6b00,#ffb000);color:#fff;border:0;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+    #seo-landing .seo-alt{font-size:14px;color:#9aa19b;margin:0 0 26px}
+    #seo-landing .seo-alt a{color:#ffb37a;font-weight:600}
+    #seo-landing .trust{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:#9aa19b}
+    #seo-landing .trust b{color:#ff8a3d;margin-right:6px}
+    #seo-landing .benefits{margin-top:66px}
+    #seo-landing .benefits h2{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(24px,3.4vw,34px);margin:0 0 8px;letter-spacing:-.01em}
+    #seo-landing .benefits>p{color:#b9c0ba;max-width:640px;margin:0 0 30px;line-height:1.6}
+    #seo-landing .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+    #seo-landing .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:22px}
+    #seo-landing .card h3{font-family:'Manrope',sans-serif;font-size:17px;margin:0 0 8px;color:#fff}
+    #seo-landing .card p{margin:0;font-size:14px;line-height:1.6;color:#aeb5af}
+    #seo-landing .seo-foot{margin-top:64px;padding-top:26px;border-top:1px solid rgba(255,255,255,.09);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:#8b938d}
+    #seo-landing .seo-foot a{color:#b9c0ba}
+    #seo-landing .seo-foot a:hover{color:#fff}
+    #seo-landing .seo-foot .contact b{color:#e8ece9;font-weight:600}
+  </style>
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
-  <div id="app-root"><div class="boot"><div class="brand-mark"><img src="/icons/icon-192.png?v=nitro-20260728b" alt=""></div><div class="boot-line"><i></i></div></div></div>
+
+  <!-- #app-root holds a fully server-rendered landing page so search engines,
+       link-preview crawlers, and no-JavaScript browsers get real content and a
+       working signup form. When the app boots, it replaces this with the SPA. -->
+  <div id="app-root">
+    <div id="seo-landing">
+      <header class="seo-head">
+        <a class="seo-brand" href="/">
+          <span class="seo-bolt">⚡</span>
+          <span>Nitro Outreach<small>MARKETING PLATFORM</small></span>
+        </a>
+        <nav class="seo-nav" aria-label="Primary">
+          <a href="/pricing">Pricing</a>
+          <a href="mailto:hello@nitrooutreach.com">Contact</a>
+          <a href="/login">Log in</a>
+          <a class="seo-cta" href="/signup">Start free</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="seo-hero">
+          <span class="eyebrow">Websites, content, social, ads &amp; outreach — one login</span>
+          <h1>Your whole marketing operation, <span>in one place.</span></h1>
+          <p class="lead">One login replaces your website builder, content tool, post scheduler, and ad manager — with an AI assistant that does the busywork for you. Everything your marketing needs, for less than you're paying for any single tool in your stack today.</p>
+
+          <!-- Email capture works without JavaScript: it posts to /api/lead,
+               which saves the lead and sends you into signup with email prefilled. -->
+          <form class="seo-form" action="/api/lead" method="post">
+            <label for="lead-email" style="position:absolute;left:-9999px">Work email</label>
+            <input id="lead-email" type="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+            <button type="submit">Start free →</button>
+          </form>
+          <p class="seo-alt">No credit card required. Already have an account? <a href="/login">Log in</a>.</p>
+
+          <div class="trust">
+            <span><b>✓</b>Free forever plan</span>
+            <span><b>✓</b>No credit card</span>
+            <span><b>✓</b>Cancel anytime</span>
+          </div>
+        </section>
+
+        <section class="benefits" aria-labelledby="benefits-title">
+          <h2 id="benefits-title">Five tools. One workspace. One bill.</h2>
+          <p>Stop stitching together a website builder, a design app, a scheduler, and an ad manager. Nitro Outreach runs your whole marketing operation from a single login — and the AI does the heavy lifting.</p>
+          <div class="grid">
+            <article class="card">
+              <h3>Websites that convert</h3>
+              <p>Describe your business and Nitro builds a complete, ready-to-share website in about a minute — no templates, no code.</p>
+            </article>
+            <article class="card">
+              <h3>Content &amp; Reels on demand</h3>
+              <p>Generate captions, marketing images, multi-slide carousels, and full vertical video Reels from a single prompt.</p>
+            </article>
+            <article class="card">
+              <h3>Social scheduling</h3>
+              <p>Queue posts on a set date and time and auto-publish straight to your connected Instagram.</p>
+            </article>
+            <article class="card">
+              <h3>Ad campaigns, planned</h3>
+              <p>Tell Nitro your offer and budget — it writes the audience, ad copy, creative direction, and a launch checklist.</p>
+            </article>
+            <article class="card">
+              <h3>Analytics that matter</h3>
+              <p>See real visitor, content, and campaign activity across your workspace in one clean dashboard.</p>
+            </article>
+            <article class="card">
+              <h3>An assistant that acts</h3>
+              <p>Ask Nitro for a website plan, a campaign idea, or a content brief and get a usable answer in seconds.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="seo-foot">
+        <span>© 2026 Nitro Outreach · <a href="/privacy.html">Privacy</a> · <a href="/pricing">Pricing</a></span>
+        <span class="contact">Questions? <a href="mailto:hello@nitrooutreach.com"><b>hello@nitrooutreach.com</b></a></span>
+      </footer>
+    </div>
+  </div>
+
   <div id="toast-region" class="toast-region" aria-live="polite"></div>
-  <noscript><div class="noscript">Nitro Outreach requires JavaScript to run the workspace.</div></noscript>
   <script type="module" src="/customer/app.js"></script>
 </body>
 </html>
