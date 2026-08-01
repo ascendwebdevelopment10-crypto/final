@@ -1,0 +1,27 @@
+name: Protect outreach engine
+
+on:
+  pull_request:
+    paths:
+      - api/cron.js
+      - api/email-cron.js
+      - lib/leads.js
+      - lib/store.js
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  require-focused-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit outreach-engine approval label
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          if [[ "$LABELS" != *'outreach-engine-approved'* ]]; then
+            echo 'Protected outreach files changed without the outreach-engine-approved label.'
+            echo 'Use a dedicated PR, verify scheduled email/SMS behavior, then add the approval label.'
+            exit 1
+          fi
