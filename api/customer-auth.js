@@ -60,7 +60,8 @@ export default async function handler(req, res) {
       let emailSent = true;
       try { await sendAccountEmail(req, user, 'verify'); }
       catch (error) { emailSent = false; console.error('Customer verification email failed:', error.message); }
-      res.status(201).json({ ok: true, emailSent, email: user.email });
+      res.setHeader('Set-Cookie', customerSessionCookie(user.id));
+      res.status(201).json({ ok: true, emailSent, email: user.email, redirect: '/welcome' });
       return;
     }
 
@@ -85,7 +86,6 @@ export default async function handler(req, res) {
         await new Promise(resolve => setTimeout(resolve, 700));
         res.status(401).json({ error: 'Email or password is incorrect' }); return;
       }
-      if (!user.emailVerified) { res.status(403).json({ error: 'Verify your email before signing in', code: 'EMAIL_UNVERIFIED', email: user.email }); return; }
       res.setHeader('Set-Cookie', customerSessionCookie(user.id));
       res.status(200).json({ ok: true, user: publicCustomer(user), redirect: user.onboarding?.completed ? '/app' : '/welcome' });
       return;
