@@ -60,7 +60,7 @@ async function generate(prompt, maxTokens = 700, model = MODEL) {
 async function generateWebsite(prompt) {
   const request = model => ({
     model,
-    max_tokens: 5600,
+    max_tokens: 4400,
     system: 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Produce compact, production-ready single-file websites. Follow the supplied business facts exactly and never invent proof.',
     messages: [{ role: 'user', content: prompt }],
   });
@@ -107,6 +107,27 @@ async function generateWebsite(prompt) {
     console.error('OpenAI website failover error:', data?.error?.message || `HTTP ${response.status}`);
   }
   throw anthropicError || new Error('No website-generation provider is available.');
+}
+function websiteDirection(industry, user) {
+  const value = clean(industry, 120).toLowerCase();
+  const primary = clean(user.onboarding?.data?.primaryColor, 16);
+  const secondary = clean(user.onboarding?.data?.secondaryColor, 16);
+  const brandColors = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(secondary)
+    ? `Use the business's saved brand colors ${primary} and ${secondary} as intentional accents.`
+    : 'Choose two distinctive accent colors that fit the industry instead of defaulting to generic SaaS blue.';
+  let personality = 'confident editorial design with strong typography, asymmetric composition, tactile depth, and restrained motion';
+  if (/(barber|beauty|salon|spa|fashion|flower|floral|wedding|photograph)/.test(value)) {
+    personality = 'premium editorial design with expressive typography, warm photography-inspired framing, soft texture, and elegant spacing';
+  } else if (/(sport|fitness|gym|training|automotive|car|construction|roof|landscap)/.test(value)) {
+    personality = 'bold performance-focused design with energetic diagonals, strong contrast, oversized type, and action-oriented composition';
+  } else if (/(law|legal|finance|account|consult|medical|dental|real estate)/.test(value)) {
+    personality = 'refined trust-first design with measured typography, calm spacing, precise grids, and a polished editorial feel';
+  } else if (/(software|technology|saas|marketing|agency|automation)/.test(value)) {
+    personality = 'modern product-led design with crisp typography, layered interface-inspired visuals, subtle glow, and disciplined contrast';
+  } else if (/(restaurant|food|bakery|coffee|cafe)/.test(value)) {
+    personality = 'warm hospitality-led design with rich color, menu-inspired rhythm, tactile surfaces, and inviting editorial composition';
+  }
+  return `${personality}. ${brandColors}`;
 }
 async function generateCampaign(prompt) {
   const request = model => ({
@@ -225,6 +246,7 @@ export default async function handler(req, res) {
       const audience = clean(body.audience, 500);
       const action = clean(body.primaryAction, 180);
       const contact = clean(body.contact, 300);
+      const designDirection = websiteDirection(industry, user);
       const prompt = `Build a polished, conversion-focused one-page website as one self-contained HTML file.
 
 BUSINESS BRIEF
@@ -234,11 +256,13 @@ BUSINESS BRIEF
 - Ideal customer and service area: ${audience || 'People looking for a reliable, professional provider.'}
 - Primary action visitors should take: ${action || 'Contact the business to get started.'}
 - Contact details supplied by the business: ${contact || 'None supplied. Use a Contact us button that links to #contact; do not invent details.'}
+- Art direction: ${designDirection}
 
 OUTPUT RULES
 - Return only the HTML document, beginning with <!DOCTYPE html> and ending with </body></html>. No markdown.
 - Put all CSS in one <style> block. No frameworks, external assets, external fonts, or JavaScript.
-- Keep the code compact enough to finish reliably while making the page feel detailed and complete.
+- Target 700–950 words of visible copy and roughly 3,000–4,200 tokens of compact HTML/CSS. Do not repeat CSS declarations or add unused selectors.
+- Keep the page lightweight and fast: no giant SVG path data, base64 assets, canvas, or decorative markup that does not improve the design.
 - Write business-specific copy using the brief's actual wording and implications. Avoid generic filler.
 - Never invent prices, statistics, years in business, customer counts, reviews, awards, certifications, addresses, phone numbers, emails, or guarantees.
 
@@ -254,7 +278,7 @@ PAGE CONTENT
 9. Strong final CTA/contact section using the supplied contact details, followed by a complete footer.
 
 DESIGN QUALITY
-- Choose a premium color palette and visual personality appropriate for ${industry}; do not default every site to blue.
+- Follow the supplied art direction closely so this site does not resemble a generic template. Make the hero composition and visual motif specific to ${industry}.
 - Use strong typography hierarchy, generous spacing, layered cards, subtle gradients, tasteful shadows, hover states, and one or two restrained decorative details.
 - Responsive at mobile, tablet, and desktop widths. Use semantic HTML, visible focus styles, accessible contrast, descriptive link text, and reduced-motion support.
 - Include a specific <title> and meta description.`;
@@ -268,8 +292,10 @@ DESIGN QUALITY
       data.websites.unshift(website);
       user.usage.websites = data.websites.length;
       user.usage.aiUsed += 1;
-      await kv.set(`site:${siteId}`, { html, name, owner: user.id, createdAt: website.createdAt });
-      await saveCustomer(user);
+      await Promise.all([
+        kv.set(`site:${siteId}`, { html, name, owner: user.id, createdAt: website.createdAt }),
+        saveCustomer(user),
+      ]);
       console.log(JSON.stringify({ level: 'info', msg: 'website_generated', siteId, model: generated.model, generationMs, htmlBytes: Buffer.byteLength(html) }));
       res.status(201).json({ ok: true, website, aiUsed: user.usage.aiUsed }); return;
     }
