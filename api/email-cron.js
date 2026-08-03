@@ -8,7 +8,7 @@ export const config = { maxDuration: 300 };
 
 // EMAIL ENGINE. Uses the FREE OpenStreetMap lead source (never paid Outscraper).
 const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@nitrooutreach.app';
-const OUTREACH_FROM = 'Ty Smith \u00b7 Nitro Outreach <ty@nitrooutreach.com>';
+const OUTREACH_FROM = 'Nitro Outreach <ty@nitrooutreach.com>';
 const OUTREACH_REPLY_TO = 'nitrooutreach@outlook.com';
 const PHYSICAL_ADDRESS = '791 S 140 E, Farmington, UT 84025';
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -155,5 +155,6 @@ export default async function handler(req, res) {
     errors.push({ type: 'fatal', error: e.message });
   }
 
+  console.log('[email-cron] result', JSON.stringify({ emailsSent, errors }));
   res.status(200).json({ emailsSent, emailCap: EMAIL_CAP, errors, timestamp: new Date().toISOString() });
 }
