@@ -8,11 +8,13 @@ export const config = { maxDuration: 300 };
 
 // EMAIL ENGINE. Uses the FREE OpenStreetMap lead source (never paid Outscraper).
 const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@nitrooutreach.app';
-const PHYSICAL_ADDRESS = process.env.PHYSICAL_ADDRESS || '14234 S Canyon Vine Cove';
+const OUTREACH_FROM = 'Ty Smith \u00b7 Nitro Outreach <ty@nitrooutreach.com>';
+const OUTREACH_REPLY_TO = 'nitrooutreach@outlook.com';
+const PHYSICAL_ADDRESS = '791 S 140 E, Farmington, UT 84025';
 const CRON_SECRET = process.env.CRON_SECRET;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 
-const EMAIL_CAP = 7;    // ~7/run x ~13 runs = ~91/day max, stays under Resend free cap (100/day)
+const EMAIL_CAP = 10;   // 10/run x 9 runs/day = 90/day, stays under Resend free cap (100/day)
 const FETCH_LIMIT = 20;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -79,7 +81,7 @@ async function generateEmail(contact) {
     : service === 'ads'
     ? 'Google and Meta ad campaigns that bring in real paying customers'
     : 'custom mobile apps with online booking, loyalty rewards, and push notifications';
-  const prompt = 'Write a short cold email (under 150 words) to ' + firstName + ' at ' + company + ' in the ' + industry + ' industry. We are Nitro Outreach. LEAD BY OFFERING A FREE, no-obligation audit of their website: say you took a quick look at their site and noticed a couple of things that are likely costing them calls/customers, and you will send the full audit over if they just reply. You can also mention we build ' + serviceDesc + '. Friendly, no fluff, no hard sell. Soft CTA: just reply and I will send it over. Subject line first as "Subject: ...". Sign off as: Ty Smith, Owner - Nitro Outreach. Do NOT use any placeholder text in brackets. Output only the subject line and body.';
+  const prompt = 'Write a short, friendly cold email (under 130 words) to ' + firstName + ' at ' + company + '. We are Nitro Outreach (nitrooutreach.com), an all-in-one AI marketing platform: one login that builds websites, social posts, Reels, and ad campaigns, replacing a whole pile of separate marketing tools. Goal: get them to check it out. It is free to start with no credit card. Warm and human, no hype, no hard sell. Briefly note it could save ' + company + ' time and money. Soft CTA: take a look at nitrooutreach.com. Subject line first as "Subject: ...". Sign off as: Ty Smith, Nitro Outreach. Do NOT use any placeholder text in brackets. Output only the subject line and body.';
   const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 350, messages: [{ role: 'user', content: prompt }] });
   const text = cleanPlaceholders(msg.content[0].text);
   const lines = text.split('\n');
@@ -93,12 +95,6 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') { res.status(405).end('Method not allowed'); return; }
   const auth = req.headers['authorization'];
   if (CRON_SECRET && auth !== 'Bearer ' + CRON_SECRET) { res.status(401).end('Unauthorized'); return; }
-
-  // === COLD-OUTREACH EMAIL SENDING DISABLED (pivoted to the customer product). ===
-  // No prospecting emails are sent. Customer transactional emails (verification, etc.) are unaffected.
-  // To re-enable, remove this block.
-  res.status(200).json({ disabled: true, emailsSent: 0, note: 'Outreach emails paused', timestamp: new Date().toISOString() });
-  return;
 
   // Take Sundays off (Mountain Time).
   const mtDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/Denver', weekday: 'short' });
@@ -143,8 +139,8 @@ export default async function handler(req, res) {
       try {
         if (await isSuppressed(contact.email)) return null;
         const { subject, body, service } = content;
-        const footer = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\n<a href="https://final-phi-swart.vercel.app/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
-        const sendOptions = { from: FROM_EMAIL, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>'), reply_to: FROM_EMAIL };
+        const footer = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\n<a href="https://nitrooutreach.com/unsubscribe?email=' + encodeURIComponent(contact.email) + '">Unsubscribe</a>';
+        const sendOptions = { from: OUTREACH_FROM, to: contact.email, subject, html: (body + footer).replace(/\n/g, '<br>'), reply_to: OUTREACH_REPLY_TO };
         if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
         await resend.emails.send(sendOptions);
         await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
