@@ -91,8 +91,10 @@ export default async function handler(req, res) {
     const ip = clientIp(req);
     if (!await rateLimit(`growth-audit:${ip}`, 3, 3600)) { res.status(429).json({ error: 'You have reached the audit limit. Try again later.' }); return; }
     const input = { businessName: clean(req.body?.businessName, 140), website: clean(req.body?.website, 600), industry: clean(req.body?.industry, 120), email: clean(req.body?.email, 254).toLowerCase(), phone: clean(req.body?.phone, 40), goal: clean(req.body?.goal, 500) };
-    if (!input.businessName || !input.website || !validEmail(input.email)) { res.status(400).json({ error: 'Add a business name, valid website, and valid email.' }); return; }
-    const page = await fetchPage(input.website); const report = await generateReport(input, page);
+    if (!input.website || !validEmail(input.email)) { res.status(400).json({ error: 'Add a valid website and email.' }); return; }
+    const page = await fetchPage(input.website);
+    input.businessName = input.businessName || new URL(page.url).hostname.replace(/^www\./, '');
+    const report = await generateReport(input, page);
     const id = `audit_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`; const now = new Date().toISOString();
     const lead = { id, ...input, website: page.url, report, status: 'New', createdAt: now, updatedAt: now, ipHash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16) };
     await kv.set(`growth:audit:${id}`, JSON.stringify(lead)); await kv.lpush('growth:audits', id); await kv.ltrim('growth:audits', 0, 499);
