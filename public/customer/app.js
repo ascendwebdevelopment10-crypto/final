@@ -31,7 +31,7 @@ const OWNER_EMAIL='nitrooutreach@outlook.com';
 const state = {
   session:null, loading:true, interval:localStorage.getItem('nitro-billing')==='monthly'?'monthly':'yearly',
   onboardStep:1, onboardData:{goals:[],socials:[]}, settingsTab:'profile', mobileMenu:false,
-  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false
+  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, hasRendered:false
 };
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -474,7 +474,7 @@ function bindApp(){
   syncInputs();bindWorkspace();
 }
 
-function animateUI(){root.classList.remove('render-enter');requestAnimationFrame(()=>root.classList.add('render-enter'));root.querySelectorAll('.stat-value').forEach(el=>{const raw=el.textContent.trim(),match=raw.match(/^(\$?)([\d,]+)(%?)$/);if(!match)return;const target=Number(match[2].replace(/,/g,''));if(!Number.isFinite(target)||target===0)return;const prefix=match[1],suffix=match[3],start=performance.now(),duration=Math.min(900,420+target*.8);el.dataset.counting='1';const tick=now=>{const p=Math.min(1,(now-start)/duration),eased=1-Math.pow(1-p,3),value=Math.round(target*eased);el.textContent=prefix+value.toLocaleString()+suffix;if(p<1)requestAnimationFrame(tick);else delete el.dataset.counting;};requestAnimationFrame(tick);});}
+function animateUI(){if(!state.hasRendered){root.classList.add('render-enter');state.hasRendered=true;}root.querySelectorAll('.stat-value').forEach(el=>{const raw=el.textContent.trim(),match=raw.match(/^(\$?)([\d,]+)(%?)$/);if(!match)return;const target=Number(match[2].replace(/,/g,''));if(!Number.isFinite(target)||target===0)return;const prefix=match[1],suffix=match[3],start=performance.now(),duration=Math.min(900,420+target*.8);el.dataset.counting='1';const tick=now=>{const p=Math.min(1,(now-start)/duration),eased=1-Math.pow(1-p,3),value=Math.round(target*eased);el.textContent=prefix+value.toLocaleString()+suffix;if(p<1)requestAnimationFrame(tick);else delete el.dataset.counting;};requestAnimationFrame(tick);});}
 function analyticsId(storage,key){try{let id=storage.getItem(key);if(!id){id=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));storage.setItem(key,id);}return id;}catch{return Date.now()+'-'+Math.random().toString(36).slice(2);}}
 function trackPageView(){try{if((state.session?.user?.email||'').toLowerCase()===OWNER_EMAIL){localStorage.setItem('nitro-owner-browser','1');return;}if(localStorage.getItem('nitro-owner-browser')==='1')return;}catch{}const path=location.pathname+location.search+location.hash;if(window.__nitroTrackedPath===path)return;window.__nitroTrackedPath=path;const p=new URLSearchParams(location.search);fetch('/api/track-visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitorId:analyticsId(localStorage,'nitro-visitor-id'),sessionId:analyticsId(sessionStorage,'nitro-visit-session-v2'),path,pageTitle:document.title,referrer:document.referrer,utmSource:p.get('utm_source')||'',utmMedium:p.get('utm_medium')||'',utmCampaign:p.get('utm_campaign')||''})}).catch(()=>{});}
 function render(){const r=route();let html;if(r==='/')html=renderLanding();else if(r==='/audit')html=renderAudit();else if(r==='/report')html=renderReport();else if(r==='/login')html=renderLogin();else if(r==='/signup')html=renderSignup();else if(r==='/forgot-password')html=renderForgot();else if(r==='/verify-email')html=renderVerify();else if(r==='/reset-password')html=renderReset();else if(r==='/pricing')html=renderPricing();else if(r==='/welcome')html=renderWelcome();else if(r==='/checkout')html=renderCheckout();else if(r==='/checkout/payment')html=renderPayment();else if(r==='/checkout/success')html=renderSuccess();else if(r==='/app'||r.startsWith('/app/'))html=appShell();else html=renderLanding();root.innerHTML=html;bindCommon();bindAuth();bindOnboarding();bindCheckout();bindApp();animateUI();trackPageView();}
@@ -488,5 +488,35 @@ function showCheckoutReturnNotice(){
   setTimeout(async()=>{await loadSession();render();},1600);
 }
 
-window.addEventListener('hashchange',()=>{state.mobileMenu=false;render();});
-loadSession().then(()=>{render();showCheckoutReturnNotice();});
+const SPA_PATHS=new Set(['/','/audit','/report','/login','/signup','/forgot-password','/verify-email','/reset-password','/pricing','/welcome','/checkout','/checkout/payment','/checkout/success']);
+function isSpaPath(pathname){const clean=pathname.replace(/\/+$/,'')||'/';return SPA_PATHS.has(clean)||clean==='/app'||clean.startsWith('/app/');}
+function scrollToRouteHash(){if(!location.hash)return;requestAnimationFrame(()=>document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({behavior:'smooth',block:'start'}));}
+function navigateSpa(url,replace=false){
+  const next=url instanceof URL?url:new URL(url,location.href);
+  if(next.origin!==location.origin||!isSpaPath(next.pathname))return false;
+  const sameDocument=next.pathname===location.pathname&&next.search===location.search;
+  if(sameDocument&&next.hash&&route()==='/'){
+    if(next.href!==location.href)(replace?history.replaceState(null,'',next):history.pushState(null,'',next));
+    scrollToRouteHash();
+    return true;
+  }
+  replace?history.replaceState(null,'',next):history.pushState(null,'',next);
+  state.mobileMenu=false;
+  render();
+  scrollToRouteHash();
+  return true;
+}
+document.addEventListener('click',event=>{
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  const link=event.target.closest('a[href]');
+  if(!link||link.target||link.hasAttribute('download'))return;
+  const href=link.getAttribute('href');
+  if(!href||href.startsWith('mailto:')||href.startsWith('tel:')||href.startsWith('javascript:'))return;
+  const next=new URL(href,location.href);
+  if(next.origin!==location.origin||!isSpaPath(next.pathname))return;
+  event.preventDefault();
+  navigateSpa(next);
+});
+window.addEventListener('popstate',()=>{state.mobileMenu=false;render();scrollToRouteHash();});
+window.addEventListener('hashchange',()=>{if(route()==='/'&&location.hash){scrollToRouteHash();return;}state.mobileMenu=false;render();});
+loadSession().then(()=>{render();showCheckoutReturnNotice();scrollToRouteHash();});
