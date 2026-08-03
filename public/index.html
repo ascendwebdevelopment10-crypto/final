@@ -4,6 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07100b">
+  <script>
+    // Vercel serves this SEO landing shell for every SPA route. Hide it on
+    // non-home refreshes so the homepage never flashes before the requested view.
+    if ((location.pathname.replace(/\\/+$/, '') || '/') !== '/') {
+      document.documentElement.classList.add('spa-route-boot');
+    }
+  </script>
+  <style>
+    html.spa-route-boot body{background:#080808}
+    html.spa-route-boot #seo-landing{display:none!important}
+  </style>
   <title>Nitro Outreach — All your marketing in one place</title>
   <meta name="description" content="Nitro Outreach is the AI-powered growth workspace that replaces your website builder, content tool, post scheduler, and ad manager — one login, one bill, with an assistant that does the busywork.">
   <link rel="canonical" href="https://nitrooutreach.com/">
