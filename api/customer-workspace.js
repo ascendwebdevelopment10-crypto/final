@@ -108,26 +108,117 @@ async function generateWebsite(prompt) {
   }
   throw anthropicError || new Error('No website-generation provider is available.');
 }
-function websiteDirection(industry, user) {
+const WEBSITE_LAYOUTS = [
+  'an offset split hero with the headline low on the left and a tall image panel breaking the grid on the right',
+  'a full-bleed photographic hero with the headline anchored in a compact floating panel near the lower edge',
+  'an editorial hero with oversized type spanning the width, a narrow copy column, and overlapping image tiles',
+  'a centered cinematic hero followed by an intentionally uneven two-column story section',
+  'a left-side vertical navigation treatment with the hero content and imagery arranged on a wide canvas',
+  'a modular magazine-style hero made from one dominant image, a small detail image, and staggered text blocks',
+];
+const WEBSITE_SECTION_RHYTHMS = [
+  'alternate full-width image bands with compact text sections; place services before credibility and the process near the end',
+  'lead from the hero into the process, use a horizontal services rail, then place the human/about story before benefits',
+  'follow the hero with a bold statement band, then an asymmetric services grid, FAQ, process, and final story-led CTA',
+  'use a long editorial scroll: image-and-copy story, services, process, credibility, FAQ, then a full-bleed closing CTA',
+  'use a dense bento section immediately after the hero, followed by one calm image-led section, the process, FAQ, and CTA',
+  'place the differentiator story first, interleave services with imagery, and use a compact benefits strip just before the final CTA',
+];
+const WEBSITE_SURFACES = [
+  'soft paper grain, thin rules, lightly tinted panels, and square editorial crops',
+  'deep cinematic surfaces, luminous edge highlights, glass only where useful, and wide landscape crops',
+  'bright gallery-like space, crisp borders, strong color blocking, and irregular image crops',
+  'warm tactile surfaces, rounded image windows, subtle shadows, and layered natural color',
+  'high-contrast monochrome foundations with one vivid accent, sharp corners, and dramatic image masks',
+  'muted tonal layers, oversized negative space, fine typography, and restrained soft-focus imagery',
+];
+const WEBSITE_TYPE_STYLES = [
+  'high-contrast editorial serif headlines paired with a clean sans-serif body',
+  'confident condensed sans-serif headlines with a neutral, highly readable body face',
+  'large geometric sans-serif display type with compact uppercase labels',
+  'refined humanist typography with italic accents used sparingly for personality',
+  'bold grotesk headlines with small monospaced labels and navigation details',
+];
+const WEBSITE_IMAGE_SETS = {
+  beauty: [
+    'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1400&q=85',
+    'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85',
+  ],
+  performance: [
+    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=85',
+    'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1800&q=85',
+  ],
+  professional: [
+    'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=85',
+    'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=85',
+  ],
+  technology: [
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=85',
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=85',
+  ],
+  hospitality: [
+    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c5b?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=85',
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=85',
+  ],
+  general: [
+    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1600&q=85',
+    'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=85',
+  ],
+};
+function websiteDirection(industry, user, usedSignatures = []) {
   const value = clean(industry, 120).toLowerCase();
   const primary = clean(user.onboarding?.data?.primaryColor, 16);
   const secondary = clean(user.onboarding?.data?.secondaryColor, 16);
   const brandColors = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(secondary)
     ? `Use the business's saved brand colors ${primary} and ${secondary} as intentional accents.`
     : 'Choose two distinctive accent colors that fit the industry instead of defaulting to generic SaaS blue.';
+  let category = 'general';
   let personality = 'confident editorial design with strong typography, asymmetric composition, tactile depth, and restrained motion';
   if (/(barber|beauty|salon|spa|fashion|flower|floral|wedding|photograph)/.test(value)) {
+    category = 'beauty';
     personality = 'premium editorial design with expressive typography, warm photography-inspired framing, soft texture, and elegant spacing';
   } else if (/(sport|fitness|gym|training|automotive|car|construction|roof|landscap)/.test(value)) {
+    category = 'performance';
     personality = 'bold performance-focused design with energetic diagonals, strong contrast, oversized type, and action-oriented composition';
   } else if (/(law|legal|finance|account|consult|medical|dental|real estate)/.test(value)) {
+    category = 'professional';
     personality = 'refined trust-first design with measured typography, calm spacing, precise grids, and a polished editorial feel';
   } else if (/(software|technology|saas|marketing|agency|automation)/.test(value)) {
+    category = 'technology';
     personality = 'modern product-led design with crisp typography, layered interface-inspired visuals, subtle glow, and disciplined contrast';
   } else if (/(restaurant|food|bakery|coffee|cafe)/.test(value)) {
+    category = 'hospitality';
     personality = 'warm hospitality-led design with rich color, menu-inspired rhythm, tactile surfaces, and inviting editorial composition';
   }
-  return `${personality}. ${brandColors}`;
+  const used = new Set(usedSignatures.filter(Boolean));
+  const imageCount = WEBSITE_IMAGE_SETS[category].length;
+  const totalRecipes = WEBSITE_LAYOUTS.length * WEBSITE_SECTION_RHYTHMS.length * WEBSITE_SURFACES.length * WEBSITE_TYPE_STYLES.length * imageCount;
+  const bytes = randomBytes(2);
+  const start = bytes.readUInt16BE(0) % totalRecipes;
+  let selection;
+  for (let attempt = 0; attempt < totalRecipes; attempt += 1) {
+    let recipe = (start + attempt) % totalRecipes;
+    const imageOffset = recipe % imageCount; recipe = Math.floor(recipe / imageCount);
+    const typeIndex = recipe % WEBSITE_TYPE_STYLES.length; recipe = Math.floor(recipe / WEBSITE_TYPE_STYLES.length);
+    const surfaceIndex = recipe % WEBSITE_SURFACES.length; recipe = Math.floor(recipe / WEBSITE_SURFACES.length);
+    const rhythmIndex = recipe % WEBSITE_SECTION_RHYTHMS.length; recipe = Math.floor(recipe / WEBSITE_SECTION_RHYTHMS.length);
+    const layoutIndex = recipe % WEBSITE_LAYOUTS.length;
+    const signature = `${layoutIndex}-${rhythmIndex}-${surfaceIndex}-${typeIndex}-${imageOffset}`;
+    selection = { layoutIndex, rhythmIndex, surfaceIndex, typeIndex, imageOffset, signature };
+    if (!used.has(signature)) break;
+  }
+  const images = WEBSITE_IMAGE_SETS[category];
+  const orderedImages = images.map((_, index) => images[(index + selection.imageOffset) % images.length]);
+  return {
+    signature: selection.signature,
+    brief: `${personality}. ${brandColors}\n- Composition: ${WEBSITE_LAYOUTS[selection.layoutIndex]}.\n- Page rhythm: ${WEBSITE_SECTION_RHYTHMS[selection.rhythmIndex]}.\n- Surface treatment: ${WEBSITE_SURFACES[selection.surfaceIndex]}.\n- Typography: ${WEBSITE_TYPE_STYLES[selection.typeIndex]}.\n- Approved photography: ${orderedImages.join(' | ')}. Use at least two of these as meaningful background or editorial images with readable overlays.`,
+  };
 }
 async function generateCampaign(prompt) {
   const request = model => ({
@@ -246,7 +337,7 @@ export default async function handler(req, res) {
       const audience = clean(body.audience, 500);
       const action = clean(body.primaryAction, 180);
       const contact = clean(body.contact, 300);
-      const designDirection = websiteDirection(industry, user);
+      const design = websiteDirection(industry, user, data.websites.slice(0, 20).map(site => site.designSignature));
       const prompt = `Build a polished, conversion-focused one-page website as one self-contained HTML file.
 
 BUSINESS BRIEF
@@ -256,29 +347,30 @@ BUSINESS BRIEF
 - Ideal customer and service area: ${audience || 'People looking for a reliable, professional provider.'}
 - Primary action visitors should take: ${action || 'Contact the business to get started.'}
 - Contact details supplied by the business: ${contact || 'None supplied. Use a Contact us button that links to #contact; do not invent details.'}
-- Art direction: ${designDirection}
+- Unique design recipe: ${design.brief}
 
 OUTPUT RULES
 - Return only the HTML document, beginning with <!DOCTYPE html> and ending with </body></html>. No markdown.
-- Put all CSS in one <style> block. No frameworks, external assets, external fonts, or JavaScript.
+- Put all CSS in one <style> block. No frameworks, external fonts, or JavaScript. The only permitted external assets are the approved photography URLs in the design recipe.
 - Target 700–950 words of visible copy and roughly 3,000–4,200 tokens of compact HTML/CSS. Do not repeat CSS declarations or add unused selectors.
 - Keep the page lightweight and fast: no giant SVG path data, base64 assets, canvas, or decorative markup that does not improve the design.
 - Write business-specific copy using the brief's actual wording and implications. Avoid generic filler.
 - Never invent prices, statistics, years in business, customer counts, reviews, awards, certifications, addresses, phone numbers, emails, or guarantees.
 
-PAGE CONTENT
-1. Sticky header with brand name, compact navigation, and primary CTA.
-2. Hero with an industry-specific eyebrow, concrete outcome-led headline, supporting copy, primary CTA, secondary anchor, and a polished CSS/inline-SVG visual related to the business.
-3. A short credibility/value strip using qualitative claims supported by the brief—no fabricated numbers.
-4. Services section with 3–5 distinct cards. Give each service a useful two-sentence description.
-5. "Why choose us" section with three specific benefits tied to the audience's needs.
-6. Simple three-step process showing what happens after the visitor takes action.
-7. About/differentiator section that feels human without inventing a founder story.
-8. FAQ with four practical questions and concise answers based only on the brief.
-9. Strong final CTA/contact section using the supplied contact details, followed by a complete footer.
+CONTENT INVENTORY — COMPOSE IT IN THE ORDER REQUIRED BY THE UNIQUE DESIGN RECIPE
+- Header with brand name, compact navigation, and primary CTA. It may be sticky, floating, vertical, or integrated into the hero according to the recipe.
+- Industry-specific hero with a concrete outcome-led headline, supporting copy, two actions, and real approved photography. Do not use a generic dashboard mockup or abstract SVG as the main visual.
+- Credibility/value moment using only qualitative claims supported by the brief—no fabricated numbers.
+- Services presentation with 3–5 items and useful two-sentence descriptions. It does not have to be a row of identical cards.
+- Three specific audience benefits, a simple three-step process, and a human differentiator/about moment.
+- Four practical FAQ questions and concise answers based only on the brief.
+- Strong final CTA/contact section using supplied details, followed by a complete footer.
+- Do not fall back to the conventional hero → logo strip → three cards → three steps layout. Reorder, overlap, alternate, and vary section widths exactly as the recipe directs.
 
 DESIGN QUALITY
-- Follow the supplied art direction closely so this site does not resemble a generic template. Make the hero composition and visual motif specific to ${industry}.
+- Treat the unique design recipe as a layout specification, not a loose suggestion. Its composition, section rhythm, surface treatment, typography, and image placement must all be visibly present.
+- Use at least two approved photos: one must be a large background or full-bleed image and another must appear in a different crop or section. Add a gradient/scrim whenever text overlays a photo.
+- Do not use the same repeated three-column card grid for multiple sections. Vary alignment, scale, shape, and placement so the page has a distinctive silhouette.
 - Use strong typography hierarchy, generous spacing, layered cards, subtle gradients, tasteful shadows, hover states, and one or two restrained decorative details.
 - Responsive at mobile, tablet, and desktop widths. Use semantic HTML, visible focus styles, accessible contrast, descriptive link text, and reduced-motion support.
 - Include a specific <title> and meta description.`;
@@ -288,7 +380,7 @@ DESIGN QUALITY
       if (!html || html.length < 600 || !/<body/i.test(html)) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
       const siteId = id('site');
       const generationMs = Date.now() - startedAt;
-      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, createdAt: new Date().toISOString(), generationMs };
+      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, designSignature: design.signature, createdAt: new Date().toISOString(), generationMs };
       data.websites.unshift(website);
       user.usage.websites = data.websites.length;
       user.usage.aiUsed += 1;
