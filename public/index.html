@@ -7,7 +7,7 @@
   <script>
     // Vercel serves this SEO landing shell for every SPA route. Hide it on
     // non-home refreshes so the homepage never flashes before the requested view.
-    if ((location.pathname.replace(/\\/+$/, '') || '/') !== '/') {
+    if ((location.pathname.replace(/\/+$/, '') || '/') !== '/') {
       document.documentElement.classList.add('spa-route-boot');
     }
   </script>
