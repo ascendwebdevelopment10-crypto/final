@@ -330,6 +330,7 @@ export default async function handler(req, res) {
     return;
   }
   const direction = chooseDirection(prompt, Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []);
+  const generationStartedAt = Date.now();
   let plan;
   try {
     plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
@@ -338,9 +339,16 @@ export default async function handler(req, res) {
     plan = fallbackPlan(prompt, company, cta, direction);
   }
   if (voiceMode !== 'custom' && voiceMode !== 'none') {
-    plan.narration = await fitNarration(plan, duration, company, cta);
+    // createPlan already has a strict word budget. Keeping this correction local
+    // avoids a second model round trip when a response misses the upper bound.
+    const maximumWords = VOICE_WORD_RANGE[duration][1];
+    const narration = narrationOf(plan);
+    plan.narration = wordCount(narration) > maximumWords
+      ? clippedNarration(narration, maximumWords)
+      : narration;
   }
 
+  const assetsStartedAt = Date.now();
   const [voiceover, sceneArt] = await Promise.all([
     createVoiceover(plan, tone, voiceMode, customVoiceover, duration),
     createSceneArt(plan, prompt, company, tone),
@@ -363,6 +371,8 @@ export default async function handler(req, res) {
     creditCost,
     chargedCredits: 0,
     reservedCredits: isOwner ? 0 : creditCost,
+    preparationMs: Date.now() - generationStartedAt,
+    assetGenerationMs: Date.now() - assetsStartedAt,
     createdAt: now,
     updatedAt: now,
   };
@@ -370,8 +380,10 @@ export default async function handler(req, res) {
   user.usage.lastReelStyle = fingerprint;
   user.usage.reelStyleHistory = [...(Array.isArray(user.usage.reelStyleHistory) ? user.usage.reelStyleHistory : []), fingerprint].slice(-12);
   if (!isOwner) user.usage.reservedVideoCredits = reserved + creditCost;
-  await saveCustomer(user);
-  await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
+  await Promise.all([
+    saveCustomer(user),
+    kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 }),
+  ]);
   res.status(201).json({
     job,
     renderUrl: `${process.env.MODAL_RENDER_URL.replace(/\/$/, '')}/render-prompt`,
