@@ -1,6 +1,8 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
 import { currentCustomer } from '../lib/customer-auth.js';
+import { outreachTokenValid } from '../lib/sign.js';
+import { trackEmailClick } from '../lib/store.js';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
@@ -96,6 +98,14 @@ export default async function handler(req, res) {
 
     const pageDedupeKey = `visit:page:v2:${sessionHash}:${hash(path, 12)}`;
     const freshPageView = await kv.set(pageDedupeKey, '1', { nx: true, ex: 20 });
+    const outreachId = clean(req.body?.outreachId, 100).replace(/[^a-zA-Z0-9_-]/g, '');
+    const outreachToken = clean(req.body?.outreachToken, 100);
+    const visibleBrowserVisit = req.body?.visibility === 'visible';
+    if (outreachId && visibleBrowserVisit && outreachTokenValid(outreachId, outreachToken)) {
+      const attributionKey = `outreach:visit:session:${outreachId}:${sessionHash}`;
+      const freshAttributedSession = await kv.set(attributionKey, '1', { nx: true, ex: 2592000 });
+      if (freshAttributedSession) await trackEmailClick(outreachId, path);
+    }
     if (freshPageView) {
       const event = {
         id: `view_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,

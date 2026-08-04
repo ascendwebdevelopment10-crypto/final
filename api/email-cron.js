@@ -1,6 +1,6 @@
 import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js';
 import { sendEmail } from '../lib/mailer.js';
-import { tokenFor } from '../lib/sign.js';
+import { outreachTokenFor, tokenFor } from '../lib/sign.js';
 import { kv } from '@vercel/kv';
 import { fetchOsmLeadPool, OSM_TAGS } from '../lib/leads.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
@@ -284,6 +284,8 @@ export default async function handler(req, res) {
         const { subject, body, service } = content;
         const trackingId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
+        const siteUrl = 'https://nitrooutreach.com/?utm_source=outreach&utm_medium=email&utm_campaign=automated&oid=' + encodeURIComponent(trackingId) + '&ot=' + encodeURIComponent(outreachTokenFor(trackingId));
+        const trackedBody = body.replaceAll('https://nitrooutreach.com', siteUrl);
         const openPixelUrl = 'https://nitrooutreach.com/api/track-open?id=' + encodeURIComponent(trackingId);
         const footerText = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
         const footerHtml = '<br><br>--<br>Ty Smith, Owner<br>Nitro Outreach<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a>' +
@@ -292,8 +294,8 @@ export default async function handler(req, res) {
           from: OUTREACH_FROM,
           to: contact.email,
           subject,
-          text: body + footerText,
-          html: escapeHtml(body).replace(/\n/g, '<br>') + footerHtml,
+          text: trackedBody + footerText,
+          html: escapeHtml(trackedBody).replace(/\n/g, '<br>') + footerHtml,
           reply_to: OUTREACH_REPLY_TO,
           headers: {
             'List-Unsubscribe': `<${unsubscribeUrl}>`,
@@ -309,7 +311,7 @@ export default async function handler(req, res) {
           id: trackingId,
           to: contact.email,
           subject,
-          body,
+          body: trackedBody,
           contactName: contact.organization_name,
           timestamp: Date.now(),
           segment: 'needs_upgrade',

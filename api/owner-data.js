@@ -8,6 +8,7 @@ const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toL
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
 const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
 const OUTREACH_TRACKING_START = Date.parse(process.env.OUTREACH_TRACKING_START || '2026-08-04T14:00:00.000Z');
+const SITE_VISIT_TRACKING_START = Date.parse(process.env.SITE_VISIT_TRACKING_START || '2026-08-04T20:33:00.000Z');
 
 function emailAddress(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -162,6 +163,9 @@ export default async function handler(req, res) {
           const openCount = Number(engagement.opens?.[entry.id] || 0);
           const firstOpenedAt = Number(engagement.opensFirst?.[entry.id] || 0) || null;
           const lastOpenedAt = Number(engagement.opensLast?.[entry.id] || 0) || null;
+          const visitCount = Number(engagement.clicks?.[entry.id] || 0);
+          const firstVisitedAt = Number(engagement.clicksFirst?.[entry.id] || 0) || null;
+          const lastVisitedAt = Number(engagement.clicksLast?.[entry.id] || 0) || null;
           return {
             ...entry,
             status: reply ? 'replied' : deliveryStatus(providerStatus),
@@ -171,6 +175,11 @@ export default async function handler(req, res) {
             opened: openCount > 0,
             firstOpenedAt,
             lastOpenedAt,
+            visitCount,
+            visitedSite: visitCount > 0,
+            firstVisitedAt,
+            lastVisitedAt,
+            visitedPath: engagement.clicksUrl?.[entry.id] || '',
             replied: !!reply,
             reply: reply ? { from: reply.from, subject: reply.subject, body: reply.body, timestamp: reply.timestamp } : null,
           };
@@ -180,12 +189,14 @@ export default async function handler(req, res) {
       const replied = log.filter(entry => entry.replied).length;
       const delivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status)).length;
       const opened = log.filter(entry => entry.opened).length;
+      const visitedSite = log.filter(entry => entry.visitedSite).length;
       const failed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status)).length;
       res.status(200).json({
         trackingStart: new Date(OUTREACH_TRACKING_START).toISOString(),
+        siteVisitTrackingStart: new Date(SITE_VISIT_TRACKING_START).toISOString(),
         webhook,
         log,
-        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, failed },
+        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, visitedSite, failed },
       });
       return;
     }
