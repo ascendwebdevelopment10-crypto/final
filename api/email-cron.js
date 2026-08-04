@@ -189,10 +189,20 @@ export default async function handler(req, res) {
           idempotencyKey: 'nitro-cold-outreach-' + Buffer.from(contact.email.toLowerCase()).toString('base64url'),
         };
         if (i < BCC_PREVIEW_LIMIT) sendOptions.bcc = BCC_PREVIEW_EMAIL;
-        await sendEmail(sendOptions);
+        const sendResult = await sendEmail(sendOptions);
         delivered = true;
         await markEmailed(contact.email);
-        await logEmail({ to: contact.email, subject, body, contactName: contact.organization_name, timestamp: Date.now(), segment: 'needs_upgrade', service });
+        await logEmail({
+          to: contact.email,
+          subject,
+          body,
+          contactName: contact.organization_name,
+          timestamp: Date.now(),
+          segment: 'needs_upgrade',
+          service,
+          providerId: sendResult?.id || sendResult?.messageId || '',
+          status: 'sent',
+        });
         return 'ok';
       } catch (e) {
         if (dailyKey && !delivered) await kv.decr(dailyKey).catch(() => {});
