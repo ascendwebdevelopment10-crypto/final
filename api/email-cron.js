@@ -3,6 +3,7 @@ import { sendEmail } from '../lib/mailer.js';
 import { tokenFor } from '../lib/sign.js';
 import { kv } from '@vercel/kv';
 import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
+import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 
 export const config = { maxDuration: 300 };
 
@@ -129,6 +130,8 @@ export default async function handler(req, res) {
   const errors = [];
 
   try {
+    const webhook = await ensureOutreachWebhook();
+    if (webhook.status !== 'active') errors.push({ type: 'webhook', error: webhook.status });
     const qi = Math.floor(Math.random() * OSM_TAGS.length);
     const batches = await Promise.allSettled([
       fetchOsmLeads(OSM_TAGS[qi], FETCH_LIMIT),

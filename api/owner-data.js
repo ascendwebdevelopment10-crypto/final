@@ -1,49 +1,18 @@
 import { currentCustomer } from '../lib/customer-auth.js';
 import { kv } from '@vercel/kv';
 import { getEmailEvents, getEmailLog, getReplies } from '../lib/store.js';
+import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
 const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
 const OUTREACH_TRACKING_START = Date.parse(process.env.OUTREACH_TRACKING_START || '2026-08-04T14:00:00.000Z');
-const OUTREACH_WEBHOOK_ENDPOINT = 'https://nitrooutreach.com/webhook';
-const OUTREACH_WEBHOOK_EVENTS = ['email.sent', 'email.delivered', 'email.delivery_delayed', 'email.bounced', 'email.failed', 'email.complained', 'email.suppressed', 'email.received'];
 
 function emailAddress(value) {
   const raw = String(value || '').trim().toLowerCase();
   const match = raw.match(/<([^>]+)>/);
   return (match ? match[1] : raw).trim();
-}
-
-async function ensureOutreachWebhook() {
-  if (!process.env.RESEND_API_KEY) return { status: 'missing_api_key' };
-  const headers = { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' };
-  try {
-    const listResponse = await fetch('https://api.resend.com/webhooks', { headers });
-    if (!listResponse.ok) return { status: 'unavailable' };
-    const list = await listResponse.json();
-    const existing = (list.data || []).find(webhook => webhook.endpoint === OUTREACH_WEBHOOK_ENDPOINT);
-    if (existing) {
-      const hasEveryEvent = OUTREACH_WEBHOOK_EVENTS.every(event => (existing.events || []).includes(event));
-      if (existing.status === 'enabled' && hasEveryEvent) return { status: 'active' };
-      const updateResponse = await fetch(`https://api.resend.com/webhooks/${encodeURIComponent(existing.id)}`, {
-        method: 'PATCH', headers,
-        body: JSON.stringify({ endpoint: OUTREACH_WEBHOOK_ENDPOINT, events: OUTREACH_WEBHOOK_EVENTS, status: 'enabled' }),
-      });
-      return { status: updateResponse.ok ? 'active' : 'unavailable' };
-    }
-    const createResponse = await fetch('https://api.resend.com/webhooks', {
-      method: 'POST', headers,
-      body: JSON.stringify({ endpoint: OUTREACH_WEBHOOK_ENDPOINT, events: OUTREACH_WEBHOOK_EVENTS }),
-    });
-    if (!createResponse.ok) return { status: 'unavailable' };
-    const created = await createResponse.json();
-    if (created.signing_secret) await kv.set('outreach:resend:webhook-secret', created.signing_secret);
-    return { status: 'active' };
-  } catch {
-    return { status: 'unavailable' };
-  }
 }
 
 function isLikelyDataCenterVisit(visit) {
