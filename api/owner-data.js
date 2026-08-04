@@ -5,6 +5,14 @@ import { getEmailLog, getTotalStats } from '../lib/store.js';
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
+const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
+
+function isLikelyDataCenterVisit(visit) {
+  const rawCity = String(visit?.city || '').trim().replace(/\+/g, ' ');
+  let city = rawCity.toLowerCase();
+  try { city = decodeURIComponent(rawCity).toLowerCase(); } catch {}
+  return !visit?.email && DATA_CENTER_CITIES.has(city);
+}
 
 function mountainDay(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -60,11 +68,18 @@ export default async function handler(req, res) {
         kv.get('stats:site:v2:pageviews'),
         kv.get(`stats:site:v2:pageviews:day:${day}`),
       ]);
-      const rawVisitors = await kv.lrange('stats:site:v2:visitors', 0, 299);
-      const visitors = (rawVisitors || []).map(value => {
+      const rawVisitors = await kv.lrange('stats:site:v2:visitors', 0, 999);
+      const allVisitors = (rawVisitors || []).map(value => {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
+      const excludedVisitors = allVisitors.filter(isLikelyDataCenterVisit);
+      const visitors = allVisitors.filter(visit => !isLikelyDataCenterVisit(visit));
+      const excludedUnique = new Set(excludedVisitors.map(visit => visit.visitorId).filter(Boolean)).size;
+      const excludedSessions = new Set(excludedVisitors.map(visit => visit.sessionId).filter(Boolean)).size;
+      const excludedToday = excludedVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
+      const excludedUniqueToday = new Set(excludedToday.map(visit => visit.visitorId).filter(Boolean)).size;
+      const excludedSessionsToday = new Set(excludedToday.map(visit => visit.sessionId).filter(Boolean)).size;
       const auditIds = await kv.lrange('growth:audits', 0, 199);
       const auditValues = auditIds.length ? await Promise.all(auditIds.map(id => kv.get(`growth:audit:${id}`))) : [];
       const auditLeads = auditValues.map(value => {
@@ -80,17 +95,18 @@ export default async function handler(req, res) {
         verified,
         unverified: keys.length - verified,
         accounts,
-        siteUnique: Number(siteUnique || 0),
-        uniqueToday: Number(uniqueToday || 0),
-        siteSessions: Number(siteSessions || 0),
-        sessionsToday: Number(sessionsToday || 0),
-        sitePageviews: Number(sitePageviews || 0),
-        pageviewsToday: Number(pageviewsToday || 0),
+        siteUnique: Math.max(0, Number(siteUnique || 0) - excludedUnique),
+        uniqueToday: Math.max(0, Number(uniqueToday || 0) - excludedUniqueToday),
+        siteSessions: Math.max(0, Number(siteSessions || 0) - excludedSessions),
+        sessionsToday: Math.max(0, Number(sessionsToday || 0) - excludedSessionsToday),
+        sitePageviews: Math.max(0, Number(sitePageviews || 0) - excludedVisitors.length),
+        pageviewsToday: Math.max(0, Number(pageviewsToday || 0) - excludedToday.length),
         analyticsTimeZone: MOUNTAIN_TIME_ZONE,
         analyticsQuality: {
           measurement: 'First-party browser tracking',
           ownerExcluded: true,
           botsExcluded: true,
+          dataCenterTrafficExcluded: true,
           identity: 'Signed-in customers are identified by account; anonymous visitors use a privacy-safe browser ID.',
           limitations: 'Ad blockers, cleared storage, private browsing, VPNs, and approximate IP location can affect counts and location accuracy.',
         },

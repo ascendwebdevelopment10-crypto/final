@@ -4,7 +4,8 @@ import { currentCustomer } from '../lib/customer-auth.js';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
-const BOT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|facebookexternalhit|linkedinbot|twitterbot|discordbot|headlesschrome|lighthouse|pagespeed|vercel-screenshot)/i;
+const BOT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|facebookexternalhit|linkedinbot|twitterbot|discordbot|headlesschrome|lighthouse|pagespeed|vercel-screenshot|google-inspectiontool|chrome-lighthouse|bytespider|semrush|ahrefs|mj12|uptimerobot|curl|wget|python-requests|node-fetch|axios|postmanruntime)/i;
+const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
 
 function clean(value, max = 160) {
   return String(value || '').replace(/[\r\n]/g, ' ').trim().slice(0, max);
@@ -32,6 +33,14 @@ function productionHost(req) {
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().split(':')[0].toLowerCase();
   return host === 'nitrooutreach.com' || host === 'www.nitrooutreach.com';
 }
+function normalizedCity(value) {
+  const city = clean(value, 80).replace(/\+/g, ' ');
+  try { return decodeURIComponent(city).toLowerCase(); } catch { return city.toLowerCase(); }
+}
+function isLikelyDataCenter(req) {
+  const city = normalizedCity(req.headers['x-vercel-ip-city']);
+  return DATA_CENTER_CITIES.has(city);
+}
 
 // Production-only, privacy-safe analytics:
 // - a page view is a real route/hash visit
@@ -45,7 +54,8 @@ export default async function handler(req, res) {
     if (!productionHost(req)) { res.status(200).json({ ok: true, excluded: 'non-production' }); return; }
     const userAgent = String(req.headers['user-agent'] || '');
     const purpose = String(req.headers.purpose || req.headers['sec-purpose'] || '');
-    if (BOT_PATTERN.test(userAgent) || /prefetch|prerender/i.test(purpose)) {
+    const automatedClient = req.body?.webdriver === true || req.body?.visibility === 'prerender';
+    if (BOT_PATTERN.test(userAgent) || automatedClient || /prefetch|prerender/i.test(purpose) || isLikelyDataCenter(req)) {
       res.status(200).json({ ok: true, excluded: 'automated' }); return;
     }
 
@@ -64,6 +74,13 @@ export default async function handler(req, res) {
     const now = new Date();
     const viewedAt = now.toISOString();
     const day = mountainDay(now);
+
+    // Browsers occasionally retry the tracker with a new storage ID. Treat the
+    // same IP, user agent, and route inside ten seconds as one request without
+    // retaining the raw IP address.
+    const requestDedupeKey = `visit:request:v2:${hash(`${ip}:${userAgent}:${path}`)}`;
+    const freshRequest = await kv.set(requestDedupeKey, '1', { nx: true, ex: 10 });
+    if (!freshRequest) { res.status(200).json({ ok: true, deduplicated: true }); return; }
 
     const sessionKey = `visit:session:v2:${sessionHash}`;
     const freshSession = await kv.set(sessionKey, '1', { nx: true, ex: 1800 });
