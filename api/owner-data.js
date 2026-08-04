@@ -70,6 +70,9 @@ export default async function handler(req, res) {
         let u = await kv.get(k);
         if (typeof u === 'string') { try { u = JSON.parse(u); } catch { u = null; } }
         if (!u) continue;
+        // Owner/test activity is useful inside the owner's own workspace, but it
+        // must never inflate customer acquisition or product-usage reporting.
+        if (String(u.email || '').trim().toLowerCase() === OWNER_EMAIL) continue;
         if (u.emailVerified) verified += 1;
         const sub = u.subscription || {};
         accounts.push({
@@ -119,9 +122,9 @@ export default async function handler(req, res) {
         score: Number(lead.report?.overallScore || 0), summary: lead.report?.summary || '', createdAt: lead.createdAt,
       }));
       res.status(200).json({
-        total: keys.length,
+        total: accounts.length,
         verified,
-        unverified: keys.length - verified,
+        unverified: accounts.length - verified,
         accounts,
         siteUnique: Math.max(0, Number(siteUnique || 0) - excludedUnique),
         uniqueToday: Math.max(0, Number(uniqueToday || 0) - excludedUniqueToday),
