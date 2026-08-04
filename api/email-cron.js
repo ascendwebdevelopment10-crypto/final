@@ -175,9 +175,12 @@ export default async function handler(req, res) {
         dailyKey = await reserveDailySlot();
         if (!dailyKey) { await kv.del(reservationKey); return { limited: true }; }
         const { subject, body, service } = content;
+        const trackingId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
+        const openPixelUrl = 'https://nitrooutreach.com/api/track-open?id=' + encodeURIComponent(trackingId);
         const footerText = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
-        const footerHtml = '<br><br>--<br>Ty Smith, Owner<br>Nitro Outreach<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a>';
+        const footerHtml = '<br><br>--<br>Ty Smith, Owner<br>Nitro Outreach<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a>' +
+          '<img src="' + escapeHtml(openPixelUrl) + '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;opacity:0" />';
         const sendOptions = {
           from: OUTREACH_FROM,
           to: contact.email,
@@ -196,6 +199,7 @@ export default async function handler(req, res) {
         delivered = true;
         await markEmailed(contact.email);
         await logEmail({
+          id: trackingId,
           to: contact.email,
           subject,
           body,

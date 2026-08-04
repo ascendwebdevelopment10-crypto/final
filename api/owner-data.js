@@ -1,6 +1,6 @@
 import { currentCustomer } from '../lib/customer-auth.js';
 import { kv } from '@vercel/kv';
-import { getEmailEvents, getEmailLog, getReplies } from '../lib/store.js';
+import { getEmailEngagement, getEmailEvents, getEmailLog, getReplies } from '../lib/store.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
@@ -31,6 +31,25 @@ function mountainDay(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+async function recentResendEvents() {
+  if (!process.env.RESEND_API_KEY) return new Map();
+  try {
+    const response = await fetch('https://api.resend.com/emails?limit=100', {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    });
+    if (!response.ok) return new Map();
+    const payload = await response.json();
+    return new Map((payload.data || []).map(email => [String(email.id || ''), String(email.last_event || 'sent')]));
+  } catch {
+    return new Map();
+  }
+}
+
+function deliveryStatus(status) {
+  const value = String(status || 'sent').replace(/^email\./, '');
+  return ['opened', 'clicked'].includes(value) ? 'delivered' : value;
 }
 
 export default async function handler(req, res) {
@@ -125,7 +144,9 @@ export default async function handler(req, res) {
     }
 
     if (action === 'outreach') {
-      const [allLog, allReplies, events, webhook] = await Promise.all([getEmailLog(300), getReplies(300), getEmailEvents(), ensureOutreachWebhook()]);
+      const [allLog, allReplies, events, engagement, webhook, resendEvents] = await Promise.all([
+        getEmailLog(300), getReplies(300), getEmailEvents(), getEmailEngagement(), ensureOutreachWebhook(), recentResendEvents(),
+      ]);
       const replies = allReplies.filter(reply => Number(reply.timestamp || 0) >= OUTREACH_TRACKING_START);
       const repliesBySender = new Map();
       for (const reply of replies) {
@@ -136,12 +157,20 @@ export default async function handler(req, res) {
         .filter(entry => Number(entry.timestamp || 0) >= OUTREACH_TRACKING_START)
         .map(entry => {
           const providerEvent = entry.providerId ? events[entry.providerId] : null;
+          const providerStatus = resendEvents.get(String(entry.providerId || '')) || providerEvent?.status || entry.status || 'sent';
           const reply = repliesBySender.get(emailAddress(entry.to));
+          const openCount = Number(engagement.opens?.[entry.id] || 0);
+          const firstOpenedAt = Number(engagement.opensFirst?.[entry.id] || 0) || null;
+          const lastOpenedAt = Number(engagement.opensLast?.[entry.id] || 0) || null;
           return {
             ...entry,
-            status: reply ? 'replied' : (providerEvent?.status || entry.status || 'sent'),
+            status: reply ? 'replied' : deliveryStatus(providerStatus),
             statusAt: reply?.timestamp || providerEvent?.timestamp || entry.timestamp,
             statusDetail: providerEvent?.detail || '',
+            openCount,
+            opened: openCount > 0,
+            firstOpenedAt,
+            lastOpenedAt,
             replied: !!reply,
             reply: reply ? { from: reply.from, subject: reply.subject, body: reply.body, timestamp: reply.timestamp } : null,
           };
@@ -150,12 +179,13 @@ export default async function handler(req, res) {
       const todayCount = log.filter(entry => mountainDay(new Date(entry.timestamp)) === today).length;
       const replied = log.filter(entry => entry.replied).length;
       const delivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status)).length;
+      const opened = log.filter(entry => entry.opened).length;
       const failed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status)).length;
       res.status(200).json({
         trackingStart: new Date(OUTREACH_TRACKING_START).toISOString(),
         webhook,
         log,
-        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, failed },
+        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, failed },
       });
       return;
     }
