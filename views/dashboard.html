@@ -125,6 +125,18 @@ footer{padding:30px 0 50px;color:var(--mut2);font-size:12.5px;text-align:center}
     </section>
   </div>
 
+  <section class="card" style="margin-bottom:16px">
+    <h3>Cold outreach engine <span id="outreach-sched">hourly 8am–4pm Mountain · ~90/day</span></h3>
+    <div style="color:var(--mut);font-size:13.5px;line-height:1.55;margin-bottom:4px">Automatically emails local businesses a Nitro pitch — <b style="color:var(--ink)">9 runs a day, up to 10 each (~90/day), 8am–4pm Mountain Time</b>. Sent from <b style="color:var(--ink)">ty@nitrooutreach.com</b>; replies go to your Outlook. Uses fill-in templates, so it runs with no AI credits.</div>
+    <div class="metrics" id="out-metrics" style="margin:18px 0 6px"></div>
+    <div class="tbl-wrap">
+      <table style="min-width:640px">
+        <thead><tr><th>Sent</th><th>Business</th><th>To</th><th>Subject</th></tr></thead>
+        <tbody id="out-tbody"><tr><td colspan="4"><div class="loading">Loading outreach…</div></td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="card">
     <h3>All customers <span id="cust-count"></span></h3>
     <div class="tbl-wrap">
@@ -222,8 +234,31 @@ function load(){
     .then(render)
     .catch(function(){document.getElementById('tbody').innerHTML='<tr><td colspan="10"><div class="empty">Could not load customer data.</div></td></tr>';});
 }
-document.getElementById('refresh').addEventListener('click',load);
-load();
+function fmtDT(s){if(s==null||s==='')return '—';var d=new Date(isNaN(s)?s:Number(s));if(isNaN(d))return '—';return d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function loadOutreach(){
+  fetch('/api/logs?type=stats',{cache:'no-store',credentials:'include'})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(s){
+      var el=document.getElementById('out-metrics');if(!el)return;
+      if(!s){el.innerHTML='';return;}
+      el.innerHTML=
+        metricCard('Sent today',s.todayEmailSent||0,'Outreach emails','&#9993;',true)+
+        metricCard('Sent total',s.totalEmailSent||0,'All time','&#128228;')+
+        metricCard('Replies',s.emailReplies||0,'Came back','&#128172;')+
+        metricCard('Bounced',s.bounced||0,'Bad addresses','&#9888;');
+    }).catch(function(){});
+  fetch('/api/logs?type=emails&limit=40',{cache:'no-store',credentials:'include'})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(log){
+      var tb=document.getElementById('out-tbody');if(!tb)return;
+      if(!log||!log.length){tb.innerHTML='<tr><td colspan="4"><div class="empty">No outreach sent yet. First run is 8am Mountain.</div></td></tr>';return;}
+      tb.innerHTML=log.map(function(e){
+        return '<tr><td class="muted" style="white-space:nowrap">'+fmtDT(e.timestamp)+'</td><td class="email">'+esc(e.contactName||'—')+'</td><td>'+esc(e.to||'')+'</td><td>'+esc(e.subject||'')+'</td></tr>';
+      }).join('');
+    }).catch(function(){var tb=document.getElementById('out-tbody');if(tb)tb.innerHTML='<tr><td colspan="4"><div class="empty">Could not load outreach log.</div></td></tr>';});
+}
+document.getElementById('refresh').addEventListener('click',function(){load();loadOutreach();});
+load();loadOutreach();
 </script>
 </body>
 </html>
