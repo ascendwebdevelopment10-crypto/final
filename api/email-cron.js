@@ -1,4 +1,4 @@
-ó_}–&ÿ•æ²;6ëİe‰¿Ş™¨¥½©bu«^Íº×ní¢Ö¥import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js';
+import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js';
 import { sendEmail } from '../lib/mailer.js';
 import { tokenFor } from '../lib/sign.js';
 import { kv } from '@vercel/kv';
