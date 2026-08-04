@@ -74,20 +74,26 @@ function normalizeContact(place) {
 async function generateEmail(contact) {
   const firstName = contact.first_name || 'there';
   const company = contact.organization_name || 'your business';
-  const industry = contact.industry || 'your industry';
   const service = pickService();
-  const serviceDesc = service === 'website'
-    ? 'SEO-optimized websites that drive more Google traffic'
-    : service === 'ads'
-    ? 'Google and Meta ad campaigns that bring in real paying customers'
-    : 'custom mobile apps with online booking, loyalty rewards, and push notifications';
-  const prompt = 'Write a short, friendly cold email (under 130 words) to ' + firstName + ' at ' + company + '. We are Nitro Outreach (nitrooutreach.com), an all-in-one AI marketing platform: one login that builds websites, social posts, Reels, and ad campaigns, replacing a whole pile of separate marketing tools. Goal: get them to check it out. It is free to start with no credit card. Warm and human, no hype, no hard sell. Briefly note it could save ' + company + ' time and money. Soft CTA: take a look at nitrooutreach.com. Subject line first as "Subject: ...". Sign off as: Ty Smith, Nitro Outreach. Do NOT use any placeholder text in brackets. Output only the subject line and body.';
-  const msg = await anthropic.messages.create({ model: ANTHROPIC_MODEL, max_tokens: 350, messages: [{ role: 'user', content: prompt }] });
-  const text = cleanPlaceholders(msg.content[0].text);
-  const lines = text.split('\n');
-  const subjectLine = lines.find(l => l.startsWith('Subject:'));
-  const subject = subjectLine ? subjectLine.replace('Subject:', '').trim() : 'A quick free audit of your website';
-  const body = lines.filter(l => !l.startsWith('Subject:')).join('\n').trim();
+
+  const subjects = [
+    'Quick idea for ' + company,
+    'Marketing help for ' + company + '?',
+    'A simpler way to run ' + company + "'s marketing",
+    'Helping ' + company + ' get more customers',
+    'One tool for all of ' + company + "'s marketing"
+  ];
+  const subject = subjects[Math.floor(Math.random() * subjects.length)];
+
+  const opener = ['Hi ' + firstName + ',', 'Hey ' + firstName + ',', 'Hi ' + firstName + ' -'][Math.floor(Math.random() * 3)];
+
+  const bodies = [
+    opener + '\n\nI run Nitro Outreach, an all-in-one marketing platform. One login builds your website, social posts, Reels, and ad campaigns - so ' + company + ' can replace a pile of separate tools and save time and money.\n\nIt is free to start, no credit card. If it sounds useful, take a look: https://nitrooutreach.com\n\nEither way, wishing ' + company + ' a great week.',
+    opener + '\n\nMost small teams juggle five different tools to keep their marketing going. Nitro Outreach puts it all in one place - website, social, Reels, and ads - built with AI from a single login.\n\nThought it might save ' + company + ' some time. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply to this email.',
+    opener + '\n\nQuick one: I built Nitro Outreach to help businesses like ' + company + ' handle all their marketing in one spot - website, social posts, Reels, and ad campaigns - without hiring an agency or stitching apps together.\n\nFree to start, no credit card: https://nitrooutreach.com\n\nWorth a look if you have a couple of minutes.'
+  ];
+  const body = bodies[Math.floor(Math.random() * bodies.length)];
+
   return { subject, body, service };
 }
 
