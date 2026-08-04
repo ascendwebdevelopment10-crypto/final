@@ -1,5 +1,6 @@
 import { currentCustomer } from '../lib/customer-auth.js';
 import { kv } from '@vercel/kv';
+import { getEmailLog, getTotalStats } from '../lib/store.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
@@ -96,6 +97,12 @@ export default async function handler(req, res) {
         visitors,
         auditLeads,
       });
+      return;
+    }
+
+    if (action === 'outreach') {
+      const [log, stats] = await Promise.all([getEmailLog(60), getTotalStats()]);
+      res.status(200).json({ log, stats });
       return;
     }
 
