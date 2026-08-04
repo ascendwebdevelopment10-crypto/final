@@ -1,8 +1,9 @@
-import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js';
+Û_}ñ&ˇïÊù≤;6Î›eâøﬁô®•Ω©bu´^éÕ∫◊nÌ¢÷•import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js';
 import { sendEmail } from '../lib/mailer.js';
 import { tokenFor } from '../lib/sign.js';
 import { kv } from '@vercel/kv';
-import { fetchOsmLeads, OSM_TAGS } from '../lib/leads.js';
+import { fetchOsmLeadPool, OSM_TAGS } from '../lib/leads.js';
+import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 
 export const config = { maxDuration: 300 };
@@ -15,7 +16,9 @@ const PHYSICAL_ADDRESS = '791 S 140 E, Farmington, UT 84025';
 const CRON_SECRET = process.env.CRON_SECRET;
 const EMAIL_CAP = 10;   // 10/run x 9 runs/day = 90/day, stays under Resend free cap (100/day)
 const DAILY_EMAIL_CAP = 90;
-const FETCH_LIMIT = 20;
+const POOL_COUNT = 4;
+const POOL_SIZE = 45;
+const DISCOVERY_WAVE_SIZE = 16;
 
 const BCC_PREVIEW_EMAIL = 'no-reply@nitrooutreach.app';
 const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
@@ -54,27 +57,108 @@ function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
-function isLikelyRealEmail(email) {
-  if (!email || email.length > 100) return false;
-  if (!/^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/.test(email)) return false;
-  const badEnd = ['.png','.jpg','.jpeg','.svg','.gif','.webp','.avif','.ico','.css','.js','.woff'];
-  if (badEnd.some(b => email.toLowerCase().endsWith(b))) return false;
-  return true;
+function normalizeWebsite(raw) {
+  try {
+    const value = String(raw || '').trim();
+    if (!value) return '';
+    const url = new URL(/^https?:\/\//i.test(value) ? value : 'https://' + value);
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    url.hash = '';
+    return url.href;
+  } catch { return ''; }
 }
 
-async function scrapeEmail(url) {
+function decodeCloudflareEmail(value) {
+  try {
+    const key = parseInt(value.slice(0, 2), 16);
+    let output = '';
+    for (let i = 2; i < value.length; i += 2) output += String.fromCharCode(parseInt(value.slice(i, i + 2), 16) ^ key);
+    return output;
+  } catch { return ''; }
+}
+
+function decodeEmailText(html) {
+  return String(html || '')
+    .replace(/&#(?:x40|64);/gi, '@')
+    .replace(/&commat;/gi, '@')
+    .replace(/\s(?:\[at\]|\(at\))\s/gi, '@')
+    .replace(/\s(?:\[dot\]|\(dot\))\s/gi, '.');
+}
+
+function extractEmails(html, pageUrl) {
+  const decoded = decodeEmailText(html);
+  const found = new Set(decoded.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,24}/g) || []);
+  for (const match of decoded.matchAll(/data-cfemail=["']([0-9a-f]+)["']/gi)) {
+    const email = decodeCloudflareEmail(match[1]);
+    if (email) found.add(email);
+  }
+  let host = '';
+  try { host = new URL(pageUrl).hostname.replace(/^www\./, '').toLowerCase(); } catch {}
+  const junk = ['sentry.io','wixpress.com','schema.org','google.com','facebook.com','twitter.com','instagram.com','youtube.com'];
+  const candidates = [...found]
+    .map(email => email.toLowerCase().replace(/^mailto:/, '').trim())
+    .filter(isLikelyRealEmail)
+    .filter(email => !junk.some(domain => email.endsWith('@' + domain)));
+  const roleOrder = ['info','contact','hello','sales','office','admin','team','booking','appointments','support'];
+  return candidates.sort((a, b) => {
+    const [aLocal, aDomain] = a.split('@');
+    const [bLocal, bDomain] = b.split('@');
+    const score = (local, domain) => {
+      const roleIndex = roleOrder.indexOf(local);
+      return (domain === host || host.endsWith('.' + domain) ? 30 : 0) + (roleIndex === -1 ? 0 : 12 - roleIndex);
+    };
+    return score(bLocal, bDomain) - score(aLocal, aDomain);
+  });
+}
+
+async function fetchHtml(url) {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6000);
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' } });
+    const timer = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { 'User-Agent': 'NitroOutreach/1.0 (+https://nitrooutreach.com)' },
+    });
     clearTimeout(timer);
-    if (!res.ok) return null;
-    const html = await res.text();
-    const matches = [...new Set((html.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || []))];
-    const junk = ['example.','sentry.','w3.org','schema.','wix','squarespace','shopify','google.','facebook.','twitter.','instagram.','youtube.','.png','.jpg','.jpeg','.svg','.gif','.webp','.css','.js'];
-    const clean = matches.filter(e => !junk.some(j => e.toLowerCase().includes(j))).filter(isLikelyRealEmail);
-    return clean.find(e => /^(info|contact|hello|sales|office|admin|support|team|booking)@/i.test(e)) || clean[0] || null;
+    if (!res.ok || !String(res.headers.get('content-type') || '').includes('text/html')) return null;
+    return { html: (await res.text()).slice(0, 1500000), url: res.url || url };
   } catch { return null; }
+}
+
+function contactLinks(html, baseUrl) {
+  const links = [];
+  for (const match of String(html || '').matchAll(/href=["']([^"'#]+)["']/gi)) {
+    if (!/(contact|about|team|staff|location|connect|get-in-touch)/i.test(match[1])) continue;
+    try {
+      const url = new URL(match[1], baseUrl);
+      if (url.origin !== new URL(baseUrl).origin || !['http:', 'https:'].includes(url.protocol)) continue;
+      url.hash = '';
+      if (!links.includes(url.href)) links.push(url.href);
+    } catch {}
+    if (links.length >= 3) break;
+  }
+  return links;
+}
+
+async function discoverEmail(rawUrl) {
+  const website = normalizeWebsite(rawUrl);
+  if (!website) return null;
+  const home = await fetchHtml(website);
+  if (!home) return null;
+  const homeEmails = extractEmails(home.html, home.url);
+  if (homeEmails.length) return homeEmails[0];
+
+  const origin = new URL(home.url).origin;
+  const discovered = contactLinks(home.html, home.url);
+  const fallback = ['/contact', '/contact-us', '/about'].map(path => origin + path);
+  const pages = [...new Set([...discovered, ...fallback])].slice(0, 3);
+  const results = await Promise.all(pages.map(fetchHtml));
+  for (const page of results.filter(Boolean)) {
+    const emails = extractEmails(page.html, page.url);
+    if (emails.length) return emails[0];
+  }
+  return null;
 }
 
 function normalizeContact(place) {
@@ -132,32 +216,55 @@ export default async function handler(req, res) {
   try {
     const webhook = await ensureOutreachWebhook();
     if (webhook.status !== 'active') errors.push({ type: 'webhook', error: webhook.status });
-    const qi = Math.floor(Math.random() * OSM_TAGS.length);
-    const batches = await Promise.allSettled([
-      fetchOsmLeads(OSM_TAGS[qi], FETCH_LIMIT),
-      fetchOsmLeads(OSM_TAGS[(qi + 1) % OSM_TAGS.length], FETCH_LIMIT),
-      fetchOsmLeads(OSM_TAGS[(qi + 2) % OSM_TAGS.length], FETCH_LIMIT),
-      fetchOsmLeads(OSM_TAGS[(qi + 3) % OSM_TAGS.length], FETCH_LIMIT)
-    ]);
-    const leads = batches.flatMap(b => b.status === 'fulfilled' ? b.value : []).map(normalizeContact);
-
-    // Use the email OSM already gave us; only scrape a homepage when we have none.
-    const scraped = await Promise.all(leads.map(c => (c.email ? Promise.resolve(c.email) : scrapeEmail(c.website_url))));
-    leads.forEach((c, i) => { c.email = c.email || scraped[i] || null; });
-
-    const emailCandidates = leads.filter(c => c.email && isLikelyRealEmail(c.email));
-    console.log('[email-cron]', JSON.stringify({ fetched: leads.length, withEmail: emailCandidates.length }));
+    const batches = await Promise.allSettled(
+      Array.from({ length: POOL_COUNT }, (_, index) => fetchOsmLeadPool(OSM_TAGS, POOL_SIZE, index))
+    );
+    const rawLeads = batches.flatMap(b => b.status === 'fulfilled' ? b.value : []);
+    const leads = [];
+    const leadKeys = new Set();
+    for (const place of rawLeads) {
+      const contact = normalizeContact(place);
+      const key = String(contact.email || normalizeWebsite(contact.website_url) || (contact.organization_name + '|' + place.full_address)).toLowerCase();
+      if (!key || leadKeys.has(key)) continue;
+      leadKeys.add(key);
+      leads.push(contact);
+    }
 
     const emailableLeads = [];
     const seen = new Set();
-    for (const c of emailCandidates) {
-      if (emailableLeads.length >= EMAIL_CAP) break;
-      const key = c.email.toLowerCase();
-      if (seen.has(key)) continue;
-      if (await wasEmailed(key)) continue;   // never email the same business twice
+    async function consider(contact) {
+      if (!contact.email || !isLikelyRealEmail(contact.email)) return;
+      const key = contact.email.toLowerCase();
+      if (seen.has(key) || await wasEmailed(key) || await isSuppressed(key)) return;
       seen.add(key);
-      emailableLeads.push(c);
+      emailableLeads.push(contact);
     }
+
+    for (const contact of leads.filter(c => c.email)) {
+      if (emailableLeads.length >= EMAIL_CAP) break;
+      await consider(contact);
+    }
+
+    const websites = leads.filter(c => !c.email && normalizeWebsite(c.website_url));
+    let websitesChecked = 0;
+    for (let offset = 0; offset < websites.length && emailableLeads.length < EMAIL_CAP; offset += DISCOVERY_WAVE_SIZE) {
+      const wave = websites.slice(offset, offset + DISCOVERY_WAVE_SIZE);
+      const found = await Promise.all(wave.map(async contact => ({ contact, email: await discoverEmail(contact.website_url) })));
+      websitesChecked += wave.length;
+      for (const { contact, email } of found) {
+        if (emailableLeads.length >= EMAIL_CAP) break;
+        contact.email = email;
+        await consider(contact);
+      }
+    }
+
+    console.log('[email-cron]', JSON.stringify({
+      fetched: rawLeads.length,
+      uniqueBusinesses: leads.length,
+      websitesChecked,
+      eligibleEmails: emailableLeads.length,
+      sourcePoolsSucceeded: batches.filter(b => b.status === 'fulfilled').length,
+    }));
 
     const emailContents = await Promise.all(emailableLeads.map(c => generateEmail(c).catch(e => ({ error: e.message }))));
 
