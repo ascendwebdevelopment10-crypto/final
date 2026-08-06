@@ -24,6 +24,29 @@ function isLikelyDataCenterVisit(visit) {
   return !visit?.email && DATA_CENTER_CITIES.has(city);
 }
 
+function collapseRapidPageViews(visits, windowMs = 60000) {
+  const ordered = [...visits].sort((a, b) => Date.parse(a.viewedAt || a.visitedAt || 0) - Date.parse(b.viewedAt || b.visitedAt || 0));
+  const kept = [];
+  const recent = new Map();
+  for (const visit of ordered) {
+    const path = String(visit.path || '/').split('?')[0].split('#')[0] || '/';
+    const identity = visit.email || visit.visitorId || visit.sessionId || visit.id;
+    const key = `${identity}:${path}`;
+    const timestamp = Date.parse(visit.viewedAt || visit.visitedAt || 0);
+    const previous = recent.get(key);
+    if (previous && Number.isFinite(timestamp) && timestamp - previous.timestamp <= windowMs) {
+      if (!previous.visit.utmSource && visit.utmSource) Object.assign(previous.visit, {
+        utmSource: visit.utmSource, utmMedium: visit.utmMedium, utmCampaign: visit.utmCampaign,
+      });
+      continue;
+    }
+    const copy = { ...visit };
+    kept.push(copy);
+    recent.set(key, { timestamp, visit: copy });
+  }
+  return kept.sort((a, b) => Date.parse(b.viewedAt || b.visitedAt || 0) - Date.parse(a.viewedAt || a.visitedAt || 0));
+}
+
 function mountainDay(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: MOUNTAIN_TIME_ZONE,
@@ -106,7 +129,12 @@ export default async function handler(req, res) {
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
       const excludedVisitors = allVisitors.filter(isLikelyDataCenterVisit);
-      const visitors = allVisitors.filter(visit => !isLikelyDataCenterVisit(visit));
+      const cleanVisitors = allVisitors.filter(visit => !isLikelyDataCenterVisit(visit));
+      const visitors = collapseRapidPageViews(cleanVisitors);
+      const duplicatePageviews = Math.max(0, cleanVisitors.length - visitors.length);
+      const cleanToday = cleanVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
+      const visitorsToday = visitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
+      const duplicatePageviewsToday = Math.max(0, cleanToday.length - visitorsToday.length);
       const excludedUnique = new Set(excludedVisitors.map(visit => visit.visitorId).filter(Boolean)).size;
       const excludedSessions = new Set(excludedVisitors.map(visit => visit.sessionId).filter(Boolean)).size;
       const excludedToday = excludedVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
@@ -131,8 +159,8 @@ export default async function handler(req, res) {
         uniqueToday: Math.max(0, Number(uniqueToday || 0) - excludedUniqueToday),
         siteSessions: Math.max(0, Number(siteSessions || 0) - excludedSessions),
         sessionsToday: Math.max(0, Number(sessionsToday || 0) - excludedSessionsToday),
-        sitePageviews: Math.max(0, Number(sitePageviews || 0) - excludedVisitors.length),
-        pageviewsToday: Math.max(0, Number(pageviewsToday || 0) - excludedToday.length),
+        sitePageviews: Math.max(0, Number(sitePageviews || 0) - excludedVisitors.length - duplicatePageviews),
+        pageviewsToday: Math.max(0, Number(pageviewsToday || 0) - excludedToday.length - duplicatePageviewsToday),
         analyticsTimeZone: MOUNTAIN_TIME_ZONE,
         analyticsQuality: {
           measurement: 'First-party browser tracking',
@@ -140,7 +168,7 @@ export default async function handler(req, res) {
           botsExcluded: true,
           dataCenterTrafficExcluded: true,
           identity: 'Signed-in customers are identified by account; anonymous visitors use a privacy-safe browser ID.',
-          limitations: 'Ad blockers, cleared storage, private browsing, VPNs, and approximate IP location can affect counts and location accuracy.',
+          limitations: 'Rapid repeat loads are collapsed. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
         },
         visitors,
         auditLeads,

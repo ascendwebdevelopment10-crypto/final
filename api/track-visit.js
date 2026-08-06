@@ -45,6 +45,8 @@ function isLikelyDataCenter(req) {
 }
 
 const CONFIRMED_ENGAGEMENTS = new Set(['active_8s', 'scroll', 'click', 'navigation']);
+const PAGE_VIEW_DEDUPE_SECONDS = 60;
+const GEO_TTL_SECONDS = 604800;
 
 // Production-only, privacy-safe analytics:
 // - a page view is a real route/hash visit
@@ -128,14 +130,27 @@ export default async function handler(req, res) {
     const dailyUniqueKey = `visit:unique:v2:day:${day}:${visitorHash}`;
     const freshToday = await kv.set(dailyUniqueKey, '1', { nx: true, ex: 172800 });
 
-    const pageDedupeKey = `visit:page:v2:${sessionHash}:${hash(path, 12)}`;
-    const freshPageView = await kv.set(pageDedupeKey, '1', { nx: true, ex: 20 });
+    // Render retries, refreshes, or a second tab can carry a different session
+    // ID. Deduplicate by the persistent browser ID and route as well.
+    const pageDedupeKey = `visit:page:v3:${visitorHash}:${hash(path, 12)}`;
+    const freshPageView = await kv.set(pageDedupeKey, '1', { nx: true, ex: PAGE_VIEW_DEDUPE_SECONDS });
     if (outreachId && visibleBrowserVisit && outreachTokenValid(outreachId, outreachToken)) {
       const attributionKey = `outreach:visit:session:${outreachId}:${sessionHash}`;
       const freshAttributedSession = await kv.set(attributionKey, '1', { nx: true, ex: 2592000 });
       if (freshAttributedSession) await trackEmailClick(outreachId, path);
     }
     if (freshPageView) {
+      const incomingGeo = {
+        city: clean(req.headers['x-vercel-ip-city'], 80),
+        region: clean(req.headers['x-vercel-ip-country-region'], 80),
+        country: clean(req.headers['x-vercel-ip-country'], 8),
+      };
+      const geoKey = `visit:geo:v2:${visitorHash}`;
+      const storedGeo = await kv.get(geoKey);
+      const geo = storedGeo && typeof storedGeo === 'object' ? storedGeo : incomingGeo;
+      if (!storedGeo && (incomingGeo.city || incomingGeo.region || incomingGeo.country)) {
+        await kv.set(geoKey, incomingGeo, { nx: true, ex: GEO_TTL_SECONDS });
+      }
       const event = {
         id: `view_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
         viewedAt,
@@ -153,9 +168,9 @@ export default async function handler(req, res) {
         utmSource: clean(req.body?.utmSource, 100),
         utmMedium: clean(req.body?.utmMedium, 100),
         utmCampaign: clean(req.body?.utmCampaign, 120),
-        city: clean(req.headers['x-vercel-ip-city'], 80),
-        region: clean(req.headers['x-vercel-ip-country-region'], 80),
-        country: clean(req.headers['x-vercel-ip-country'], 8),
+        city: clean(geo.city, 80),
+        region: clean(geo.region, 80),
+        country: clean(geo.country, 8),
         device: deviceName(userAgent),
       };
       await kv.incr('stats:site:v2:pageviews');

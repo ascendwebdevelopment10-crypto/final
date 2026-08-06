@@ -26,6 +26,15 @@ const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
 const SERVICES = ['website', 'ads', 'app'];
 function pickService() { return SERVICES[Math.floor(Math.random() * SERVICES.length)]; }
 
+const AGENCY_TYPES = new Set(['advertising_agency', 'it', 'employment_agency', 'consulting', 'photographer']);
+const TARGET_TYPES = new Set(OSM_TAGS.map(tag => String(tag).split('=')[1]).filter(Boolean));
+
+export function qualifyOutreachContact(contact) {
+  const industry = String(contact?.industry || '').trim().toLowerCase();
+  if (!contact?.organization_name || contact?.isChain || !TARGET_TYPES.has(industry)) return null;
+  return AGENCY_TYPES.has(industry) ? 'Solo / small agency' : 'Independent small business';
+}
+
 function mountainDate() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -162,20 +171,24 @@ async function discoverEmail(rawUrl) {
 }
 
 function normalizeContact(place) {
-  return {
+  const contact = {
     first_name: (place.name || '').split(' ')[0] || 'there',
     organization_name: place.name || '',
     email: place.email || null,     // use the email OSM already provides, when present
     phone: place.phone || null,
     website_url: place.website || '',
-    industry: place.type || place.subtypes || ''
+    industry: place.type || place.subtypes || '',
+    isChain: Boolean(place.isChain),
   };
+  contact.targetSegment = qualifyOutreachContact(contact);
+  return contact;
 }
 
 async function generateEmail(contact) {
   const firstName = contact.first_name || 'there';
   const company = contact.organization_name || 'your business';
-  const service = pickService();
+  const agency = contact.targetSegment === 'Solo / small agency';
+  const service = agency ? 'agency' : pickService();
 
   const subjects = [
     'Quick idea for ' + company,
@@ -188,7 +201,10 @@ async function generateEmail(contact) {
 
   const opener = ['Hi ' + firstName + ',', 'Hey ' + firstName + ',', 'Hi ' + firstName + ' -'][Math.floor(Math.random() * 3)];
 
-  const bodies = [
+  const bodies = agency ? [
+    opener + '\n\nI built Nitro Outreach for small agencies that need to create and manage more client marketing without adding a pile of tools. It brings websites, social posts, Reels, ad planning, and outreach into one workspace.\n\nIt is free to start, no credit card: https://nitrooutreach.com\n\nThought it could help ' + company + ' handle more work without adding more overhead.',
+    opener + '\n\nQuick one: Nitro Outreach gives solo and small agencies one place to build client websites, create social content and Reels, plan ads, and keep outreach organized.\n\nIt may be useful if ' + company + ' wants to save production time or take on more clients. Free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply here.'
+  ] : [
     opener + '\n\nI run Nitro Outreach, an all-in-one marketing platform. One login builds your website, social posts, Reels, and ad campaigns - so ' + company + ' can replace a pile of separate tools and save time and money.\n\nIt is free to start, no credit card. If it sounds useful, take a look: https://nitrooutreach.com\n\nEither way, wishing ' + company + ' a great week.',
     opener + '\n\nMost small teams juggle five different tools to keep their marketing going. Nitro Outreach puts it all in one place - website, social, Reels, and ads - built with AI from a single login.\n\nThought it might save ' + company + ' some time. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply to this email.',
     opener + '\n\nQuick one: I built Nitro Outreach to help businesses like ' + company + ' handle all their marketing in one spot - website, social posts, Reels, and ad campaigns - without hiring an agency or stitching apps together.\n\nFree to start, no credit card: https://nitrooutreach.com\n\nWorth a look if you have a couple of minutes.'
@@ -224,6 +240,7 @@ export default async function handler(req, res) {
     const leadKeys = new Set();
     for (const place of rawLeads) {
       const contact = normalizeContact(place);
+      if (!contact.targetSegment) continue;
       const key = String(contact.email || normalizeWebsite(contact.website_url) || (contact.organization_name + '|' + place.full_address)).toLowerCase();
       if (!key || leadKeys.has(key)) continue;
       leadKeys.add(key);
@@ -316,6 +333,8 @@ export default async function handler(req, res) {
           timestamp: Date.now(),
           segment: 'needs_upgrade',
           service,
+          industry: contact.industry,
+          targetSegment: contact.targetSegment,
           providerId: sendResult?.id || sendResult?.messageId || '',
           status: 'sent',
         });
