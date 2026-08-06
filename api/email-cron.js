@@ -203,11 +203,11 @@ async function generateEmail(contact) {
 
   const bodies = agency ? [
     opener + '\n\nI built Nitro Outreach for small agencies that need to create and manage more client marketing without adding a pile of tools. It brings websites, social posts, Reels, ad planning, and outreach into one workspace.\n\nIt is free to start, no credit card: https://nitrooutreach.com\n\nThought it could help ' + company + ' handle more work without adding more overhead.',
-    opener + '\n\nQuick one: Nitro Outreach gives solo and small agencies one place to build client websites, create social content and Reels, plan ads, and keep outreach organized.\n\nIt may be useful if ' + company + ' wants to save production time or take on more clients. Free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply here.'
+    opener + '\n\nNitro Outreach gives solo and small agencies one place to build client websites, create social content and Reels, plan ads, and keep outreach organized.\n\nIt may help ' + company + ' save production time or take on more clients. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply here.'
   ] : [
     opener + '\n\nI run Nitro Outreach, an all-in-one marketing platform. One login builds your website, social posts, Reels, and ad campaigns - so ' + company + ' can replace a pile of separate tools and save time and money.\n\nIt is free to start, no credit card. If it sounds useful, take a look: https://nitrooutreach.com\n\nEither way, wishing ' + company + ' a great week.',
     opener + '\n\nMost small teams juggle five different tools to keep their marketing going. Nitro Outreach puts it all in one place - website, social, Reels, and ads - built with AI from a single login.\n\nThought it might save ' + company + ' some time. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply to this email.',
-    opener + '\n\nQuick one: I built Nitro Outreach to help businesses like ' + company + ' handle all their marketing in one spot - website, social posts, Reels, and ad campaigns - without hiring an agency or stitching apps together.\n\nFree to start, no credit card: https://nitrooutreach.com\n\nWorth a look if you have a couple of minutes.'
+    opener + '\n\nI built Nitro Outreach to help businesses like ' + company + ' handle their marketing in one spot - website, social posts, Reels, and ad campaigns - without hiring an agency or stitching apps together.\n\nIt is free to start, no credit card: https://nitrooutreach.com\n\nWorth a look if you have a couple of minutes.'
   ];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 
@@ -303,6 +303,9 @@ export default async function handler(req, res) {
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
         const siteUrl = 'https://nitrooutreach.com/?utm_source=outreach&utm_medium=email&utm_campaign=automated&oid=' + encodeURIComponent(trackingId) + '&ot=' + encodeURIComponent(outreachTokenFor(trackingId));
         const trackedBody = body.replaceAll('https://nitrooutreach.com', siteUrl);
+        const emailHtml = escapeHtml(body)
+          .replaceAll('https://nitrooutreach.com', '<a href="' + escapeHtml(siteUrl) + '" style="color:#ff8a4c;font-weight:700;text-decoration:underline">Visit Nitro Outreach</a>')
+          .replace(/\n/g, '<br>');
         const openPixelUrl = 'https://nitrooutreach.com/api/track-open?id=' + encodeURIComponent(trackingId);
         const footerText = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
         const footerHtml = '<br><br>--<br>Ty Smith, Owner<br>Nitro Outreach<br>' + escapeHtml(PHYSICAL_ADDRESS) + '<br><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe</a>' +
@@ -312,7 +315,7 @@ export default async function handler(req, res) {
           to: contact.email,
           subject,
           text: trackedBody + footerText,
-          html: escapeHtml(trackedBody).replace(/\n/g, '<br>') + footerHtml,
+          html: emailHtml + footerHtml,
           reply_to: OUTREACH_REPLY_TO,
           headers: {
             'List-Unsubscribe': `<${unsubscribeUrl}>`,

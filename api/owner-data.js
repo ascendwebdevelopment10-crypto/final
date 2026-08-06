@@ -58,13 +58,13 @@ function collapseRapidPageViews(visits, windowMs = 60000) {
 
 function sourceLabel(visit) {
   const source = String(visit?.utmSource || '').trim().toLowerCase();
-  if (source === 'outreach' || source === 'out') return 'Email outreach';
+  if (source === 'outreach' || source === 'out' || visit?.outreachId) return 'Email outreach';
   if (['ig', 'instagram', 'igshopping'].includes(source)) return 'Instagram';
   if (['fb', 'facebook', 'meta'].includes(source)) return 'Facebook';
   if (['google', 'adwords'].includes(source)) return source === 'adwords' ? 'Google Ads' : 'Google';
   if (source) return source.charAt(0).toUpperCase() + source.slice(1);
   const referrer = String(visit?.referrer || '').trim().toLowerCase();
-  if (!referrer || ['null', 'undefined', '-'].includes(referrer)) return 'Direct / typed';
+  if (!referrer || ['null', 'undefined', '-'].includes(referrer)) return 'Direct / unknown';
   if (referrer.includes('instagram')) return 'Instagram';
   if (referrer.includes('facebook')) return 'Facebook';
   if (referrer.includes('google')) return 'Google';
@@ -89,7 +89,7 @@ function groupVisitSessions(visits, windowMs = 30 * 60 * 1000) {
       previous.session.lastViewedAt = visit.viewedAt || visit.visitedAt;
       previous.session.viewCount += 1;
       if (!previous.session.pages.includes(path)) previous.session.pages.push(path);
-      if (sourceLabel(previous.session) === 'Direct / typed' && sourceLabel(visit) !== 'Direct / typed') {
+      if (sourceLabel(previous.session) === 'Direct / unknown' && sourceLabel(visit) !== 'Direct / unknown') {
         Object.assign(previous.session, { referrer: visit.referrer, utmSource: visit.utmSource, utmMedium: visit.utmMedium, utmCampaign: visit.utmCampaign });
       }
       continue;
