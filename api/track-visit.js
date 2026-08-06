@@ -44,6 +44,8 @@ function isLikelyDataCenter(req) {
   return DATA_CENTER_CITIES.has(city);
 }
 
+const CONFIRMED_ENGAGEMENTS = new Set(['active_8s', 'scroll', 'click', 'navigation']);
+
 // Production-only, privacy-safe analytics:
 // - a page view is a real route/hash visit
 // - a session is 30 minutes of activity
@@ -76,6 +78,36 @@ export default async function handler(req, res) {
     const now = new Date();
     const viewedAt = now.toISOString();
     const day = mountainDay(now);
+    const outreachId = clean(req.body?.outreachId, 100).replace(/[^a-zA-Z0-9_-]/g, '');
+    const outreachToken = clean(req.body?.outreachToken, 100);
+    const engagement = clean(req.body?.outreachEngagement, 40).toLowerCase();
+    const visibleBrowserVisit = req.body?.visibility === 'visible';
+
+    // A signed link load is only a possible visit: security scanners can run
+    // JavaScript too. Promote it to a confirmed visit only after the same
+    // attributed browser session sends a meaningful engagement signal.
+    if (engagement) {
+      if (!outreachId || !visibleBrowserVisit || !CONFIRMED_ENGAGEMENTS.has(engagement) || !outreachTokenValid(outreachId, outreachToken)) {
+        res.status(200).json({ ok: true, excluded: 'unconfirmed-engagement' }); return;
+      }
+      const attributionKey = `outreach:visit:session:${outreachId}:${sessionHash}`;
+      if (!await kv.get(attributionKey)) {
+        res.status(200).json({ ok: true, excluded: 'missing-attributed-load' }); return;
+      }
+      const confirmationKey = `outreach:confirmed:session:${outreachId}:${sessionHash}`;
+      const freshConfirmation = await kv.set(confirmationKey, '1', { nx: true, ex: 2592000 });
+      if (freshConfirmation) {
+        await kv.hincrby('email:confirmed-visits:count', outreachId, 1);
+        const firstConfirmedAt = await kv.hget('email:confirmed-visits:first', outreachId);
+        if (!firstConfirmedAt) await kv.hset('email:confirmed-visits:first', { [outreachId]: Date.now() });
+        await Promise.all([
+          kv.hset('email:confirmed-visits:last', { [outreachId]: Date.now() }),
+          kv.hset('email:confirmed-visits:reason', { [outreachId]: engagement }),
+          kv.hset('email:confirmed-visits:url', { [outreachId]: path }),
+        ]);
+      }
+      res.status(200).json({ ok: true, confirmed: true, deduplicated: !freshConfirmation }); return;
+    }
 
     // Browsers occasionally retry the tracker with a new storage ID. Treat the
     // same IP, user agent, and route inside ten seconds as one request without
@@ -98,9 +130,6 @@ export default async function handler(req, res) {
 
     const pageDedupeKey = `visit:page:v2:${sessionHash}:${hash(path, 12)}`;
     const freshPageView = await kv.set(pageDedupeKey, '1', { nx: true, ex: 20 });
-    const outreachId = clean(req.body?.outreachId, 100).replace(/[^a-zA-Z0-9_-]/g, '');
-    const outreachToken = clean(req.body?.outreachToken, 100);
-    const visibleBrowserVisit = req.body?.visibility === 'visible';
     if (outreachId && visibleBrowserVisit && outreachTokenValid(outreachId, outreachToken)) {
       const attributionKey = `outreach:visit:session:${outreachId}:${sessionHash}`;
       const freshAttributedSession = await kv.set(attributionKey, '1', { nx: true, ex: 2592000 });

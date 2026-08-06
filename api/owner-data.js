@@ -9,6 +9,7 @@ const MOUNTAIN_TIME_ZONE = 'America/Denver';
 const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
 const OUTREACH_TRACKING_START = Date.parse(process.env.OUTREACH_TRACKING_START || '2026-08-04T14:00:00.000Z');
 const SITE_VISIT_TRACKING_START = Date.parse(process.env.SITE_VISIT_TRACKING_START || '2026-08-04T20:33:00.000Z');
+const CONFIRMED_VISIT_TRACKING_START = Date.parse(process.env.CONFIRMED_VISIT_TRACKING_START || '2026-08-06T16:15:00.000Z');
 
 function emailAddress(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -148,8 +149,11 @@ export default async function handler(req, res) {
     }
 
     if (action === 'outreach') {
-      const [allLog, allReplies, events, engagement, webhook, resendEvents] = await Promise.all([
+      const [allLog, allReplies, events, engagement, webhook, resendEvents, confirmedCounts, confirmedFirst, confirmedLast, confirmedReasons, confirmedUrls] = await Promise.all([
         getEmailLog(300), getReplies(300), getEmailEvents(), getEmailEngagement(), ensureOutreachWebhook(), recentResendEvents(),
+        kv.hgetall('email:confirmed-visits:count'), kv.hgetall('email:confirmed-visits:first'),
+        kv.hgetall('email:confirmed-visits:last'), kv.hgetall('email:confirmed-visits:reason'),
+        kv.hgetall('email:confirmed-visits:url'),
       ]);
       const replies = allReplies.filter(reply => Number(reply.timestamp || 0) >= OUTREACH_TRACKING_START);
       const repliesBySender = new Map();
@@ -169,6 +173,9 @@ export default async function handler(req, res) {
           const visitCount = Number(engagement.clicks?.[entry.id] || 0);
           const firstVisitedAt = Number(engagement.clicksFirst?.[entry.id] || 0) || null;
           const lastVisitedAt = Number(engagement.clicksLast?.[entry.id] || 0) || null;
+          const confirmedVisitCount = Number(confirmedCounts?.[entry.id] || 0);
+          const firstConfirmedAt = Number(confirmedFirst?.[entry.id] || 0) || null;
+          const lastConfirmedAt = Number(confirmedLast?.[entry.id] || 0) || null;
           return {
             ...entry,
             status: reply ? 'replied' : deliveryStatus(providerStatus),
@@ -183,6 +190,13 @@ export default async function handler(req, res) {
             firstVisitedAt,
             lastVisitedAt,
             visitedPath: engagement.clicksUrl?.[entry.id] || '',
+            linkLoaded: visitCount > 0,
+            confirmedVisitCount,
+            confirmedVisit: confirmedVisitCount > 0,
+            firstConfirmedAt,
+            lastConfirmedAt,
+            confirmedReason: confirmedReasons?.[entry.id] || '',
+            confirmedPath: confirmedUrls?.[entry.id] || '',
             replied: !!reply,
             reply: reply ? { from: reply.from, subject: reply.subject, body: reply.body, timestamp: reply.timestamp } : null,
           };
@@ -192,14 +206,16 @@ export default async function handler(req, res) {
       const replied = log.filter(entry => entry.replied).length;
       const delivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status)).length;
       const opened = log.filter(entry => entry.opened).length;
-      const visitedSite = log.filter(entry => entry.visitedSite).length;
+      const linkLoads = log.filter(entry => entry.linkLoaded).length;
+      const confirmedVisits = log.filter(entry => entry.confirmedVisit).length;
       const failed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status)).length;
       res.status(200).json({
         trackingStart: new Date(OUTREACH_TRACKING_START).toISOString(),
         siteVisitTrackingStart: new Date(SITE_VISIT_TRACKING_START).toISOString(),
+        confirmedVisitTrackingStart: new Date(CONFIRMED_VISIT_TRACKING_START).toISOString(),
         webhook,
         log,
-        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, visitedSite, failed },
+        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, linkLoads, confirmedVisits, visitedSite: confirmedVisits, failed },
       });
       return;
     }
