@@ -6,7 +6,7 @@ import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
-const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
+const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles', 'boydton']);
 const OUTREACH_TRACKING_START = Date.parse(process.env.OUTREACH_TRACKING_START || '2026-08-04T14:00:00.000Z');
 const SITE_VISIT_TRACKING_START = Date.parse(process.env.SITE_VISIT_TRACKING_START || '2026-08-04T20:33:00.000Z');
 const CONFIRMED_VISIT_TRACKING_START = Date.parse(process.env.CONFIRMED_VISIT_TRACKING_START || '2026-08-06T16:15:00.000Z');
@@ -22,6 +22,15 @@ function isLikelyDataCenterVisit(visit) {
   let city = rawCity.toLowerCase();
   try { city = decodeURIComponent(rawCity).toLowerCase(); } catch {}
   return !visit?.email && DATA_CENTER_CITIES.has(city);
+}
+
+function isOutreachVisit(visit) {
+  const source = String(visit?.utmSource || '').trim().toLowerCase();
+  return source === 'outreach' || source === 'out' || !!visit?.outreachId;
+}
+
+function isConfirmedOutreachVisit(visit, confirmedSessions) {
+  return !!(visit?.outreachId && visit?.sessionId && confirmedSessions?.[`${visit.outreachId}:${visit.sessionId}`]);
 }
 
 function collapseRapidPageViews(visits, windowMs = 60000) {
@@ -45,6 +54,51 @@ function collapseRapidPageViews(visits, windowMs = 60000) {
     recent.set(key, { timestamp, visit: copy });
   }
   return kept.sort((a, b) => Date.parse(b.viewedAt || b.visitedAt || 0) - Date.parse(a.viewedAt || a.visitedAt || 0));
+}
+
+function sourceLabel(visit) {
+  const source = String(visit?.utmSource || '').trim().toLowerCase();
+  if (source === 'outreach' || source === 'out') return 'Email outreach';
+  if (['ig', 'instagram', 'igshopping'].includes(source)) return 'Instagram';
+  if (['fb', 'facebook', 'meta'].includes(source)) return 'Facebook';
+  if (['google', 'adwords'].includes(source)) return source === 'adwords' ? 'Google Ads' : 'Google';
+  if (source) return source.charAt(0).toUpperCase() + source.slice(1);
+  const referrer = String(visit?.referrer || '').trim().toLowerCase();
+  if (!referrer || ['null', 'undefined', '-'].includes(referrer)) return 'Direct / typed';
+  if (referrer.includes('instagram')) return 'Instagram';
+  if (referrer.includes('facebook')) return 'Facebook';
+  if (referrer.includes('google')) return 'Google';
+  if (referrer.includes('bing')) return 'Bing';
+  if (referrer.includes('linkedin')) return 'LinkedIn';
+  if (referrer.includes('nitrooutreach.com')) return 'On-site link';
+  try { return new URL(referrer).hostname.replace(/^www\./, ''); } catch { return referrer; }
+}
+
+function groupVisitSessions(visits, windowMs = 30 * 60 * 1000) {
+  const ordered = [...visits].sort((a, b) => Date.parse(a.viewedAt || a.visitedAt || 0) - Date.parse(b.viewedAt || b.visitedAt || 0));
+  const sessions = [];
+  const latestByVisitor = new Map();
+  for (const visit of ordered) {
+    const timestamp = Date.parse(visit.viewedAt || visit.visitedAt || 0);
+    const identity = visit.email || visit.visitorId || visit.sessionId || visit.id;
+    const previous = latestByVisitor.get(identity);
+    const sameSession = previous && Number.isFinite(timestamp) && timestamp - previous.lastTimestamp <= windowMs;
+    const path = String(visit.path || '/').split('?')[0].split('#')[0] || '/';
+    if (sameSession) {
+      previous.lastTimestamp = timestamp;
+      previous.session.lastViewedAt = visit.viewedAt || visit.visitedAt;
+      previous.session.viewCount += 1;
+      if (!previous.session.pages.includes(path)) previous.session.pages.push(path);
+      if (sourceLabel(previous.session) === 'Direct / typed' && sourceLabel(visit) !== 'Direct / typed') {
+        Object.assign(previous.session, { referrer: visit.referrer, utmSource: visit.utmSource, utmMedium: visit.utmMedium, utmCampaign: visit.utmCampaign });
+      }
+      continue;
+    }
+    const session = { ...visit, firstViewedAt: visit.viewedAt || visit.visitedAt, lastViewedAt: visit.viewedAt || visit.visitedAt, viewCount: 1, pages: [path] };
+    sessions.push(session);
+    latestByVisitor.set(identity, { lastTimestamp: timestamp, session });
+  }
+  return sessions.sort((a, b) => Date.parse(b.lastViewedAt || 0) - Date.parse(a.lastViewedAt || 0));
 }
 
 function mountainDay(date = new Date()) {
@@ -115,31 +169,25 @@ export default async function handler(req, res) {
       }
       accounts.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       const day = mountainDay();
-      const [siteUnique, uniqueToday, siteSessions, sessionsToday, sitePageviews, pageviewsToday] = await Promise.all([
-        kv.get('stats:site:v2:unique'),
-        kv.get(`stats:site:v2:unique:day:${day}`),
-        kv.get('stats:site:v2:sessions'),
-        kv.get(`stats:site:v2:sessions:day:${day}`),
-        kv.get('stats:site:v2:pageviews'),
-        kv.get(`stats:site:v2:pageviews:day:${day}`),
-      ]);
       const rawVisitors = await kv.lrange('stats:site:v2:visitors', 0, 999);
       const allVisitors = (rawVisitors || []).map(value => {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
-      const excludedVisitors = allVisitors.filter(isLikelyDataCenterVisit);
-      const cleanVisitors = allVisitors.filter(visit => !isLikelyDataCenterVisit(visit));
-      const visitors = collapseRapidPageViews(cleanVisitors);
-      const duplicatePageviews = Math.max(0, cleanVisitors.length - visitors.length);
+      const confirmedSessions = await kv.hgetall('email:confirmed-visits:sessions');
+      const excludedVisitors = allVisitors.filter(visit => isLikelyDataCenterVisit(visit) || (isOutreachVisit(visit) && !isConfirmedOutreachVisit(visit, confirmedSessions)));
+      const cleanVisitors = collapseRapidPageViews(allVisitors.filter(visit => !isLikelyDataCenterVisit(visit) && (!isOutreachVisit(visit) || isConfirmedOutreachVisit(visit, confirmedSessions))));
+      const visitors = groupVisitSessions(cleanVisitors);
       const cleanToday = cleanVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
-      const visitorsToday = visitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
-      const duplicatePageviewsToday = Math.max(0, cleanToday.length - visitorsToday.length);
-      const excludedUnique = new Set(excludedVisitors.map(visit => visit.visitorId).filter(Boolean)).size;
-      const excludedSessions = new Set(excludedVisitors.map(visit => visit.sessionId).filter(Boolean)).size;
-      const excludedToday = excludedVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
-      const excludedUniqueToday = new Set(excludedToday.map(visit => visit.visitorId).filter(Boolean)).size;
-      const excludedSessionsToday = new Set(excludedToday.map(visit => visit.sessionId).filter(Boolean)).size;
+      const visitorsToday = groupVisitSessions(cleanToday);
+      const uniqueVisitors = new Set(cleanVisitors.map(visit => visit.email || visit.visitorId).filter(Boolean)).size;
+      const uniqueVisitorsToday = new Set(cleanToday.map(visit => visit.email || visit.visitorId).filter(Boolean)).size;
+      const sourceCounts = new Map();
+      for (const visit of visitors) {
+        const label = sourceLabel(visit);
+        sourceCounts.set(label, (sourceCounts.get(label) || 0) + 1);
+      }
+      const sourceBreakdown = [...sourceCounts.entries()].map(([source, sessions]) => ({ source, sessions })).sort((a, b) => b.sessions - a.sessions);
       const auditIds = await kv.lrange('growth:audits', 0, 199);
       const auditValues = auditIds.length ? await Promise.all(auditIds.map(id => kv.get(`growth:audit:${id}`))) : [];
       const auditLeads = auditValues.map(value => {
@@ -155,12 +203,12 @@ export default async function handler(req, res) {
         verified,
         unverified: accounts.length - verified,
         accounts,
-        siteUnique: Math.max(0, Number(siteUnique || 0) - excludedUnique),
-        uniqueToday: Math.max(0, Number(uniqueToday || 0) - excludedUniqueToday),
-        siteSessions: Math.max(0, Number(siteSessions || 0) - excludedSessions),
-        sessionsToday: Math.max(0, Number(sessionsToday || 0) - excludedSessionsToday),
-        sitePageviews: Math.max(0, Number(sitePageviews || 0) - excludedVisitors.length - duplicatePageviews),
-        pageviewsToday: Math.max(0, Number(pageviewsToday || 0) - excludedToday.length - duplicatePageviewsToday),
+        siteUnique: uniqueVisitors,
+        uniqueToday: uniqueVisitorsToday,
+        siteSessions: visitors.length,
+        sessionsToday: visitorsToday.length,
+        sitePageviews: cleanVisitors.length,
+        pageviewsToday: cleanToday.length,
         analyticsTimeZone: MOUNTAIN_TIME_ZONE,
         analyticsQuality: {
           measurement: 'First-party browser tracking',
@@ -168,9 +216,11 @@ export default async function handler(req, res) {
           botsExcluded: true,
           dataCenterTrafficExcluded: true,
           identity: 'Signed-in customers are identified by account; anonymous visitors use a privacy-safe browser ID.',
-          limitations: 'Rapid repeat loads are collapsed. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
+          limitations: 'Rapid repeat loads are collapsed and page views are grouped into 30-minute visits. Unconfirmed outreach link loads and known data-center locations are excluded. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
         },
         visitors,
+        sourceBreakdown,
+        excludedAutomated: excludedVisitors.length,
         auditLeads,
       });
       return;

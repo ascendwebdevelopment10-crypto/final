@@ -7,7 +7,7 @@ import { trackEmailClick } from '../lib/store.js';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
 const BOT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|facebookexternalhit|linkedinbot|twitterbot|discordbot|headlesschrome|lighthouse|pagespeed|vercel-screenshot|google-inspectiontool|chrome-lighthouse|bytespider|semrush|ahrefs|mj12|uptimerobot|curl|wget|python-requests|node-fetch|axios|postmanruntime)/i;
-const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles']);
+const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles', 'boydton']);
 
 function clean(value, max = 160) {
   return String(value || '').replace(/[\r\n]/g, ' ').trim().slice(0, max);
@@ -84,6 +84,7 @@ export default async function handler(req, res) {
     const outreachToken = clean(req.body?.outreachToken, 100);
     const engagement = clean(req.body?.outreachEngagement, 40).toLowerCase();
     const visibleBrowserVisit = req.body?.visibility === 'visible';
+    const validOutreachAttribution = !!(outreachId && outreachTokenValid(outreachId, outreachToken));
 
     // A signed link load is only a possible visit: security scanners can run
     // JavaScript too. Promote it to a confirmed visit only after the same
@@ -103,6 +104,7 @@ export default async function handler(req, res) {
         const firstConfirmedAt = await kv.hget('email:confirmed-visits:first', outreachId);
         if (!firstConfirmedAt) await kv.hset('email:confirmed-visits:first', { [outreachId]: Date.now() });
         await Promise.all([
+          kv.hset('email:confirmed-visits:sessions', { [`${outreachId}:${sessionHash.slice(0, 8).toUpperCase()}`]: Date.now() }),
           kv.hset('email:confirmed-visits:last', { [outreachId]: Date.now() }),
           kv.hset('email:confirmed-visits:reason', { [outreachId]: engagement }),
           kv.hset('email:confirmed-visits:url', { [outreachId]: path }),
@@ -134,7 +136,7 @@ export default async function handler(req, res) {
     // ID. Deduplicate by the persistent browser ID and route as well.
     const pageDedupeKey = `visit:page:v3:${visitorHash}:${hash(path, 12)}`;
     const freshPageView = await kv.set(pageDedupeKey, '1', { nx: true, ex: PAGE_VIEW_DEDUPE_SECONDS });
-    if (outreachId && visibleBrowserVisit && outreachTokenValid(outreachId, outreachToken)) {
+    if (validOutreachAttribution && visibleBrowserVisit) {
       const attributionKey = `outreach:visit:session:${outreachId}:${sessionHash}`;
       const freshAttributedSession = await kv.set(attributionKey, '1', { nx: true, ex: 2592000 });
       if (freshAttributedSession) await trackEmailClick(outreachId, path);
@@ -151,6 +153,17 @@ export default async function handler(req, res) {
       if (!storedGeo && (incomingGeo.city || incomingGeo.region || incomingGeo.country)) {
         await kv.set(geoKey, incomingGeo, { nx: true, ex: GEO_TTL_SECONDS });
       }
+      const incomingSource = {
+        referrer: clean(req.body?.referrer, 240),
+        utmSource: clean(req.body?.utmSource, 100),
+        utmMedium: clean(req.body?.utmMedium, 100),
+        utmCampaign: clean(req.body?.utmCampaign, 120),
+      };
+      const sourceKey = `visit:source:v2:${sessionHash}`;
+      const storedSource = await kv.get(sourceKey);
+      const hasCampaignSource = incomingSource.utmSource || (incomingSource.referrer && !incomingSource.referrer.includes('nitrooutreach.com'));
+      if (!storedSource && hasCampaignSource) await kv.set(sourceKey, incomingSource, { nx: true, ex: 1800 });
+      const source = storedSource && typeof storedSource === 'object' ? storedSource : incomingSource;
       const event = {
         id: `view_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
         viewedAt,
@@ -164,10 +177,11 @@ export default async function handler(req, res) {
         path,
         landingPath,
         pageTitle: clean(req.body?.pageTitle, 160),
-        referrer: clean(req.body?.referrer, 240),
-        utmSource: clean(req.body?.utmSource, 100),
-        utmMedium: clean(req.body?.utmMedium, 100),
-        utmCampaign: clean(req.body?.utmCampaign, 120),
+        referrer: source.referrer,
+        utmSource: source.utmSource,
+        utmMedium: source.utmMedium,
+        utmCampaign: source.utmCampaign,
+        outreachId: validOutreachAttribution ? outreachId : '',
         city: clean(geo.city, 80),
         region: clean(geo.region, 80),
         country: clean(geo.country, 8),
