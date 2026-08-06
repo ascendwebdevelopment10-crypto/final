@@ -101,6 +101,39 @@ function groupVisitSessions(visits, windowMs = 30 * 60 * 1000) {
   return sessions.sort((a, b) => Date.parse(b.lastViewedAt || 0) - Date.parse(a.lastViewedAt || 0));
 }
 
+function groupVisitors(sessions) {
+  const groups = new Map();
+  for (const session of sessions) {
+    const identity = session.email || session.visitorId || session.sessionId || session.id;
+    let group = groups.get(identity);
+    if (!group) {
+      group = { ...session, sessionCount: 0, viewCount: 0, pages: [], sessions: [] };
+      groups.set(identity, group);
+    }
+    group.sessionCount += 1;
+    group.viewCount += Number(session.viewCount || 1);
+    if (Date.parse(session.firstViewedAt || 0) < Date.parse(group.firstViewedAt || 0)) group.firstViewedAt = session.firstViewedAt;
+    if (Date.parse(session.lastViewedAt || 0) >= Date.parse(group.lastViewedAt || 0)) {
+      Object.assign(group, {
+        lastViewedAt: session.lastViewedAt,
+        city: session.city, region: session.region, country: session.country, device: session.device,
+        referrer: session.referrer, utmSource: session.utmSource, utmMedium: session.utmMedium,
+        utmCampaign: session.utmCampaign, outreachId: session.outreachId,
+      });
+    }
+    for (const path of session.pages || [session.path || '/']) {
+      if (!group.pages.includes(path)) group.pages.push(path);
+    }
+    group.sessions.push({
+      firstViewedAt: session.firstViewedAt,
+      lastViewedAt: session.lastViewedAt,
+      viewCount: Number(session.viewCount || 1),
+      pages: session.pages || [session.path || '/'],
+    });
+  }
+  return [...groups.values()].sort((a, b) => Date.parse(b.lastViewedAt || 0) - Date.parse(a.lastViewedAt || 0));
+}
+
 function mountainDay(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: MOUNTAIN_TIME_ZONE,
@@ -178,6 +211,7 @@ export default async function handler(req, res) {
       const excludedVisitors = allVisitors.filter(visit => isLikelyDataCenterVisit(visit) || (isOutreachVisit(visit) && !isConfirmedOutreachVisit(visit, confirmedSessions)));
       const cleanVisitors = collapseRapidPageViews(allVisitors.filter(visit => !isLikelyDataCenterVisit(visit) && (!isOutreachVisit(visit) || isConfirmedOutreachVisit(visit, confirmedSessions))));
       const visitors = groupVisitSessions(cleanVisitors);
+      const visitorGroups = groupVisitors(visitors);
       const cleanToday = cleanVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
       const visitorsToday = groupVisitSessions(cleanToday);
       const uniqueVisitors = new Set(cleanVisitors.map(visit => visit.email || visit.visitorId).filter(Boolean)).size;
@@ -219,6 +253,7 @@ export default async function handler(req, res) {
           limitations: 'Rapid repeat loads are collapsed and page views are grouped into 30-minute visits. Unconfirmed outreach link loads and known data-center locations are excluded. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
         },
         visitors,
+        visitorGroups,
         sourceBreakdown,
         excludedAutomated: excludedVisitors.length,
         auditLeads,
