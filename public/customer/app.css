@@ -305,7 +305,8 @@
 
 /* Desktop quick navigation keeps lower account/owner tabs one click away. */
 .desktop-quick-wrap{position:relative;display:block}.desktop-quick-button{font-size:16px}.desktop-quick-panel{display:none;position:absolute;left:0;top:45px;width:260px;max-height:min(620px,calc(100vh - 92px));overflow:auto;padding:10px;border:1px solid var(--line);border-radius:15px;background:rgba(18,13,10,.98);box-shadow:0 24px 70px #000b;backdrop-filter:blur(24px);z-index:80}.desktop-quick-wrap.open .desktop-quick-panel{display:grid;gap:3px}.desktop-quick-panel .side-link{height:38px}.quick-menu-label{padding:9px 10px 5px;color:#746a64;font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.desktop-quick-panel .quick-menu-label:not(:first-child){margin-top:5px;border-top:1px solid var(--line)}
-@media(max-width:760px){.desktop-quick-wrap{display:none}}
+.icon-btn.mobile-menu{display:none}
+@media(max-width:760px){.desktop-quick-wrap{display:none}.icon-btn.mobile-menu{display:grid}}
 
 /* ===== Keep me signed in + hero login ===== */
 .remember{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin:-2px 0 6px;cursor:pointer;user-select:none}
