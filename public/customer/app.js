@@ -200,7 +200,29 @@ function renderReset(){document.title='Choose a new password — Nitro Outreach'
 function pricingBlock(compact=false){return `<div class="billing-toggle"><button data-interval="monthly" class="${state.interval==='monthly'?'active':''}">Monthly</button><button data-interval="yearly" class="${state.interval==='yearly'?'active':''}">Yearly <span class="save-badge">SAVE ~17%</span></button></div><div class="pricing-grid">${Object.values(PLANS).map(p=>priceCard(p,compact)).join('')}</div>`;}
 function priceCard(p){const yr=state.interval==='yearly';const amount=p.id==='free'?0:(yr?Math.round(p.yearly/12):p.monthly);const unit=p.id==='free'?'':'/mo';const monthly=p.id==='free'?'Free forever':(yr?`billed yearly · ${money(p.yearly)}/yr`:'billed monthly');return `<article class="price-card ${p.recommended?'recommended':''}">${p.recommended?'<span class="recommend-badge">RECOMMENDED</span>':''}<div class="price-name">${p.name}</div><div class="price-desc">${p.desc}</div><div class="price">${money(amount)}<small>${p.id==='free'?'':unit}</small></div><div class="price-note">${monthly}</div><a class="btn ${p.recommended?'btn-primary':''}" href="${checkoutLink(p.id)}">${state.session?(p.id==='free'?'Open workspace':'Choose '+p.name):'Start free'}</a><ul class="feature-list">${p.features.map(f=>`<li>${f}</li>`).join('')}</ul></article>`;}
 function checkoutLink(planId){if(!state.session)return `/signup?plan=${planId}&interval=${state.interval}`;if(planId==='free')return state.session.user?.onboarding?.completed?'/app':'/welcome';return `/checkout?plan=${planId}&interval=${state.interval}`;}
-function renderPricing(){document.title='Pricing — Nitro Outreach';return `<div class="pricing-page">${publicNav()}<section class="pricing-section"><div class="section-head"><span class="eyebrow">Clear, flexible pricing</span><h2>A plan for every stage of growth.</h2><p>Start with the essentials, then unlock the complete operating system as your business grows.</p></div>${pricingBlock()}</section>${footer()}</div>`;}
+function renderPricing(){
+  document.title='Pricing — Nitro Outreach';
+  const accountAction=state.session?'<a class="pill" href="/app">OPEN WORKSPACE ↗</a>':'<a href="/login">Log in</a><a class="pill" href="/signup">START FREE ↗</a>';
+  return `<div class="pricing-page stacked-pricing-page">
+    <nav class="top" aria-label="Primary navigation"><a class="brand" href="/">⚡ NITRO OUTREACH</a><div class="navlinks"><a href="/#platform">Features</a><a href="/#solutions">How it works</a><a href="/pricing" aria-current="page">Pricing</a></div><div class="navright">${accountAction}</div></nav>
+    <main>
+      <section class="stacked-pricing-hero">
+        <span class="kicker">● SIMPLE PLANS. ONE CONNECTED WORKSPACE.</span>
+        <h1>Choose your plan.<br><em>Keep your momentum.</em></h1>
+        <p>Start free, then add more websites, content, campaigns, analytics, and automation as your business grows.</p>
+        <div class="pricing-reassure"><span>Free forever plan</span><span>No credit card to start</span><span>Cancel anytime</span></div>
+      </section>
+      <section class="stacked-pricing-plans" aria-label="Nitro Outreach plans">
+        ${pricingBlock()}
+      </section>
+      <section class="stacked-pricing-value">
+        <div><span class="kicker">● LESS SOFTWARE. MORE OUTPUT.</span><h2>One bill replaces<br><em>the tool pile.</em></h2></div>
+        <div class="pricing-value-copy"><p>Every plan keeps your websites, content, outreach, and analytics in the same customer context. Upgrade when you need more firepower—not because your tools stopped talking to each other.</p><a class="cta" href="/signup">Start building free ↗</a></div>
+      </section>
+    </main>
+    <footer class="foot"><b>⚡ Nitro Outreach</b><p>Find customers. Create content. Build your presence. Track what happens next.</p><div><a href="/pricing">Pricing</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div></footer>
+  </div>`;
+}
 
 function selectedCheckout(){const id=qs('plan')||sessionStorage.getItem('nitro-plan')||'growth';const interval=qs('interval')||sessionStorage.getItem('nitro-interval')||state.interval;const chosen=plan(id);sessionStorage.setItem('nitro-plan',chosen.id);sessionStorage.setItem('nitro-interval',interval);return {chosen,interval,amount:interval==='yearly'?chosen.yearly:chosen.monthly};}
 function checkoutSteps(active){return `<div class="checkout-steps">${['Review','Payment','Complete'].map((x,i)=>`${i?'<span class="checkout-line"></span>':''}<span class="checkout-step ${i<active?'done':i===active?'active':''}"><i>${i<active?'✓':i+1}</i>${x}</span>`).join('')}</div>`;}
@@ -709,7 +731,7 @@ function syncRouteMeta(r){
   document.querySelector('meta[property="og:title"]')?.setAttribute('content',document.title);
   document.querySelector('meta[name="twitter:title"]')?.setAttribute('content',document.title);
 }
-function render(){const r=route(),stacked=r==='/';setStackedLandingStyles(stacked);let html;if(stacked)html=renderLanding();else if(r==='/audit')html=renderAudit();else if(r==='/report')html=renderReport();else if(r==='/login')html=renderLogin();else if(r==='/signup')html=renderSignup();else if(r==='/forgot-password')html=renderForgot();else if(r==='/verify-email')html=renderVerify();else if(r==='/reset-password')html=renderReset();else if(r==='/pricing')html=renderPricing();else if(r==='/privacy')html=legalPage('privacy');else if(r==='/terms')html=legalPage('terms');else if(r==='/welcome')html=renderWelcome();else if(r==='/checkout')html=renderCheckout();else if(r==='/checkout/payment')html=renderPayment();else if(r==='/checkout/success')html=renderSuccess();else if(r==='/app'||r.startsWith('/app/'))html=appShell();else html=renderLanding();syncRouteMeta(r);root.innerHTML=html;bindCommon();bindAuth();bindOnboarding();bindCheckout();bindApp();animateUI();trackPageView();if(stacked)hydrateStackedLanding();}
+function render(){const r=route(),stackedHome=r==='/',stackedTheme=stackedHome||r==='/pricing';setStackedLandingStyles(stackedTheme);let html;if(stackedHome)html=renderLanding();else if(r==='/audit')html=renderAudit();else if(r==='/report')html=renderReport();else if(r==='/login')html=renderLogin();else if(r==='/signup')html=renderSignup();else if(r==='/forgot-password')html=renderForgot();else if(r==='/verify-email')html=renderVerify();else if(r==='/reset-password')html=renderReset();else if(r==='/pricing')html=renderPricing();else if(r==='/privacy')html=legalPage('privacy');else if(r==='/terms')html=legalPage('terms');else if(r==='/welcome')html=renderWelcome();else if(r==='/checkout')html=renderCheckout();else if(r==='/checkout/payment')html=renderPayment();else if(r==='/checkout/success')html=renderSuccess();else if(r==='/app'||r.startsWith('/app/'))html=appShell();else html=renderLanding();syncRouteMeta(r);root.innerHTML=html;bindCommon();bindAuth();bindOnboarding();bindCheckout();bindApp();animateUI();trackPageView();if(stackedHome)hydrateStackedLanding();}
 function showCheckoutReturnNotice(){
   const params=new URLSearchParams(location.search);
   const upgraded=params.get('upgraded')==='1';
