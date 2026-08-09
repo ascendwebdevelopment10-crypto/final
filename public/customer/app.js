@@ -89,8 +89,46 @@ function legalPage(type){
   return `<div class="public-shell">${publicNav()}<main class="legal-page"><header><span class="eyebrow">${privacy?'PRIVACY':'LEGAL'}</span><h1>${privacy?'Privacy Policy':'Terms of Service'}</h1><p>Effective August 3, 2026 · Plain-language information for Nitro Outreach customers.</p></header><div class="legal-layout"><aside><a href="/privacy" class="${privacy?'active':''}">Privacy Policy</a><a href="/terms" class="${privacy?'':'active'}">Terms of Service</a><a href="mailto:hello@nitrooutreach.com">Contact us</a></aside><article>${sections.map((section,index)=>`<section><span>${String(index+1).padStart(2,'0')}</span><div><h2>${section[0]}</h2><p>${section[1]}</p></div></section>`).join('')}</article></div><div class="legal-note">These pages are intended to clearly describe Nitro’s current service. They do not override rights that cannot be waived under applicable law.</div></main>${footer()}</div>`;
 }
 
+const STACKED_LANDING_STYLES=['/current-mono-preview.css','/current-stacked-preview.css','/current-stacked-tweaks.css'];
+let stackedLandingMarkupPromise;
+function setStackedLandingStyles(enabled){
+  STACKED_LANDING_STYLES.forEach((href,index)=>{
+    const id='stacked-landing-style-'+index;
+    let link=document.getElementById(id);
+    if(enabled&&!link){link=document.createElement('link');link.id=id;link.rel='stylesheet';link.href=href;document.head.appendChild(link);}
+    if(!enabled&&link)link.remove();
+  });
+}
+function stackedLandingMarkup(){
+  if(!stackedLandingMarkupPromise){
+    stackedLandingMarkupPromise=fetch('/current-stacked-preview/').then(response=>{
+      if(!response.ok)throw new Error('Landing page failed to load');
+      return response.text();
+    }).then(html=>new DOMParser().parseFromString(html,'text/html').body.innerHTML);
+  }
+  return stackedLandingMarkupPromise;
+}
+async function hydrateStackedLanding(){
+  const mount=document.getElementById('stacked-home-root');
+  if(!mount)return;
+  try{
+    const html=await stackedLandingMarkup();
+    if(route()!=='/'||!mount.isConnected)return;
+    mount.outerHTML=html;
+    const greeting=document.getElementById('timeGreeting');
+    if(greeting){const hour=new Date().getHours();greeting.textContent=hour<12?'Good morning.':hour<18?'Good afternoon.':'Good evening.';}
+    scrollToRouteHash();
+  }catch(error){
+    window.__stackedLandingFailed=true;
+    setStackedLandingStyles(false);
+    if(mount.isConnected){root.innerHTML=renderLanding();bindCommon();animateUI();}
+    console.error(error);
+  }
+}
+
 function renderLanding(){
-  document.title='Nitro Outreach — All your marketing in one place';
+  document.title='Nitro Outreach — Do all your marketing in one tab';
+  if(!window.__stackedLandingFailed)return '<div id="stacked-home-root" class="stacked-home-loading" aria-busy="true"><span>⚡</span><small>Loading Nitro Outreach…</small></div>';
   const navItems=[['⌂','Overview'],['◇','Websites'],['✦','Content'],['◎','Social'],['◈','Ads']];
   const capabilities=[
     ['website','◇','WEBSITES','Go from a few details to a polished site.','Conversion-ready copy, structure, and publishing live in the same workspace.'],
@@ -671,7 +709,7 @@ function syncRouteMeta(r){
   document.querySelector('meta[property="og:title"]')?.setAttribute('content',document.title);
   document.querySelector('meta[name="twitter:title"]')?.setAttribute('content',document.title);
 }
-function render(){const r=route();let html;if(r==='/')html=renderLanding();else if(r==='/audit')html=renderAudit();else if(r==='/report')html=renderReport();else if(r==='/login')html=renderLogin();else if(r==='/signup')html=renderSignup();else if(r==='/forgot-password')html=renderForgot();else if(r==='/verify-email')html=renderVerify();else if(r==='/reset-password')html=renderReset();else if(r==='/pricing')html=renderPricing();else if(r==='/privacy')html=legalPage('privacy');else if(r==='/terms')html=legalPage('terms');else if(r==='/welcome')html=renderWelcome();else if(r==='/checkout')html=renderCheckout();else if(r==='/checkout/payment')html=renderPayment();else if(r==='/checkout/success')html=renderSuccess();else if(r==='/app'||r.startsWith('/app/'))html=appShell();else html=renderLanding();syncRouteMeta(r);root.innerHTML=html;bindCommon();bindAuth();bindOnboarding();bindCheckout();bindApp();animateUI();trackPageView();}
+function render(){const r=route(),stacked=r==='/';setStackedLandingStyles(stacked);let html;if(stacked)html=renderLanding();else if(r==='/audit')html=renderAudit();else if(r==='/report')html=renderReport();else if(r==='/login')html=renderLogin();else if(r==='/signup')html=renderSignup();else if(r==='/forgot-password')html=renderForgot();else if(r==='/verify-email')html=renderVerify();else if(r==='/reset-password')html=renderReset();else if(r==='/pricing')html=renderPricing();else if(r==='/privacy')html=legalPage('privacy');else if(r==='/terms')html=legalPage('terms');else if(r==='/welcome')html=renderWelcome();else if(r==='/checkout')html=renderCheckout();else if(r==='/checkout/payment')html=renderPayment();else if(r==='/checkout/success')html=renderSuccess();else if(r==='/app'||r.startsWith('/app/'))html=appShell();else html=renderLanding();syncRouteMeta(r);root.innerHTML=html;bindCommon();bindAuth();bindOnboarding();bindCheckout();bindApp();animateUI();trackPageView();if(stacked)hydrateStackedLanding();}
 function showCheckoutReturnNotice(){
   const params=new URLSearchParams(location.search);
   const upgraded=params.get('upgraded')==='1';
