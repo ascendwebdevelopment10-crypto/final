@@ -672,9 +672,11 @@ Be specific to the supplied business and offer. Do not invent performance number
     // ---- MESSAGING: connect an email/texting account so sends auto-log ----
     if (action === 'connect-messaging') {
       const channel = clean(body.channel, 10).toLowerCase() === 'sms' ? 'sms' : 'email';
-      data.connections[channel] = channel === 'email'
-        ? { connected: true, from: clean(body.from, 200), connectedAt: new Date().toISOString() }
-        : { connected: true, number: clean(body.number, 40), connectedAt: new Date().toISOString() };
+      if (channel === 'email') {
+        res.status(400).json({ error: 'Use Connect Outlook so Microsoft can securely authorize the mailbox.' });
+        return;
+      }
+      data.connections.sms = { connected: true, number: clean(body.number, 40), connectedAt: new Date().toISOString() };
       // One durable webhook token per account so a connected provider can auto-log sends & replies.
       if (!data.connections.hookToken) {
         const token = randomBytes(24).toString('base64url');
