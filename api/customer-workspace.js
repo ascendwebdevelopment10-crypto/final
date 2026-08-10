@@ -353,6 +353,25 @@ export default async function handler(req, res) {
       return;
     }
 
+    // ---- CAROUSEL: group existing Content Studio images without duplicating media ----
+    if (action === 'create-carousel-from-images') {
+      const imageIds = [...new Set((Array.isArray(body.imageIds) ? body.imageIds : []).map(value => clean(value, 80)).filter(Boolean))].slice(0, 10);
+      if (imageIds.length < 2) { res.status(400).json({ error: 'Select at least 2 images for the carousel.' }); return; }
+      const slides = imageIds.map(imageId => data.content.find(item => item.id === imageId && item.type === 'image'));
+      if (slides.some(item => !item)) { res.status(400).json({ error: 'One or more selected images are no longer available.' }); return; }
+      const title = clean(body.title, 140) || 'Instagram carousel';
+      const item = {
+        id: id('carousel'), type: 'carousel', topic: title,
+        caption: clean(body.caption, 2200), ownsSlides: false,
+        slides: slides.map((slide, index) => ({ id: slide.id, caption: `Slide ${index + 1}` })),
+        source: 'upload', createdAt: new Date().toISOString(),
+      };
+      data.content.unshift(item);
+      await saveCustomer(user);
+      res.status(201).json({ ok: true, item });
+      return;
+    }
+
     // ---- WEBSITES: generate a real, complete one-page site ----
     if (action === 'generate-website' || action === 'create-website') {
       if (plan.websites !== null && data.websites.length >= plan.websites) {
@@ -620,7 +639,7 @@ Be specific to the supplied business and offer. Do not invent performance number
       const gone = data.content.find(c => c.id === cid);
       data.content = data.content.filter(c => c.id !== cid);
       try { await kv.del(`customer:img:${cid}`); } catch {}
-      if (gone && Array.isArray(gone.slides)) { for (const s of gone.slides) { try { await kv.del(`customer:img:${s.id}`); } catch {} } }
+      if (gone && gone.ownsSlides !== false && Array.isArray(gone.slides)) { for (const s of gone.slides) { try { await kv.del(`customer:img:${s.id}`); } catch {} } }
       await saveCustomer(user); res.status(200).json({ ok: true }); return;
     }
     if (action === 'update-content-caption') {
@@ -649,6 +668,7 @@ Be specific to the supplied business and offer. Do not invent performance number
       const cid = clean(body.id, 80);
       const item = data.content.find(c => c.id === cid);
       if (!item) { res.status(404).json({ error: 'That content was not found.' }); return; }
+      if (item.postedToInstagram) { res.status(409).json({ error: 'This content has already been posted to Instagram.' }); return; }
       if (!user.meta || !user.meta.token || !user.meta.igUserId) {
         res.status(400).json({ error: 'Connect your Instagram first (Social tab).' }); return;
       }
