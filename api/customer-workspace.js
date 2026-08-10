@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { randomBytes } from 'node:crypto';
 import { currentCustomer, sameOrigin, saveCustomer, rateLimit, requestOrigin } from '../lib/customer-auth.js';
 import { publishImage, publishCarousel, publishReel } from '../lib/meta.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
 
@@ -692,6 +693,7 @@ Be specific to the supplied business and offer. Do not invent performance number
         res.status(200).json({ ok: true, mediaId });
       } catch (e) {
         console.error('Instagram publish error:', e.message);
+        await notifyBestEffort({ title: 'Instagram post failed', message: `${user.email}: ${e.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#content' });
         res.status(500).json({ error: e.message || 'Posting to Instagram failed. Please try again.' });
       }
       return;
@@ -742,6 +744,9 @@ Be specific to the supplied business and offer. Do not invent performance number
     res.status(400).json({ error: 'Unknown workspace action' });
   } catch (error) {
     console.error('Customer workspace error:', error.message);
+    if (/generate|create-(website|campaign|content)/.test(action)) {
+      await notifyBestEffort({ title: 'Nitro generation failed', message: `${user.email} · ${action}: ${error.message}`, priority: 'high', tags: 'warning,robot_face', click: 'https://nitrooutreach.com/app' });
+    }
     res.status(500).json({ error: 'That action could not be completed. Please try again.' });
   }
 }
