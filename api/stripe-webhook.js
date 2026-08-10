@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import { verifyWebhook } from '../lib/stripe.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { recordFunnelEvent } from '../lib/funnel.js';
 
 // Stripe needs the raw request body to verify the signature.
 export const config = { api: { bodyParser: false } };
@@ -142,6 +143,8 @@ export default async function handler(req, res) {
         }
         user.subscription = { ...(user.subscription || {}), status: 'active', billingMode: 'stripe' };
         await saveCustomer(user);
+        try { await recordFunnelEvent('paid', `customer:${user.id}`, { email: user.email, source: 'stripe' }); }
+        catch (error) { console.error('Paid funnel tracking failed:', error.message); }
       }
     } else if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object;

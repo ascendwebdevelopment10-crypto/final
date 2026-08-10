@@ -9,6 +9,7 @@ import {
 } from '../lib/customer-auth.js';
 import { verifyPassword as verifyAdminPassword, makeSessionCookie as makeAdminSessionCookie } from '../lib/auth.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { recordFunnelEvent } from '../lib/funnel.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function esc(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -58,6 +59,9 @@ export default async function handler(req, res) {
         preferences: { productUpdates: true, activityAlerts: true, billingEmails: true, weeklyReport: true },
       };
       await saveCustomer(user);
+      const visitorId = clean(body.visitorId, 100).replace(/[^a-zA-Z0-9_-]/g, '');
+      try { await recordFunnelEvent('account_created', visitorId ? `visitor:${visitorId}` : `customer:${user.id}`, { email: user.email, path: '/signup' }); }
+      catch (error) { console.error('Signup funnel tracking failed:', error.message); }
       await notifyBestEffort({ title: 'New Nitro signup', message: `${user.firstName || 'A new user'} created an account (${user.email}).`, priority: 'high', tags: 'tada,bust_in_silhouette', click: 'https://nitrooutreach.com/dashboard' });
       let emailSent = true;
       try { await sendAccountEmail(req, user, 'verify'); }

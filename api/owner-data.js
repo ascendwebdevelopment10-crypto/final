@@ -2,6 +2,7 @@ import { currentCustomer } from '../lib/customer-auth.js';
 import { kv } from '@vercel/kv';
 import { getEmailEngagement, getEmailEvents, getEmailLog, getReplies } from '../lib/store.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
+import { funnelSummary } from '../lib/funnel.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
@@ -232,6 +233,8 @@ export default async function handler(req, res) {
         email: lead.email, phone: lead.phone, goal: lead.goal, status: lead.status || 'New',
         score: Number(lead.report?.overallScore || 0), summary: lead.report?.summary || '', createdAt: lead.createdAt,
       }));
+      let funnel = [];
+      try { funnel = await funnelSummary(); } catch {}
       res.status(200).json({
         total: accounts.length,
         verified,
@@ -257,6 +260,7 @@ export default async function handler(req, res) {
         sourceBreakdown,
         excludedAutomated: excludedVisitors.length,
         auditLeads,
+        funnel,
       });
       return;
     }
