@@ -193,11 +193,15 @@ const WEBSITE_IMAGE_SETS = {
     'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=85',
   ],
 };
-function websiteDirection(industry, user, usedSignatures = []) {
+function websiteDirection(industry, user, usedSignatures = [], businessBrief = '') {
   const value = clean(industry, 120).toLowerCase();
+  const requestedBrand = clean(businessBrief, 800);
+  const hasExplicitBrandDirection = /(hard brand|brand rules?|colou?r palette|typography|font system|wordmark|no gradients?|only (?:black|white|charcoal|graphite|silver|grey|gray))/i.test(requestedBrand);
   const primary = clean(user.onboarding?.data?.primaryColor, 16);
   const secondary = clean(user.onboarding?.data?.secondaryColor, 16);
-  const brandColors = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(secondary)
+  const brandColors = hasExplicitBrandDirection
+    ? 'The business brief contains explicit brand direction. Follow it exactly and ignore conflicting saved workspace colors.'
+    : /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(secondary)
     ? `Use the business's saved brand colors ${primary} and ${secondary} as intentional accents.`
     : 'Choose a restrained color palette that fits the industry. If the business brief names allowed or prohibited colors, treat those instructions as hard requirements and do not introduce additional accent colors.';
   let category = 'general';
@@ -362,7 +366,7 @@ export default async function handler(req, res) {
       const audience = clean(body.audience, 500);
       const action = clean(body.primaryAction, 180);
       const contact = clean(body.contact, 300);
-      const design = websiteDirection(industry, user, data.websites.slice(0, 20).map(site => site.designSignature));
+      const design = websiteDirection(industry, user, data.websites.slice(0, 20).map(site => site.designSignature), about);
       const prompt = `Build a polished, conversion-focused one-page website as one self-contained HTML file.
 
 BUSINESS BRIEF
