@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { metaConfigured, publishImage } from '../lib/meta.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 export const config = { maxDuration: 60 };
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -33,6 +34,7 @@ export async function runSocialPublish() {
       } catch (e) {
         post.status = 'failed'; post.error = e.message; changed = true;
         errors.push({ user: user.id, error: e.message });
+        await notifyBestEffort({ title: 'Scheduled social post failed', message: `${user.email || user.id}: ${e.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#content' });
       }
     }
     if (changed) await kv.set(key, user);
