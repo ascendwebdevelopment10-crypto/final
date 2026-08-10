@@ -4,6 +4,8 @@ import {
   passwordIssue, publicCustomer, sameOrigin, saveCustomer, verifyCustomerPassword,
 } from '../lib/customer-auth.js';
 import { planFor, publicPlans } from '../lib/customer-plans.js';
+import { metaConfigured } from '../lib/meta.js';
+import { socialProviderStatus } from '../lib/social-oauth.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function bool(value) { return value === true; }
@@ -20,7 +22,11 @@ export default async function handler(req, res) {
   if (!user) { res.status(401).json({ error: 'Customer sign-in required' }); return; }
   if (req.method === 'GET') {
     const plan = planFor(user.subscription?.plan);
-    res.status(200).json({ user: publicCustomer(user), plan, plans: publicPlans(), stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY) });
+    res.status(200).json({
+      user: publicCustomer(user), plan, plans: publicPlans(),
+      stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
+      socialProviders: { instagram: metaConfigured(), ...socialProviderStatus() },
+    });
     return;
   }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
