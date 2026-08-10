@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { addToSuppression, logReply, recordEmailEvent } from '../lib/store.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FORWARD_TO_EMAIL = 'nitrooutreach@outlook.com';
@@ -46,6 +47,7 @@ export default async function handler(req, res) {
 
             // 1. Log to dashboard
             const added = await logReply({ from, subject, body, timestamp: Date.parse(event.created_at || complete?.created_at) || Date.now(), originalTo, thread: complete?.message_id || data.message_id, eventId: providerId || event?.id });
+            if (added) await notifyBestEffort({ title: `New outreach reply: ${subject || 'No subject'}`, message: `${from}: ${String(body || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)}`, priority: 'high', tags: 'incoming_envelope,email', click: 'https://nitrooutreach.com/dashboard#outreach' });
 
             // 2. Forward to your inbox so you see it directly
             if (added) await resend.emails.send({
