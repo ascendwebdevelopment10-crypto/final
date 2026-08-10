@@ -4,15 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07100b">
-  <script>
-    // The static landing shell is only a no-JavaScript fallback. Hide it before
-    // first paint whenever JavaScript is available; the SPA replaces it on boot.
-    document.documentElement.classList.add('spa-route-boot');
-  </script>
-  <style>
-    html.spa-route-boot body{background:#080808}
-    html.spa-route-boot #seo-landing{display:none!important}
-  </style>
+  <!-- Keep the server-rendered landing page visible until the SPA successfully
+       replaces it. This prevents a blank screen if the client script fails. -->
   <title>Nitro Outreach — All your marketing in one place</title>
   <meta name="description" content="Nitro Outreach is the AI-powered growth workspace that replaces your website builder, content tool, post scheduler, and ad manager — one login, one bill, with an assistant that does the busywork.">
   <link rel="canonical" href="https://nitrooutreach.com/">
