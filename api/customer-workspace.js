@@ -157,6 +157,11 @@ const WEBSITE_TYPE_STYLES = [
   'bold grotesk headlines with small monospaced labels and navigation details',
 ];
 const WEBSITE_IMAGE_SETS = {
+  automotive: [
+    'https://images.unsplash.com/photo-1746079074522-2b14240d932c?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1565689876697-e467b6c54da2?auto=format&fit=crop&w=1600&q=85',
+    'https://images.unsplash.com/photo-1762933855598-273a51b47649?auto=format&fit=crop&w=1800&q=85',
+  ],
   beauty: [
     'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1800&q=85',
     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1400&q=85',
@@ -200,7 +205,10 @@ function websiteDirection(industry, user, usedSignatures = []) {
   if (/(barber|beauty|salon|spa|fashion|flower|floral|wedding|photograph)/.test(value)) {
     category = 'beauty';
     personality = 'premium editorial design with expressive typography, warm photography-inspired framing, soft texture, and elegant spacing';
-  } else if (/(sport|fitness|gym|training|automotive|car|construction|roof|landscap)/.test(value)) {
+  } else if (/(automotive|auto detail|car detail|car wash|vehicle detail)/.test(value)) {
+    category = 'automotive';
+    personality = 'premium automotive design with deep contrast, polished metallic accents, dramatic vehicle photography, precise typography, and restrained high-performance energy';
+  } else if (/(sport|fitness|gym|training|construction|roof|landscap)/.test(value)) {
     category = 'performance';
     personality = 'bold performance-focused design with energetic diagonals, strong contrast, oversized type, and action-oriented composition';
   } else if (/(law|legal|finance|account|consult|medical|dental|real estate)/.test(value)) {
