@@ -2,7 +2,8 @@ import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
 import { currentCustomer } from '../lib/customer-auth.js';
 import { outreachTokenValid } from '../lib/sign.js';
-import { trackEmailClick } from '../lib/store.js';
+import { getEmailLog, trackEmailClick } from '../lib/store.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
@@ -42,6 +43,37 @@ function normalizedCity(value) {
 function isLikelyDataCenter(req) {
   const city = normalizedCity(req.headers['x-vercel-ip-city']);
   return DATA_CENTER_CITIES.has(city);
+}
+function locationLabel(event) {
+  return [event.city, event.region, event.country].filter(Boolean).join(', ') || 'Location unavailable';
+}
+function sourceLabel(event) {
+  if (event.outreachId) return 'Tracked email outreach';
+  if (event.utmSource) return [event.utmSource, event.utmMedium].filter(Boolean).join(' / ');
+  if (event.referrer) {
+    try { return new URL(event.referrer).hostname.replace(/^www\./, ''); } catch { return event.referrer; }
+  }
+  return 'Direct or unknown';
+}
+
+async function visitIdentity(event) {
+  if (event.email || event.name) return [event.name, event.email].filter(Boolean).join(' · ');
+  if (!event.outreachId) return 'Anonymous visitor';
+  const log = await getEmailLog(500);
+  const entry = log.find(item => String(item?.id || '') === event.outreachId);
+  if (!entry) return 'Tracked outreach visitor';
+  return [clean(entry.contactName, 120), clean(entry.to, 160)].filter(Boolean).join(' · ') || 'Tracked outreach visitor';
+}
+
+async function notifySessionVisit(event) {
+  const identity = await visitIdentity(event);
+  await notifyBestEffort({
+    title: `${event.visitorType} site visitor · ${locationLabel(event)}`,
+    message: `${identity}\nPage: ${event.path}\nSource: ${sourceLabel(event)}\nDevice: ${event.device}`,
+    priority: 'default',
+    tags: 'eyes,globe_with_meridians',
+    click: 'https://nitrooutreach.com/app#owner',
+  });
 }
 
 const CONFIRMED_ENGAGEMENTS = new Set(['active_8s', 'scroll', 'click', 'navigation']);
@@ -191,6 +223,7 @@ export default async function handler(req, res) {
       await kv.incr(`stats:site:v2:pageviews:day:${day}`);
       await kv.lpush('stats:site:v2:visitors', JSON.stringify(event));
       await kv.ltrim('stats:site:v2:visitors', 0, 999);
+      if (freshSession) await notifySessionVisit(event);
     }
     if (freshSession) {
       await kv.incr('stats:site:v2:sessions');
