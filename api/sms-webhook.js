@@ -2,6 +2,7 @@ import twilio from 'twilio';
 import Anthropic from '@anthropic-ai/sdk';
 import { kv } from '@vercel/kv';
 import { Resend } from 'resend';
+import { notifyBestEffort } from '../lib/ntfy.js';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const NOTIFY_EMAIL = 'tysmith327@icloud.com';
 
@@ -54,23 +55,7 @@ async function generatePitchReply(incomingBody, service) {
 
 // Push notification via ntfy.sh — instant alert on your phone when someone replies
 async function sendPushNotification(from, body, contactName) {
-      try {
-              const topic = process.env.NTFY_TOPIC || 'nitro-replies';
-              const title = contactName ? `Reply from ${contactName}` : `New SMS Reply`;
-              const message = `${from}: ${body.slice(0, 200)}`;
-              await fetch(`https://ntfy.sh/${topic}`, {
-                        method: 'POST',
-                        headers: {
-                                    'Title': title,
-                                    'Priority': 'high',
-                                    'Tags': 'speech_balloon,phone',
-                                    'Content-Type': 'text/plain'
-                        },
-                        body: message
-              });
-      } catch (e) {
-              console.error('ntfy push error:', e.message);
-      }
+      return notifyBestEffort({ title: contactName ? `Reply from ${contactName}` : 'New SMS reply', message: `${from}: ${body.slice(0, 200)}`, priority: 'high', tags: 'speech_balloon,phone', click: 'https://nitrooutreach.com/dashboard#outreach' });
 }
 
 // Carrier auto-responses to ignore entirely (no log, no reply)
