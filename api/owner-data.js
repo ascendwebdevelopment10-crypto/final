@@ -178,6 +178,16 @@ export default async function handler(req, res) {
       const keys = await kv.keys('customer:user:*');
       let verified = 0;
       const accounts = [];
+      const productActivity = {
+        contentCreated: 0,
+        reelsCreated: 0,
+        socialPublished: 0,
+        socialScheduled: 0,
+        outreachSent: 0,
+        outreachReplies: 0,
+        activeCampaigns: 0,
+        connectedSocials: 0,
+      };
       for (const k of keys) {
         let u = await kv.get(k);
         if (typeof u === 'string') { try { u = JSON.parse(u); } catch { u = null; } }
@@ -187,6 +197,20 @@ export default async function handler(req, res) {
         if (String(u.email || '').trim().toLowerCase() === OWNER_EMAIL) continue;
         if (u.emailVerified) verified += 1;
         const sub = u.subscription || {};
+        const workspace = u.workspace || {};
+        const content = Array.isArray(workspace.content) ? workspace.content : [];
+        const socialDrafts = Array.isArray(workspace.socialDrafts) ? workspace.socialDrafts : [];
+        const messages = Array.isArray(workspace.messages) ? workspace.messages : [];
+        const campaigns = Array.isArray(workspace.campaigns) ? workspace.campaigns : [];
+        const socialConnections = Object.values(u.socialConnections || {}).filter(connection => connection?.connected).length + (u.meta?.igUserId ? 1 : 0);
+        productActivity.contentCreated += content.length;
+        productActivity.reelsCreated += content.filter(item => item.type === 'video').length;
+        productActivity.socialPublished += content.filter(item => item.postedToInstagram).length + socialDrafts.filter(item => item.status === 'published').length;
+        productActivity.socialScheduled += socialDrafts.filter(item => item.status === 'scheduled').length;
+        productActivity.outreachSent += messages.filter(item => item.status === 'sent').length;
+        productActivity.outreachReplies += messages.filter(item => item.status === 'reply').length;
+        productActivity.activeCampaigns += campaigns.filter(item => item.status === 'active').length;
+        productActivity.connectedSocials += socialConnections;
         accounts.push({
           email: u.email,
           name: ((u.firstName || '') + ' ' + (u.lastName || '')).trim(),
@@ -261,6 +285,7 @@ export default async function handler(req, res) {
         excludedAutomated: excludedVisitors.length,
         auditLeads,
         funnel,
+        productActivity,
       });
       return;
     }
