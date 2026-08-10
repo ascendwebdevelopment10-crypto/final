@@ -8,6 +8,7 @@ import {
   sameOrigin, saveCustomer, validEmail, verifyCustomerPassword,
 } from '../lib/customer-auth.js';
 import { verifyPassword as verifyAdminPassword, makeSessionCookie as makeAdminSessionCookie } from '../lib/auth.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function esc(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
         preferences: { productUpdates: true, activityAlerts: true, billingEmails: true, weeklyReport: true },
       };
       await saveCustomer(user);
+      await notifyBestEffort({ title: 'New Nitro signup', message: `${user.firstName || 'A new user'} created an account (${user.email}).`, priority: 'high', tags: 'tada,bust_in_silhouette', click: 'https://nitrooutreach.com/dashboard' });
       let emailSent = true;
       try { await sendAccountEmail(req, user, 'verify'); }
       catch (error) { emailSent = false; console.error('Customer verification email failed:', error.message); }
