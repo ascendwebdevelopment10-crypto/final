@@ -87,24 +87,41 @@ async function generateWebsite(prompt) {
   // Provider failover: a depleted balance or provider outage must not take the
   // customer-facing builder down. OpenAI receives the same constrained brief.
   if (process.env.OPENAI_API_KEY) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.OPENAI_WEBSITE_MODEL || 'gpt-5-mini',
-        messages: [
-          { role: 'system', content: 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Return only one compact, complete, self-contained HTML document. Follow supplied business facts exactly and never invent proof.' },
-          { role: 'user', content: prompt },
-        ],
-        max_completion_tokens: 7200,
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok) {
-      const html = clean(data?.choices?.[0]?.message?.content, 120000);
-      if (html) return { html, model: data.model || process.env.OPENAI_WEBSITE_MODEL || 'gpt-5-mini' };
+    const system = 'You are Nitro Site Builder, a senior conversion copywriter and award-level web designer. Return only one compact, complete, self-contained HTML document. Follow supplied business facts exactly and never invent proof.';
+    const primaryModel = process.env.OPENAI_WEBSITE_MODEL || 'gpt-5-mini';
+    const attempts = [
+      {
+        model: primaryModel,
+        max_completion_tokens: 12000,
+        ...(/^gpt-5/i.test(primaryModel) ? { reasoning_effort: 'minimal', verbosity: 'low' } : {}),
+      },
+      ...(primaryModel === 'gpt-4.1-mini' ? [] : [{ model: 'gpt-4.1-mini', max_tokens: 7000 }]),
+    ];
+    for (const attempt of attempts) {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...attempt,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const html = clean(data?.choices?.[0]?.message?.content, 120000);
+        if (html) return { html, model: data.model || attempt.model };
+      }
+      console.error('OpenAI website failover attempt failed:', JSON.stringify({
+        model: attempt.model,
+        status: response.status,
+        message: data?.error?.message || 'Empty model response',
+        finishReason: data?.choices?.[0]?.finish_reason || null,
+        usage: data?.usage || null,
+      }));
     }
-    console.error('OpenAI website failover error:', data?.error?.message || `HTTP ${response.status}`);
   }
   throw anthropicError || new Error('No website-generation provider is available.');
 }
