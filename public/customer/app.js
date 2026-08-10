@@ -381,6 +381,35 @@ function socialChannelCard(channel,paid){
     <div class="social-account-footer"><span>${connected?`Connected as <b>${esc(account)}</b>`:channel.live?'Direct publishing available':'Authorization flow ready'}</span>${action}</div>
   </article>`;
 }
+function instagramPerformanceShell(user,paid){
+  if(!paid||!user.meta?.igUserId)return '';
+  return `<section class="instagram-performance" id="instagram-performance">
+    <div class="panel-head instagram-performance-head"><div><span class="eyebrow">ACTUAL INSTAGRAM POSTS</span><h3>Live post performance</h3><p>Synced from @${esc(user.meta.igUsername||'your account')} — including posts and Reels published directly inside Instagram.</p></div><button class="btn btn-sm" id="instagram-performance-refresh">Refresh stats</button></div>
+    <div class="instagram-performance-summary" id="instagram-performance-summary">${['Posts synced','Views','Interactions','Tracked clicks'].map(label=>`<article class="glass-card"><small>${label}</small><strong>—</strong><span>Loading from Instagram…</span></article>`).join('')}</div>
+    <div class="instagram-post-grid" id="instagram-post-grid"><div class="glass-card instagram-performance-loading">Syncing your published Instagram posts…</div></div>
+  </section>`;
+}
+function socialMetric(value){return Number.isFinite(Number(value))?Number(value).toLocaleString():'—';}
+function instagramPostType(post){return post.productType==='REELS'||post.mediaType==='VIDEO'?'Reel':post.mediaType==='CAROUSEL_ALBUM'?'Carousel':'Post';}
+function instagramPostCard(post){
+  const caption=String(post.caption||'').trim()||'Instagram post';
+  const metrics=[['Views',post.views],['Reach',post.reach],['Likes',post.likes],['Comments',post.comments],['Shares',post.shares],['Saves',post.saved],['Clicks',post.clicks]];
+  return `<article class="glass-card instagram-post-card"><a class="instagram-post-media" href="${esc(post.permalink||'#')}" target="_blank" rel="noopener noreferrer">${post.thumbnailUrl?`<img src="${esc(post.thumbnailUrl)}" alt="${esc(caption.slice(0,90))}" loading="lazy" referrerpolicy="no-referrer">`:'<span>IG</span>'}<em>${instagramPostType(post)}</em></a><div class="instagram-post-body"><div class="instagram-post-meta"><span>${post.timestamp?new Date(post.timestamp).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Published on Instagram'}</span><a href="${esc(post.permalink||'#')}" target="_blank" rel="noopener noreferrer">Open post ↗</a></div><p>${esc(caption)}</p><div class="instagram-post-metrics">${metrics.map(metric=>`<div><small>${metric[0]}</small><b>${socialMetric(metric[1])}</b></div>`).join('')}</div>${post.trackingUrl?`<div class="instagram-tracked-link"><span><b>Nitro tracked link</b><small>Use this in your bio, Story sticker, or campaign to count real clicks.</small></span><button class="btn btn-sm" data-copy-social-link="${esc(post.trackingUrl)}">Copy link</button></div>`:'<div class="instagram-tracked-link is-disabled"><span><b>Tracked clicks not enabled</b><small>Add your business website in Settings to create a tracked link for this post.</small></span></div>'}${post.insightsError?`<small class="instagram-insight-note">Some Instagram metrics are unavailable until the account is reconnected with analytics access.</small>`:''}</div></article>`;
+}
+async function loadInstagramPerformance(force){
+  const section=document.getElementById('instagram-performance');if(!section)return;
+  const button=document.getElementById('instagram-performance-refresh'),grid=document.getElementById('instagram-post-grid');
+  if(button)setBusy(button,true,'Syncing…');
+  try{
+    const data=await api('/api/instagram-insights?limit=12'+(force?'&refresh=1':''));
+    const summary=document.getElementById('instagram-performance-summary'),totals=data.totals||{};
+    if(summary)summary.innerHTML=[['Posts synced',totals.posts,'Latest published media'],['Views',totals.views,'Across the posts shown'],['Interactions',totals.interactions,'Instagram-reported total'],['Tracked clicks',totals.clicks,'Unique Nitro link clicks']].map(item=>`<article class="glass-card"><small>${item[0]}</small><strong>${socialMetric(item[1])}</strong><span>${item[2]}</span></article>`).join('');
+    if(data.needsReconnect){grid.innerHTML=`<div class="notice instagram-reconnect"><span><b>Reconnect Instagram once for complete analytics.</b><small>Your current connection was approved before Nitro requested insights access.</small></span><a class="btn btn-primary btn-sm" href="/api/meta-connect">Reconnect Instagram</a></div>`+(data.posts||[]).map(instagramPostCard).join('');}
+    else if(grid)grid.innerHTML=(data.posts||[]).length?data.posts.map(instagramPostCard).join(''):'<div class="glass-card instagram-performance-loading">No published posts were returned by this Instagram account yet.</div>';
+    document.querySelectorAll('[data-copy-social-link]').forEach(copy=>copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(copy.dataset.copySocialLink);toast('Tracked link copied','success');}catch{toast('Could not copy the link','error');}}));
+  }catch(error){if(grid)grid.innerHTML=`<div class="notice instagram-reconnect"><span><b>${esc(error.message)}</b><small>Published drafts inside Nitro are not used for this report.</small></span>${/reconnect/i.test(error.message)?'<a class="btn btn-primary btn-sm" href="/api/meta-connect">Reconnect Instagram</a>':''}</div>`;}
+  if(button)setBusy(button,false);
+}
 function socialsPage(){
   const user=state.session.user,p=plan(user.subscription?.plan),paid=p.id!=='free',w=workspaceData(),drafts=w.socialDrafts||[];
   const connected=SOCIAL_CHANNELS.filter(channel=>socialConnection(channel.id)?.connected).length;
@@ -390,6 +419,7 @@ function socialsPage(){
     <div class="section-toolbar socials-toolbar"><div><span class="eyebrow">SOCIAL COMMAND CENTER</span><h2>Every social account. One place.</h2><p>Connect Instagram, Facebook, TikTok, LinkedIn, and YouTube without hunting through settings.</p></div>${paid?'<button class="btn btn-primary" data-workspace-action="social">+ Schedule Instagram post</button>':'<a class="btn btn-primary" href="/pricing">Unlock social publishing</a>'}</div>
     ${resultNotice}<section class="glass-card social-overview"><div><span class="social-overview-count">${connected}<small>/ ${SOCIAL_CHANNELS.length}</small></span><div><b>${connected?'Your social stack is taking shape':'Connect your first channel'}</b><p>${connected?'Manage every authorized account below.':'Start with Instagram, then add the channels your customers actually use.'}</p></div></div><div class="social-overview-pips">${SOCIAL_CHANNELS.map(c=>`<i class="${socialConnection(c.id)?.connected?'on':''}" title="${c.name}"></i>`).join('')}</div></section>
     <section class="social-account-grid">${SOCIAL_CHANNELS.map(channel=>socialChannelCard(channel,paid)).join('')}</section>
+    ${instagramPerformanceShell(user,paid)}
     ${!paid?upgradeCard('Social publishing is included on every paid plan','Upgrade to connect channels, receive monthly Reel credits, and schedule Instagram publishing.'):''}
     <section class="social-queue-section"><div class="panel-head"><div><h3>Publishing queue</h3><p>Instagram scheduling is live now. Additional channel publishing activates after each provider approves Nitro’s app.</p></div><span>${drafts.length} ${drafts.length===1?'POST':'POSTS'}</span></div>${drafts.length?`<div class="activity-list glass-card panel">${drafts.map(d=>`<div class="activity-item"><span class="activity-dot">◎</span><span><b>${d.status==='scheduled'?'Scheduled':d.status==='published'?'Published':'Draft'} · ${esc(d.platform||'instagram')}</b><p>${esc(d.text)}</p></span><time>${d.scheduledFor?new Date(d.scheduledFor).toLocaleString():new Date(d.createdAt).toLocaleDateString()}</time><button class="card-del" data-del-item="social" data-del-id="${esc(d.id)}" title="Delete">×</button></div>`).join('')}</div>`:`<section class="glass-card"><div class="empty-state"><div class="empty-icon">◎</div><h3>No scheduled posts yet</h3><p>Create a post, choose a time, and Nitro keeps it ready for your connected Instagram account.</p>${paid?'<button class="btn btn-primary" data-workspace-action="social">Schedule a post</button>':'<a class="btn btn-primary" href="/pricing">View paid plans</a>'}</div></section>`}</section>
   </div>`;
@@ -735,6 +765,7 @@ function bindApp(){
   if(document.getElementById('owner-traffic'))loadDashboardTraffic();
   if(document.getElementById('owner-stats')){loadOwner();document.getElementById('owner-refresh')?.addEventListener('click',loadOwner);}
   if(document.getElementById('outreach-stats')){loadOutreach();document.getElementById('outreach-refresh')?.addEventListener('click',loadOutreach);}
+  if(document.getElementById('instagram-performance')){loadInstagramPerformance(false);document.getElementById('instagram-performance-refresh')?.addEventListener('click',()=>loadInstagramPerformance(true));}
   document.getElementById('brand-form')?.addEventListener('submit',async e=>{e.preventDefault();const btn=e.target.querySelector('button');setBusy(btn,true,'Saving…');const primaryColor=document.getElementById('primaryColor').value,secondaryColor=document.getElementById('secondaryColor').value;try{await api('/api/customer-brand',{method:'POST',body:JSON.stringify({primaryColor,secondaryColor})});const o=state.session.user.onboarding=state.session.user.onboarding||{};o.data=o.data||{};o.data.primaryColor=primaryColor;o.data.secondaryColor=secondaryColor;toast('Brand colors updated','success');render();}catch(err){setFormStatus(err.message,'error');setBusy(btn,false);}});
   document.getElementById('mobile-menu')?.addEventListener('click',()=>{state.mobileMenu=!state.mobileMenu;document.getElementById('customer-shell')?.classList.toggle('menu-open',state.mobileMenu);});
   document.querySelectorAll('[data-social-disconnect]').forEach(button=>button.addEventListener('click',async()=>{
