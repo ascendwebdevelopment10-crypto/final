@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { verifyWebhook } from '../lib/stripe.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 // Stripe needs the raw request body to verify the signature.
 export const config = { api: { bodyParser: false } };
@@ -150,6 +151,7 @@ export default async function handler(req, res) {
         user.subscription = { ...(user.subscription || {}), status: 'past_due', billingMode: 'stripe' };
         await saveCustomer(user);
       }
+      await notifyBestEffort({ title: 'Nitro payment failed', message: `${user?.email || 'A customer'} has a failed payment${invoice.amount_due ? ` for $${(Number(invoice.amount_due) / 100).toFixed(2)}` : ''}.`, priority: 'urgent', tags: 'warning,credit_card', click: 'https://nitrooutreach.com/dashboard' });
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
       const customerId = await customerIdForStripeObject(sub) || await kv.get(`stripe:subscription:${sub.id}`);
