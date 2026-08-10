@@ -199,7 +199,7 @@ function websiteDirection(industry, user, usedSignatures = []) {
   const secondary = clean(user.onboarding?.data?.secondaryColor, 16);
   const brandColors = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(secondary)
     ? `Use the business's saved brand colors ${primary} and ${secondary} as intentional accents.`
-    : 'Choose two distinctive accent colors that fit the industry instead of defaulting to generic SaaS blue.';
+    : 'Choose a restrained color palette that fits the industry. If the business brief names allowed or prohibited colors, treat those instructions as hard requirements and do not introduce additional accent colors.';
   let category = 'general';
   let personality = 'confident editorial design with strong typography, asymmetric composition, tactile depth, and restrained motion';
   if (/(barber|beauty|salon|spa|fashion|flower|floral|wedding|photograph)/.test(value)) {
@@ -393,10 +393,11 @@ CONTENT INVENTORY — COMPOSE IT IN THE ORDER REQUIRED BY THE UNIQUE DESIGN RECI
 - Do not fall back to the conventional hero → logo strip → three cards → three steps layout. Reorder, overlap, alternate, and vary section widths exactly as the recipe directs.
 
 DESIGN QUALITY
+- Explicit branding instructions in the BUSINESS BRIEF override every conflicting color, typography, logo, surface, and decoration suggestion in the unique design recipe below. Do not improvise outside an explicitly restricted palette or font system.
 - Treat the unique design recipe as a layout specification, not a loose suggestion. Its composition, section rhythm, surface treatment, typography, and image placement must all be visibly present.
-- Use at least two approved photos: one must be a large background or full-bleed image and another must appear in a different crop or section. Add a gradient/scrim whenever text overlays a photo.
+- Use at least two approved photos: one must be a large background or full-bleed image and another must appear in a different crop or section. Add a readable solid scrim when text overlays a photo; use a gradient scrim only when the business brief permits gradients.
 - Do not use the same repeated three-column card grid for multiple sections. Vary alignment, scale, shape, and placement so the page has a distinctive silhouette.
-- Use strong typography hierarchy, generous spacing, layered cards, subtle gradients, tasteful shadows, hover states, and one or two restrained decorative details.
+- Use strong typography hierarchy, generous spacing, layered cards, tasteful shadows, hover states, and one or two restrained decorative details. Use gradients only when the business brief permits them and they fit the requested brand system.
 - Responsive at mobile, tablet, and desktop widths. Use semantic HTML, visible focus styles, accessible contrast, descriptive link text, and reduced-motion support.
 - Include a specific <title> and meta description.`;
       const startedAt = Date.now();
