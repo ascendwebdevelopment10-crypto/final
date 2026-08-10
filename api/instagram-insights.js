@@ -62,7 +62,10 @@ export default async function handler(req, res) {
       }
       return { ...post, clicks, trackingUrl };
     }));
-    const missingInsights = enriched.some(post => post.insightsError && /permission|scope|authorized|access/i.test(post.insightsError));
+    const insightValues = enriched.flatMap(post => [post.views, post.reach, post.saved, post.shares, post.interactions]);
+    const noInsightsReturned = enriched.length > 0 && !insightValues.some(Number.isFinite);
+    const missingInsights = enriched.some(post => post.insightsError && /permission|scope|authorized|access/i.test(post.insightsError)) ||
+      (noInsightsReturned && enriched.some(post => post.insightsError));
     const payload = {
       username: user.meta.igUsername || '',
       syncedAt: new Date().toISOString(),
