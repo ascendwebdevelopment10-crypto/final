@@ -171,6 +171,28 @@ function deliveryStatus(status) {
   return ['opened', 'clicked'].includes(value) ? 'delivered' : value;
 }
 
+export function resolvedDeliveryStatus({ providerStatus, webhookStatus, replied, openCount, visitCount, confirmedVisitCount }) {
+  const provider = deliveryStatus(providerStatus);
+  const webhook = deliveryStatus(webhookStatus);
+  const failureStatuses = new Set(['bounced', 'failed', 'complained', 'suppressed']);
+  const failure = [webhook, provider].find(status => failureStatuses.has(status));
+  if (failure) return failure;
+  if (replied) return 'replied';
+  if (
+    provider === 'delivered' || webhook === 'delivered' ||
+    Number(openCount || 0) > 0 || Number(visitCount || 0) > 0 || Number(confirmedVisitCount || 0) > 0
+  ) return 'delivered';
+  if (webhook === 'delivery_delayed' || provider === 'delivery_delayed') return 'delivery_delayed';
+  return webhook !== 'sent' ? webhook : provider;
+}
+
+export function firstDeliveryEvidence(entry, providerEvent, reply, firstOpenedAt, firstVisitedAt, firstConfirmedAt) {
+  const providerDeliveredAt = deliveryStatus(providerEvent?.status) === 'delivered' ? Number(providerEvent?.timestamp || 0) : 0;
+  const candidates = [providerDeliveredAt, Number(firstOpenedAt || 0), Number(firstVisitedAt || 0), Number(firstConfirmedAt || 0), Number(reply?.timestamp || 0)]
+    .filter(value => Number.isFinite(value) && value > 0);
+  return candidates.length ? Math.min(...candidates) : Number(entry.timestamp || 0) || null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const user = await currentCustomer(req);
@@ -324,13 +346,27 @@ export default async function handler(req, res) {
           const confirmedVisitCount = Number(confirmedCounts?.[entry.id] || 0);
           const firstConfirmedAt = Number(confirmedFirst?.[entry.id] || 0) || null;
           const lastConfirmedAt = Number(confirmedLast?.[entry.id] || 0) || null;
-          const normalizedProviderStatus = deliveryStatus(providerStatus);
+          const normalizedProviderStatus = resolvedDeliveryStatus({
+            providerStatus,
+            webhookStatus: providerEvent?.status,
+            replied: !!reply,
+            openCount,
+            visitCount,
+            confirmedVisitCount,
+          });
+          const deliveredAt = ['delivered', 'replied'].includes(normalizedProviderStatus)
+            ? firstDeliveryEvidence(entry, providerEvent, reply, firstOpenedAt, firstVisitedAt, firstConfirmedAt)
+            : null;
           return {
             ...entry,
-            status: reply ? 'replied' : normalizedProviderStatus,
+            status: normalizedProviderStatus,
             statusAt: reply?.timestamp || providerEvent?.timestamp || entry.timestamp,
-            deliveredAt: (normalizedProviderStatus === 'delivered' || reply) ? (providerEvent?.timestamp || entry.timestamp) : null,
-            statusDetail: providerEvent?.detail || '',
+            deliveredAt,
+            statusDetail: providerEvent?.detail || (
+              normalizedProviderStatus === 'delivered' && !['delivered', 'opened', 'clicked'].includes(deliveryStatus(providerStatus))
+                ? 'Confirmed by recipient activity'
+                : ''
+            ),
             openCount,
             opened: openCount > 0,
             firstOpenedAt,
