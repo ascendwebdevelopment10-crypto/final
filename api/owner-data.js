@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { getEmailEngagement, getEmailEvents, getEmailLog, getReplies } from '../lib/store.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 import { funnelSummary } from '../lib/funnel.js';
+import { automatedOutreachBurstIdentities } from '../lib/analytics-traffic.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
@@ -28,6 +29,10 @@ function isLikelyDataCenterVisit(visit) {
 function isOutreachVisit(visit) {
   const source = String(visit?.utmSource || '').trim().toLowerCase();
   return source === 'outreach' || source === 'out' || !!visit?.outreachId;
+}
+
+function visitIdentity(visit) {
+  return visit?.email || visit?.visitorId || visit?.sessionId || visit?.id;
 }
 
 function isConfirmedOutreachVisit(visit, confirmedSessions) {
@@ -261,8 +266,15 @@ export default async function handler(req, res) {
         try { return JSON.parse(value); } catch { return null; }
       }).filter(Boolean);
       const confirmedSessions = await kv.hgetall('email:confirmed-visits:sessions');
-      const excludedVisitors = allVisitors.filter(visit => isLikelyDataCenterVisit(visit) || (isOutreachVisit(visit) && !isConfirmedOutreachVisit(visit, confirmedSessions)));
-      const cleanVisitors = collapseRapidPageViews(allVisitors.filter(visit => !isLikelyDataCenterVisit(visit) && (!isOutreachVisit(visit) || isConfirmedOutreachVisit(visit, confirmedSessions))));
+      const automatedBurstIdentities = automatedOutreachBurstIdentities(allVisitors);
+      const isExcludedVisit = visit => {
+        const identity = visitIdentity(visit);
+        return isLikelyDataCenterVisit(visit)
+          || (!!identity && automatedBurstIdentities.has(identity))
+          || (isOutreachVisit(visit) && !isConfirmedOutreachVisit(visit, confirmedSessions));
+      };
+      const excludedVisitors = allVisitors.filter(isExcludedVisit);
+      const cleanVisitors = collapseRapidPageViews(allVisitors.filter(visit => !isExcludedVisit(visit)));
       const visitors = groupVisitSessions(cleanVisitors);
       const visitorGroups = groupVisitors(visitors);
       const cleanToday = cleanVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
@@ -305,7 +317,7 @@ export default async function handler(req, res) {
           botsExcluded: true,
           dataCenterTrafficExcluded: true,
           identity: 'Signed-in customers are identified by account; anonymous visitors use a privacy-safe browser ID.',
-          limitations: 'Rapid repeat loads are collapsed and page views are grouped into 30-minute visits. Unconfirmed outreach link loads and known data-center locations are excluded. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
+          limitations: 'Rapid repeat loads are collapsed and page views are grouped into 30-minute visits. Unconfirmed outreach link loads, coordinated scanner bursts, and known data-center locations are excluded. Location is approximate and held consistent per browser for seven days; VPNs and private relays can still affect it.',
         },
         visitors,
         visitorGroups,
