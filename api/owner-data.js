@@ -146,6 +146,12 @@ function mountainDay(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function happenedOnMountainDay(value, day) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && mountainDay(date) === day;
+}
+
 async function recentResendEvents() {
   if (!process.env.RESEND_API_KEY) return new Map();
   try {
@@ -318,10 +324,12 @@ export default async function handler(req, res) {
           const confirmedVisitCount = Number(confirmedCounts?.[entry.id] || 0);
           const firstConfirmedAt = Number(confirmedFirst?.[entry.id] || 0) || null;
           const lastConfirmedAt = Number(confirmedLast?.[entry.id] || 0) || null;
+          const normalizedProviderStatus = deliveryStatus(providerStatus);
           return {
             ...entry,
-            status: reply ? 'replied' : deliveryStatus(providerStatus),
+            status: reply ? 'replied' : normalizedProviderStatus,
             statusAt: reply?.timestamp || providerEvent?.timestamp || entry.timestamp,
+            deliveredAt: (normalizedProviderStatus === 'delivered' || reply) ? (providerEvent?.timestamp || entry.timestamp) : null,
             statusDetail: providerEvent?.detail || '',
             openCount,
             opened: openCount > 0,
@@ -344,20 +352,43 @@ export default async function handler(req, res) {
           };
         });
       const today = mountainDay();
-      const todayCount = log.filter(entry => mountainDay(new Date(entry.timestamp)) === today).length;
+      const todayLog = log.filter(entry => happenedOnMountainDay(entry.timestamp, today));
+      const todayCount = todayLog.length;
       const replied = log.filter(entry => entry.replied).length;
       const delivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status)).length;
       const opened = log.filter(entry => entry.opened).length;
       const linkLoads = log.filter(entry => entry.linkLoaded).length;
       const confirmedVisits = log.filter(entry => entry.confirmedVisit).length;
       const failed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status)).length;
+      const todayReplied = log.filter(entry => entry.replied && happenedOnMountainDay(entry.reply?.timestamp, today)).length;
+      const todayDelivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status) && happenedOnMountainDay(entry.deliveredAt, today)).length;
+      const todayOpened = log.filter(entry => entry.opened && happenedOnMountainDay(entry.firstOpenedAt, today)).length;
+      const todayLinkLoads = log.filter(entry => entry.linkLoaded && happenedOnMountainDay(entry.firstVisitedAt, today)).length;
+      const todayConfirmedVisits = log.filter(entry => entry.confirmedVisit && happenedOnMountainDay(entry.firstConfirmedAt, today)).length;
+      const todayFailed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status) && happenedOnMountainDay(entry.statusAt, today)).length;
       res.status(200).json({
         trackingStart: new Date(OUTREACH_TRACKING_START).toISOString(),
         siteVisitTrackingStart: new Date(SITE_VISIT_TRACKING_START).toISOString(),
         confirmedVisitTrackingStart: new Date(CONFIRMED_VISIT_TRACKING_START).toISOString(),
         webhook,
         log,
-        stats: { todayEmailSent: todayCount, totalEmailSent: log.length, emailReplies: replied, delivered, opened, linkLoads, confirmedVisits, visitedSite: confirmedVisits, failed },
+        stats: {
+          todayEmailSent: todayCount,
+          totalEmailSent: log.length,
+          emailReplies: replied,
+          todayEmailReplies: todayReplied,
+          delivered,
+          todayDelivered,
+          opened,
+          todayOpened,
+          linkLoads,
+          todayLinkLoads,
+          confirmedVisits,
+          todayConfirmedVisits,
+          visitedSite: confirmedVisits,
+          failed,
+          todayFailed,
+        },
       });
       return;
     }
