@@ -44,6 +44,10 @@
     {
       "path": "/api/social-cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/outreach-followup-cron",
+      "schedule": "30 18 * * 1-6"
     }
   ],
   "redirects": [

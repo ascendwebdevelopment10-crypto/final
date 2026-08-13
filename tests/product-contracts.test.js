@@ -66,6 +66,22 @@ test('owner publishing queue and all three DM response scripts are visible in th
   assert.match(client, /data-copy-dm/);
 });
 
+test('outreach conversion path includes a focused landing page, full funnel tracking, and beta pipeline', async () => {
+  const [app, css, followup, cron] = await Promise.all([
+    read('../public/customer/app.js'), read('../public/customer/app.css'),
+    read('../api/outreach-followup-cron.js'), read('../vercel.json'),
+  ]);
+  assert.match(app, /function renderStart\(/);
+  assert.match(app, /trackFunnelStage\('signup_viewed'\)/);
+  assert.match(app, /trackFunnelStage\('signup_started'\)/);
+  assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
+  assert.match(app, /Three-business beta pipeline/);
+  assert.match(css, /\.beta-candidate-grid/);
+  assert.match(followup, /email:confirmed-visits:first/);
+  assert.match(followup, /engaged_followup/);
+  assert.match(cron, /outreach-followup-cron/);
+});
+
 test('responsive contracts cover desktop, tablet, phone, and compact phone layouts', async () => {
   const css = await read('../public/customer/app.css');
   for (const breakpoint of ['1220px', '1080px', '900px', '760px', '430px']) assert.match(css, new RegExp(`max-width:${breakpoint}`));

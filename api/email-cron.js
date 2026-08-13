@@ -5,7 +5,7 @@ import { kv } from '@vercel/kv';
 import { fetchOsmLeadPool, OSM_TAGS } from '../lib/leads.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
-import { emailMatchesBusinessWebsite, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
+import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
 
 export const config = { maxDuration: 300 };
 
@@ -99,7 +99,7 @@ function extractEmails(html, pageUrl) {
   const candidates = [...found]
     .map(email => email.toLowerCase().replace(/^mailto:/, '').trim())
     .filter(isLikelyRealEmail)
-    .filter(email => emailMatchesBusinessWebsite(email, pageUrl))
+    .filter(email => emailMatchesBusinessWebsite(email, pageUrl) && isQualifiedOutreachEmail(email))
     .filter(email => !junk.some(domain => email.endsWith('@' + domain)));
   const roleOrder = ['info','contact','hello','sales','office','admin','team','booking','appointments','support'];
   return candidates.sort((a, b) => {
@@ -237,7 +237,7 @@ export default async function handler(req, res) {
     const emailableLeads = [];
     const seen = new Set();
     async function consider(contact) {
-      if (!contact.email || !isLikelyRealEmail(contact.email) || !emailMatchesBusinessWebsite(contact.email, contact.website_url)) return;
+      if (!contact.email || !isLikelyRealEmail(contact.email) || !isQualifiedOutreachEmail(contact.email) || !emailMatchesBusinessWebsite(contact.email, contact.website_url)) return;
       const key = contact.email.toLowerCase();
       if (seen.has(key) || await wasEmailed(key) || await isSuppressed(key)) return;
       seen.add(key);
@@ -288,7 +288,7 @@ export default async function handler(req, res) {
         const { subject, body, service } = content;
         const trackingId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
-        const siteUrl = 'https://nitrooutreach.com/?utm_source=outreach&utm_medium=email&utm_campaign=automated&oid=' + encodeURIComponent(trackingId) + '&ot=' + encodeURIComponent(outreachTokenFor(trackingId));
+        const siteUrl = 'https://nitrooutreach.com/start?utm_source=outreach&utm_medium=email&utm_campaign=independent-business&oid=' + encodeURIComponent(trackingId) + '&ot=' + encodeURIComponent(outreachTokenFor(trackingId));
         // Keep the plain-text fallback and dashboard preview readable. The
         // unique attribution URL stays behind the short HTML CTA instead of
         // being exposed as a multi-line query string in the email body.

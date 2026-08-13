@@ -1,12 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { emailMatchesBusinessWebsite, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
+import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
 
 test('prioritizes owner-operated categories with high reply potential', () => {
   assert.equal(qualifyOutreachContact({ organization_name: 'Peak Detail', industry: 'car_wash' }), 'Owner-operated service business');
   assert.equal(qualifyOutreachContact({ organization_name: 'Moth & Sage', industry: 'advertising_agency' }), 'Solo / small agency');
   assert.equal(qualifyOutreachContact({ organization_name: 'Big Chain', industry: 'beauty', isChain: true }), null);
   assert.equal(qualifyOutreachContact({ organization_name: 'Medical Group', industry: 'clinic' }), null);
+  assert.equal(qualifyOutreachContact({ organization_name: 'Silicon Labs', industry: 'it' }), null);
+  assert.equal(qualifyOutreachContact({ organization_name: 'AlphaGraphics Downtown', industry: 'advertising_agency' }), null);
+  assert.equal(qualifyOutreachContact({ organization_name: 'State University Florist', industry: 'florist' }), null);
+});
+
+test('rejects low-intent departmental inboxes', () => {
+  assert.equal(isQualifiedOutreachEmail('hello@peakdetail.com'), true);
+  assert.equal(isQualifiedOutreachEmail('owner@gmail.com'), true);
+  assert.equal(isQualifiedOutreachEmail('feedback@localshop.com'), false);
+  assert.equal(isQualifiedOutreachEmail('wholesale@bakery.com'), false);
 });
 
 test('uses an industry-specific reason to reply', () => {
