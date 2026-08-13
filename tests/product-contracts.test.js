@@ -88,6 +88,14 @@ test('outreach dashboard removes the redundant Delivered summary and explains co
   assert.match(client, /\.main-area\{background:radial-gradient/);
 });
 
+test('Instagram publishing buttons inherit the selected workspace appearance', async () => {
+  const css = await read('../public/customer/app.css');
+  const rule = css.match(/\.ig-post-btn\{([^}]*)\}/)?.[1] || '';
+  assert.match(rule, /var\(--green\)/);
+  assert.match(rule, /var\(--aqua\)/);
+  assert.doesNotMatch(rule, /#f09433|#dc2743|#bc1888/i);
+});
+
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {
   const secretBytes = crypto.randomBytes(32);
   const secret = `whsec_${secretBytes.toString('base64')}`;
