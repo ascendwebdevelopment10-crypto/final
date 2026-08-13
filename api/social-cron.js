@@ -10,37 +10,37 @@ export const NITRO_SOCIAL_CAMPAIGN = [
     id: '2026-08-one-workspace',
     scheduledFor: '2026-08-13T17:30:00.000Z',
     imagePath: '/social/aug-2026/01-one-workspace.jpg',
-    caption: 'Your website, content, social, ads, and outreach should work together—not live in five different tabs. Nitro puts the operation in one place. Start free at nitrooutreach.com.\n\n#smallbusinessmarketing #marketingtools #nitrooutreach',
+    caption: 'Five tabs do not make a marketing system. Nitro brings your website, content, social, ads, and outreach into one workspace so the work can actually move.\n\nStart free: nitrooutreach.com\n\n#smallbusinessmarketing #marketingworkflow #nitrooutreach',
   },
   {
     id: '2026-08-website',
     scheduledFor: '2026-08-14T17:30:00.000Z',
     imagePath: '/social/aug-2026/02-website.jpg',
-    caption: 'A website is only useful if it helps the next conversation happen. Build the site, understand the traffic, and follow up from the same workspace.\n\n#businesswebsite #leadgeneration #smallbusiness',
+    caption: 'Quick question: does your website create the next conversation—or just sit there?\n\nWith Nitro, the page, visitor signal, and follow-up live together. Build it. See who came. Keep the momentum.\n\n#businesswebsite #leadgeneration #smallbusiness',
   },
   {
     id: '2026-08-content',
     scheduledFor: '2026-08-15T17:30:00.000Z',
     imagePath: '/social/aug-2026/03-content.jpg',
-    caption: 'One solid idea can become a week of useful content. Nitro helps turn the idea into posts, Reel scripts, and campaign copy without losing your voice.\n\n#contentmarketing #reelsstrategy #smallbusinessowner',
+    caption: 'The content chain:\n\nOne useful idea → one sharp hook → one Reel → one post → one campaign.\n\nNitro helps you stretch the idea without flattening your voice.\n\n#contentstudio #reelsstrategy #contentmarketing',
   },
   {
     id: '2026-08-social',
     scheduledFor: '2026-08-16T17:30:00.000Z',
     imagePath: '/social/aug-2026/04-social.jpg',
-    caption: 'Consistency gets easier when the queue is visible. Draft, schedule, edit, and catch posts that need attention before they miss the moment.\n\n#socialmediamarketing #contentscheduler #marketingworkflow',
+    caption: 'Your future self does not want to remember what needs posting on Thursday. Put the whole week somewhere visible, adjust it once, and let the queue do its job.\n\n#socialscheduler #contentcalendar #smallbusinessowner',
   },
   {
     id: '2026-08-outreach',
     scheduledFor: '2026-08-17T17:30:00.000Z',
     imagePath: '/social/aug-2026/05-outreach.jpg',
-    caption: 'Opens are interesting. Replies are useful. Nitro keeps opens, clicks, site visits, and replies in one view so follow-up is based on real signals.\n\n#outreach #salesfollowup #leadtracking',
+    caption: 'Opened is curiosity. Clicked is intent. Replied is a conversation.\n\nNitro keeps those signals together so your next follow-up is based on what actually happened—not a guess.\n\n#outreach #salesfollowup #leadtracking',
   },
   {
     id: '2026-08-start-free',
     scheduledFor: '2026-08-18T17:30:00.000Z',
     imagePath: '/social/aug-2026/06-start-free.jpg',
-    caption: 'Do the marketing work without adding another pile of disconnected tools. Nitro has a free forever plan and doesn’t require a credit card. Start at nitrooutreach.com.\n\n#entrepreneurtools #smallbusinessgrowth #nitrooutreach',
+    caption: '$0 to start. No card. No forced demo.\n\nTry Nitro on one real job today: build a page, make a post, or organize your outreach. Keep it only if it earns its place.\n\nnitrooutreach.com\n\n#entrepreneurtools #smallbusinessgrowth #nitrooutreach',
   },
 ];
 

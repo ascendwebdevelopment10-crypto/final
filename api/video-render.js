@@ -25,6 +25,14 @@ const STORY_SHAPES = [
   'quiet emotional opening that accelerates into a kinetic finish',
   'cause-and-effect chain shown through physical action rather than explanations',
 ];
+const REEL_TEMPLATE_DIRECTIONS = {
+  founder_pov: { name: 'Founder POV', camera: 'phone-native handheld framing at eye level, imperfect reframing, one subject, no impossible camera moves', edit: 'confident jump cuts on thought changes with a cold open in the middle of an honest sentence', proof: 'the founder physically demonstrates one concrete detail instead of making broad claims', sound: 'room tone and intimate founder delivery; music stays secondary' },
+  product_proof: { name: 'Product Proof', camera: 'clean device and over-shoulder macro coverage, readable physical interactions, stable controlled motion', edit: 'cause-and-effect workflow cuts where each action visibly creates the next result', proof: 'the real product stays central; show a single end-to-end task rather than a feature montage', sound: 'precise tactile clicks with a restrained modern pulse' },
+  mini_doc: { name: 'Mini Documentary', camera: 'observational natural-light coverage, patient handheld follow, tactile inserts, one consistent customer and place', edit: 'story-led continuity from friction through discovery to a quiet earned payoff', proof: 'small human behavior and a believable real-world outcome carry the claim', sound: 'natural location sound under warm, sparse narration' },
+  kinetic_editorial: { name: 'Kinetic Editorial', camera: 'graphic angles, bold negative space, decisive match movement and tangible objects arranged with intent', edit: 'hard rhythmic cuts and visual contrasts; never a slideshow or repeated card layout', proof: 'make one sharp visual argument using physical cause and effect', sound: 'percussive editorial rhythm synchronized to movement' },
+  cinematic_reveal: { name: 'Cinematic Reveal', camera: 'controlled macro lens language, shallow focus, deliberate dolly movement and sculpted practical light', edit: 'slow tension, sensory detail, then one clean reveal; fewer stronger shots', proof: 'premium physical detail and a memorable hero payoff rather than explanation', sound: 'cinematic texture and restrained rise with no busy voice track' },
+  local_day: { name: 'Local Day-in-the-Life', camera: 'grounded street-level follow coverage, recognizable environmental detail, natural staff and customer movement', edit: 'arrival, service in action, tangible result, departure; all in one believable local day', proof: 'show the actual place, process, and customer outcome without staged reactions', sound: 'authentic neighborhood ambience and upbeat human pacing' },
+};
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function renderSecret() { return process.env.MODAL_SHARED_SECRET || ''; }
 function normalizedHex(value) {
@@ -80,7 +88,7 @@ function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt))
     ],
   };
 }
-async function createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, mustShow, avoid }) {
+async function createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, templateId, template, mustShow, avoid }) {
   const fallback = fallbackPlan(prompt, company, cta, direction);
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
   const sceneCount = duration === 15 ? 3 : duration === 30 ? 4 : 5;
@@ -102,6 +110,11 @@ Starting camera move: ${direction.camera}
 Random palette seed: ${direction.palette.join(', ')}
 Story shape for this render: ${direction.storyShape}
 Production style: ${productionStyle}
+Production system: ${template.name} (${templateId})
+Camera language: ${template.camera}
+Edit rhythm: ${template.edit}
+Proof method: ${template.proof}
+Sound direction: ${template.sound}
 Details that must appear: ${mustShow || 'Use only concrete details from the request and business context.'}
 Details to avoid: ${avoid || 'Generic AI imagery, fake dashboards, floating icons, and meaningless technology visuals.'}
 
@@ -111,7 +124,7 @@ Plan exactly ${sceneCount} visual beats that blend into one uninterrupted piece 
 - visual: choose the most relevant world from ${VISUAL_WORLDS.join(', ')}
 - camera: a camera move that continues the direction and energy of the previous beat
 
-This must feel like a normal cinematic video, not slides with sections. The camera and subject should appear to keep moving through one connected world while imagery blends naturally. Do not create title cards, information panels, section labels, numbered steps, bullet points, or repeated text layouts. Only the opening phrase and final CTA may appear on screen; the middle must be visual footage with narration. Never write "first/second/third" or use a problem/solution/benefits list structure. It may fly through the air, travel inside a computer, follow a person through a real workspace, orbit a product, or move through a city/storefront when relevant. Narration must be one coherent human thought with natural sentence flow and contractions—not isolated lines written for separate scenes. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
+Treat the selected production system as a binding directing brief, not a mood label. This must feel like one finished video, not slides with sections. Do not create title cards, information panels, section labels, numbered steps, bullet points, or repeated text layouts. Only the opening phrase and final CTA may appear on screen; the middle must be visual footage with narration. Narration must be one coherent human thought with natural sentence flow and contractions—not isolated lines written for separate scenes. Avoid generic phrases such as "stop scrolling," "game changer," "work smarter," "built for growth," or "take the next step." Do not invent statistics, testimonials, awards, or guarantees. Write original wording specific to this exact request.
 
 Write one complete narration script totaling ${minimumWords}-${maximumWords} words across the entire Reel. Make it sound spoken rather than written: use contractions, varied sentence lengths, and at most one or two natural filler phrases such as "honestly," "you know," or "kinda" only where they genuinely fit. Break it into a few thought beats using punctuation, an em dash, or an ellipsis so the voice naturally pauses instead of racing through one uninterrupted paragraph. Do not number anything.
 
@@ -268,13 +281,14 @@ async function generateImage(prompt, referenceImage = '') {
   return clean(data?.data?.[0]?.b64_json, 3_500_000);
 }
 
-async function createSceneArt(plan, prompt, company, tone, productionStyle, mustShow, avoid, userReference) {
+async function createSceneArt(plan, prompt, company, tone, productionStyle, template, mustShow, avoid, userReference) {
   if (!process.env.OPENAI_API_KEY) return [];
   const palette = (plan.creative?.palette || []).map(color => `#${color}`).join(', ');
   const scenePrompt = (scene, index, continuity) => `Create visual beat ${index + 1} of one continuous vertical social-media commercial for ${company}.
 Overall ad request: ${prompt}
 This moment: ${WORLD_PROMPTS[scene.visual] || scene.visual}. Story beat: ${scene.headline}. Camera: ${scene.camera}.
 Production treatment: ${productionStyle}; ${tone} high-end advertising, believable physical detail, sophisticated lighting, intentional composition, premium color grade, and natural imperfections instead of plastic AI gloss.
+Template camera language: ${template.camera}. Template proof method: ${template.proof}. Follow these as hard visual constraints.
 Must show: ${mustShow || 'the real offer through believable action and concrete business details'}.
 Avoid: ${avoid || 'generic AI visuals, fake dashboards, floating icons, empty neon technology, warped objects, and stock-photo posing'}.
 Use this palette as inspiration: ${palette}. ${continuity} Compose for a 9:16 frame with safe space for a short opening hook or final CTA.
@@ -351,6 +365,9 @@ export default async function handler(req, res) {
   const customVoiceover = clean(req.body?.customVoiceover, 1600);
   const productionStyle = ['real_footage', 'product_demo', 'ugc', 'editorial', 'cinematic'].includes(clean(req.body?.productionStyle, 30))
     ? clean(req.body.productionStyle, 30) : 'real_footage';
+  const requestedTemplateId = clean(req.body?.templateId, 40);
+  const templateId = REEL_TEMPLATE_DIRECTIONS[requestedTemplateId] ? requestedTemplateId : 'mini_doc';
+  const template = REEL_TEMPLATE_DIRECTIONS[templateId];
   const mustShow = clean(req.body?.mustShow, 500);
   const avoid = clean(req.body?.avoid, 500);
   const referenceImage = clean(req.body?.referenceImage, 3_500_000);
@@ -368,7 +385,7 @@ export default async function handler(req, res) {
   const generationStartedAt = Date.now();
   let plan;
   try {
-    plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, mustShow, avoid });
+    plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, templateId, template, mustShow, avoid });
   } catch (error) {
     console.error('Reel plan generation error:', error.message);
     plan = fallbackPlan(prompt, company, cta, direction);
@@ -386,7 +403,7 @@ export default async function handler(req, res) {
   const assetsStartedAt = Date.now();
   const [voiceover, sceneArt] = await Promise.all([
     createVoiceover(plan, tone, voiceMode, customVoiceover, duration),
-    createSceneArt(plan, prompt, company, tone, productionStyle, mustShow, avoid, referenceImage),
+    createSceneArt(plan, prompt, company, tone, productionStyle, template, mustShow, avoid, referenceImage),
   ]);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
   const now = new Date().toISOString();
@@ -400,6 +417,8 @@ export default async function handler(req, res) {
     caption: plan.caption,
     duration,
     tone,
+    templateId,
+    templateName: template.name,
     voiceMode,
     voiceoverIncluded: Boolean(voiceover),
     generatedSceneCount: sceneArt.filter(Boolean).length,

@@ -2,127 +2,26 @@ import { mkdir, writeFile } from 'node:fs/promises';
 
 const out = process.argv[2] || '/tmp/nitro-instagram';
 await mkdir(out, { recursive: true });
+const svg = body => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${body}</svg>`;
+const brand = (fill = '#ff6b00', ink = '#fff') => `<rect x="60" y="55" width="56" height="56" rx="15" fill="${fill}"/><path d="M90 68 74 94h13l-7 20 26-33H93z" fill="${ink}"/><text x="135" y="94" font-family="Arial" font-size="24" font-weight="800" fill="${ink}">Nitro Outreach</text>`;
 
-const cards = [
-  {
-    file: '01-one-workspace.svg', eyebrow: 'NITRO OUTREACH',
-    title: ['Your whole marketing', 'operation. One login.'],
-    body: 'Websites, content, social, ads, and outreach—without juggling five tools.',
-    panel: ['WEBSITE', 'CONTENT', 'OUTREACH'], metric: 'ONE WORKSPACE',
-  },
-  {
-    file: '02-website.svg', eyebrow: 'WEBSITES',
-    title: ['Launch the site.', 'Keep the momentum.'],
-    body: 'Build a polished business website, then turn traffic into follow-up from the same workspace.',
-    panel: ['LIVE SITE', 'VISITORS', 'FOLLOW-UP'], metric: 'BUILT TO CONVERT',
-  },
-  {
-    file: '03-content.svg', eyebrow: 'CONTENT STUDIO',
-    title: ['One idea.', 'A week of content.'],
-    body: 'Draft posts, Reel scripts, and campaign copy while keeping your brand voice consistent.',
-    panel: ['IDEA', 'DRAFT', 'SCHEDULE'], metric: 'CREATE FASTER',
-  },
-  {
-    file: '04-social.svg', eyebrow: 'SOCIAL SCHEDULING',
-    title: ['Plan it now.', 'Publish it on time.'],
-    body: 'Queue visual posts, edit the schedule, and catch anything that needs attention before it goes live.',
-    panel: ['DRAFT', 'QUEUED', 'PUBLISHED'], metric: 'STAY CONSISTENT',
-  },
-  {
-    file: '05-outreach.svg', eyebrow: 'OUTREACH',
-    title: ['Know what happened', 'after you hit send.'],
-    body: 'Track opens, clicks, visits, and replies so you can follow up with real intent.',
-    panel: ['OPENED', 'CLICKED', 'REPLIED'], metric: 'REAL SIGNALS',
-  },
-  {
-    file: '06-start-free.svg', eyebrow: 'START FREE',
-    title: ['Do the work.', 'Skip the tool pile.'],
-    body: 'Start with the free plan. No credit card. Upgrade when Nitro is earning its place.',
-    panel: ['FREE PLAN', 'NO CARD', 'ONE LOGIN'], metric: 'NITROOUTREACH.COM',
-  },
+const posts = [
+  ['01-one-workspace.svg', svg(`<rect width="1080" height="1350" fill="#f3efe6"/>${brand('#111','#c9ff36')}<text x="60" y="240" font-family="Arial" font-size="24" font-weight="900" letter-spacing="6" fill="#ff5f00">THE TOOL-PILE PROBLEM</text><text x="50" y="470" font-family="Arial" font-size="245" font-weight="900" letter-spacing="-18" fill="#111">ONE</text><text x="62" y="555" font-family="Georgia" font-size="61" font-style="italic" fill="#111">workspace, not five tabs.</text><g transform="rotate(-4 540 850)"><rect x="75" y="650" width="930" height="425" rx="22" fill="#111"/><g font-family="Arial" font-size="30" font-weight="900" fill="#fff"><text x="130" y="770">WEBSITE</text><text x="130" y="855">CONTENT</text><text x="130" y="940">SOCIAL</text><text x="590" y="770">ADS</text><text x="590" y="855">OUTREACH</text></g><path d="M490 720v270" stroke="#c9ff36" stroke-width="7" stroke-dasharray="12 14"/><circle cx="490" cy="855" r="22" fill="#ff6b00"/></g><text x="60" y="1218" font-family="Arial" font-size="31" font-weight="900" fill="#111">LESS SWITCHING. MORE SHIPPING.</text><text x="60" y="1280" font-family="Arial" font-size="20" fill="#555">nitrooutreach.com · 01/06</text>`)],
+  ['02-website.svg', svg(`<rect width="1080" height="1350" fill="#dff4ff"/>${brand('#ff5f00','#fff')}<circle cx="930" cy="170" r="150" fill="#ffdd55"/><text x="65" y="275" font-family="Georgia" font-size="82" font-weight="700" fill="#102a43">A website should</text><text x="65" y="365" font-family="Georgia" font-size="82" font-style="italic" fill="#ff5f00">start the conversation.</text><rect x="65" y="475" width="950" height="610" rx="30" fill="#fff" stroke="#102a43" stroke-width="5"/><rect x="65" y="475" width="950" height="78" rx="30" fill="#102a43"/><circle cx="110" cy="514" r="10" fill="#ff5f00"/><circle cx="145" cy="514" r="10" fill="#ffdd55"/><rect x="115" y="630" width="400" height="330" rx="18" fill="#102a43"/><text x="565" y="660" font-family="Arial" font-size="17" font-weight="900" letter-spacing="3" fill="#ff5f00">PAGE → SIGNAL → FOLLOW-UP</text><g font-family="Arial" font-size="40" font-weight="900" fill="#102a43"><text x="565" y="755">BUILD IT.</text><text x="565" y="825">SEE WHO CAME.</text><text x="565" y="895">FOLLOW UP.</text></g><rect x="565" y="945" width="290" height="72" rx="36" fill="#ff5f00"/><text x="710" y="991" text-anchor="middle" font-family="Arial" font-size="22" font-weight="900" fill="#fff">ONE WORKFLOW</text><text x="65" y="1218" font-family="Arial" font-size="28" font-weight="900" fill="#102a43">BUILT TO CONVERT · NOT JUST EXIST</text><text x="65" y="1280" font-family="Arial" font-size="20" fill="#46627a">nitrooutreach.com · 02/06</text>`)],
+  ['03-content.svg', svg(`<defs><linearGradient id="p" x2="1" y2="1"><stop stop-color="#4610a5"/><stop offset="1" stop-color="#ff3278"/></linearGradient></defs><rect width="1080" height="1350" fill="url(#p)"/>${brand()}<text x="60" y="235" font-family="Arial" font-size="22" font-weight="900" letter-spacing="7" fill="#ffe85b">CONTENT STUDIO</text><text x="50" y="385" font-family="Arial" font-size="112" font-weight="900" fill="#fff">ONE IDEA.</text><text x="50" y="500" font-family="Arial" font-size="112" font-weight="900" fill="#ffe85b">SIX MOVES.</text><g font-family="Arial"><g transform="translate(55 610)"><rect width="300" height="190" rx="12" fill="#fff"/><text x="25" y="48" font-size="18" font-weight="900" fill="#4610a5">01 · HOOK</text><text x="25" y="125" font-family="Georgia" font-size="42" font-style="italic">Stop them.</text></g><g transform="translate(390 660) rotate(4)"><rect width="300" height="190" rx="12" fill="#ffe85b"/><text x="25" y="48" font-size="18" font-weight="900" fill="#4610a5">02 · REEL</text><text x="25" y="125" font-family="Georgia" font-size="42" font-style="italic">Show it.</text></g><g transform="translate(725 610)"><rect width="300" height="190" rx="12" fill="#9dffcf"/><text x="25" y="48" font-size="18" font-weight="900" fill="#4610a5">03 · POST</text><text x="25" y="125" font-family="Georgia" font-size="42" font-style="italic">Ship it.</text></g></g><path d="M195 900c205 120 490 120 700 0" fill="none" stroke="#fff" stroke-width="7" stroke-dasharray="14 18"/><text x="540" y="1080" text-anchor="middle" font-family="Arial" font-size="42" font-weight="900" fill="#fff">YOUR VOICE. MORE OUTPUT.</text><text x="60" y="1280" font-family="Arial" font-size="20" fill="#fff">nitrooutreach.com · 03/06</text>`)],
+  ['04-social.svg', svg(`<rect width="1080" height="1350" fill="#071b35"/>${brand()}<text x="60" y="225" font-family="Arial" font-size="22" font-weight="900" letter-spacing="6" fill="#56d6ff">SOCIAL SCHEDULING</text><text x="60" y="345" font-family="Arial" font-size="76" font-weight="900" fill="#fff">SEE THE WHOLE WEEK.</text><text x="60" y="420" font-family="Georgia" font-size="53" font-style="italic" fill="#56d6ff">Then let it run.</text><g transform="translate(60 510)"><rect width="960" height="580" rx="28" fill="#0d294d" stroke="#56d6ff" stroke-opacity=".4" stroke-width="3"/><g font-family="Arial" font-size="18" font-weight="900" fill="#8ab6d9"><text x="35" y="60">MON</text><text x="225" y="60">TUE</text><text x="415" y="60">WED</text><text x="605" y="60">THU</text><text x="795" y="60">FRI</text></g><g stroke="#315676"><path d="M192 20v530M382 20v530M572 20v530M762 20v530"/><path d="M20 100h920M20 250h920M20 400h920"/></g><rect x="30" y="135" width="145" height="88" rx="15" fill="#ff6b00"/><rect x="220" y="285" width="145" height="88" rx="15" fill="#56d6ff"/><rect x="410" y="135" width="335" height="88" rx="15" fill="#c9ff36"/><rect x="790" y="435" width="145" height="88" rx="15" fill="#a78bfa"/><g font-family="Arial" font-size="17" font-weight="900" fill="#071b35"><text x="293" y="338" text-anchor="middle">POST</text><text x="578" y="188" text-anchor="middle">CAMPAIGN LIVE</text><text x="862" y="488" text-anchor="middle">STORY</text></g><text x="102" y="188" text-anchor="middle" font-family="Arial" font-size="17" font-weight="900" fill="#fff">REEL</text></g><text x="60" y="1215" font-family="Arial" font-size="28" font-weight="900" fill="#fff">VISIBLE. EDITABLE. ON TIME.</text><text x="60" y="1280" font-family="Arial" font-size="20" fill="#8ab6d9">nitrooutreach.com · 04/06</text>`)],
+  ['05-outreach.svg', svg(`<rect width="1080" height="1350" fill="#111"/>${brand()}<text x="60" y="235" font-family="Arial" font-size="23" font-weight="900" letter-spacing="6" fill="#ff7a1a">OUTREACH WITH CONTEXT</text><text x="60" y="355" font-family="Arial" font-size="77" font-weight="900" fill="#fff">AN OPEN IS A CLUE.</text><text x="60" y="435" font-family="Arial" font-size="77" font-weight="900" fill="#c9ff36">A REPLY IS A SIGNAL.</text><g transform="translate(60 540)" font-family="Arial" font-weight="900"><path d="M50 80C280 20 350 260 570 180S760 80 920 180" fill="none" stroke="#ff6b00" stroke-width="9"/><path d="M50 365c180 55 330-120 515-45s235 145 355 75" fill="none" stroke="#c9ff36" stroke-width="9"/><circle cx="50" cy="80" r="28" fill="#ff6b00"/><circle cx="570" cy="180" r="32" fill="#ff6b00"/><circle cx="920" cy="180" r="45" fill="#fff"/><circle cx="50" cy="365" r="28" fill="#c9ff36"/><circle cx="565" cy="320" r="48" fill="#c9ff36"/><circle cx="920" cy="395" r="62" fill="#ff6b00"/><g font-size="18" fill="#fff"><text x="95" y="88">SENT</text><text x="615" y="188">CLICKED</text></g><g font-size="16" fill="#111"><text x="920" y="187" text-anchor="middle">VISIT</text><text x="565" y="327" text-anchor="middle">REPLY</text></g><text x="920" y="402" text-anchor="middle" font-size="15" fill="#fff">FOLLOW UP</text></g><rect x="60" y="1080" width="960" height="105" rx="53" fill="#222"/><text x="540" y="1145" text-anchor="middle" font-family="Georgia" font-size="35" font-style="italic" fill="#fff">Know what happened after “send.”</text><text x="60" y="1280" font-family="Arial" font-size="20" fill="#999">nitrooutreach.com · 05/06</text>`)],
+  ['06-start-free.svg', svg(`<rect width="1080" height="1350" fill="#c9ff36"/>${brand('#111','#c9ff36')}<text x="60" y="230" font-family="Arial" font-size="24" font-weight="900" letter-spacing="6" fill="#111">START WITHOUT THE SALES CALL</text><text x="35" y="760" font-family="Arial" font-size="650" font-weight="900" letter-spacing="-55" fill="#111">$0</text><rect x="60" y="830" width="960" height="9" fill="#111"/><g font-family="Arial" font-size="67" font-weight="900" fill="#111"><text x="60" y="940">NO CARD.</text><text x="60" y="1018">NO TOOL PILE.</text><text x="60" y="1096">JUST START.</text></g><rect x="60" y="1160" width="500" height="88" rx="44" fill="#ff5f00"/><text x="310" y="1216" text-anchor="middle" font-family="Arial" font-size="27" font-weight="900" fill="#fff">NITROOUTREACH.COM</text><text x="1010" y="1280" text-anchor="end" font-family="Arial" font-size="20">06/06</text>`)],
 ];
 
-function esc(value) {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-}
-
-function wrap(value, max = 54) {
-  const words = value.split(/\s+/);
-  const lines = [''];
-  for (const word of words) {
-    const current = lines.at(-1);
-    if (current && `${current} ${word}`.length > max && lines.length < 2) lines.push(word);
-    else lines[lines.length - 1] = current ? `${current} ${word}` : word;
-  }
-  return lines;
-}
-
-function cardSvg(card, index) {
-  const bodyLines = wrap(card.body);
-  const title = card.title.map((line, i) =>
-    `<text x="72" y="${326 + i * 96}" class="title${i === 1 ? ' accent' : ''}">${esc(line)}</text>`
-  ).join('\n');
-  const chips = card.panel.map((label, i) => {
-    const x = 112 + i * 288;
-    return `<rect x="${x}" y="778" width="248" height="92" rx="18" class="chip"/>
-      <circle cx="${x + 34}" cy="824" r="8" class="dot${i === 2 ? ' hot' : ''}"/>
-      <text x="${x + 56}" y="833" class="chipText">${esc(label)}</text>`;
-  }).join('\n');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
-  <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#07120d"/><stop offset="1" stop-color="#0c2418"/></linearGradient>
-    <filter id="shadow"><feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#000" flood-opacity=".38"/></filter>
-  </defs>
-  <style>
-    text { font-family: Arial, Helvetica, sans-serif; }
-    .eyebrow { fill:#ff7a1a; font-size:25px; font-weight:800; letter-spacing:5px; }
-    .title { fill:#f6f7f3; font-size:72px; font-weight:800; letter-spacing:-3px; }
-    .accent { fill:#ff8528; }
-    .body { fill:#c4ccc6; font-size:30px; font-weight:400; }
-    .panel { fill:#0a100d; stroke:#294033; stroke-width:2; }
-    .panelTitle { fill:#f6f7f3; font-size:24px; font-weight:700; }
-    .small { fill:#829087; font-size:18px; }
-    .chip { fill:#111d16; stroke:#31493a; stroke-width:2; }
-    .chipText { fill:#e9eee9; font-size:18px; font-weight:700; }
-    .dot { fill:#47d17e; } .hot { fill:#ff7a1a; }
-    .metric { fill:#f6f7f3; font-size:31px; font-weight:800; letter-spacing:2px; }
-    .footer { fill:#9ba69f; font-size:20px; }
-  </style>
-  <rect width="1080" height="1350" fill="url(#bg)"/>
-  <circle cx="970" cy="150" r="310" fill="#163b27" opacity=".55"/>
-  <circle cx="40" cy="1280" r="330" fill="#0b1b12"/>
-  <rect x="72" y="64" width="62" height="62" rx="17" fill="#ff6d00"/>
-  <path d="M105 77 87 106h14l-8 23 28-36h-15z" fill="#fff"/>
-  <text x="156" y="105" class="panelTitle">Nitro Outreach</text>
-  <text x="72" y="222" class="eyebrow">${esc(card.eyebrow)}</text>
-  ${title}
-  <text x="72" y="565" class="body">${esc(bodyLines[0] || '')}</text>
-  <text x="72" y="608" class="body">${esc(bodyLines[1] || '')}</text>
-  <g filter="url(#shadow)">
-    <rect x="72" y="696" width="936" height="380" rx="32" class="panel"/>
-    <text x="112" y="746" class="small">WORKFLOW</text>
-    ${chips}
-    <line x1="112" y1="932" x2="968" y2="932" stroke="#26382d" stroke-width="2"/>
-    <text x="112" y="1000" class="small">RESULT</text>
-    <text x="968" y="1000" text-anchor="end" class="metric">${esc(card.metric)}</text>
-  </g>
-  <text x="72" y="1240" class="footer">Free forever plan · No credit card</text>
-  <text x="1008" y="1240" text-anchor="end" class="footer">${String(index + 1).padStart(2, '0')} / 06</text>
-  <text x="72" y="1282" class="footer">nitrooutreach.com</text>
-</svg>`;
-}
-
-for (const [index, card] of cards.entries()) {
-  await writeFile(`${out}/${card.file}`, cardSvg(card, index));
-}
-
+for (const [file, content] of posts) await writeFile(`${out}/${file}`, content);
 const captions = [
-  `Your website, content, social, ads, and outreach should work together—not live in five different tabs. Nitro puts the operation in one place. Start free at nitrooutreach.com.\n\n#smallbusinessmarketing #marketingtools #nitrooutreach`,
-  `A website is only useful if it helps the next conversation happen. Build the site, understand the traffic, and follow up from the same workspace.\n\n#businesswebsite #leadgeneration #smallbusiness`,
-  `One solid idea can become a week of useful content. Nitro helps turn the idea into posts, Reel scripts, and campaign copy without losing your voice.\n\n#contentmarketing #reelsstrategy #smallbusinessowner`,
-  `Consistency gets easier when the queue is visible. Draft, schedule, edit, and catch posts that need attention before they miss the moment.\n\n#socialmediamarketing #contentscheduler #marketingworkflow`,
-  `Opens are interesting. Replies are useful. Nitro keeps opens, clicks, site visits, and replies in one view so follow-up is based on real signals.\n\n#outreach #salesfollowup #leadtracking`,
-  `Do the marketing work without adding another pile of disconnected tools. Nitro has a free forever plan and doesn’t require a credit card. Start at nitrooutreach.com.\n\n#entrepreneurtools #smallbusinessgrowth #nitrooutreach`,
+  'Five tabs do not make a marketing system. Nitro brings your website, content, social, ads, and outreach into one workspace so the work can actually move.\n\nStart free: nitrooutreach.com\n\n#smallbusinessmarketing #marketingworkflow #nitrooutreach',
+  'Quick question: does your website create the next conversation—or just sit there?\n\nWith Nitro, the page, visitor signal, and follow-up live together. Build it. See who came. Keep the momentum.\n\n#businesswebsite #leadgeneration #smallbusiness',
+  'The content chain:\n\nOne useful idea → one sharp hook → one Reel → one post → one campaign.\n\nNitro helps you stretch the idea without flattening your voice.\n\n#contentstudio #reelsstrategy #contentmarketing',
+  'Your future self does not want to remember what needs posting on Thursday. Put the whole week somewhere visible, adjust it once, and let the queue do its job.\n\n#socialscheduler #contentcalendar #smallbusinessowner',
+  'Opened is curiosity. Clicked is intent. Replied is a conversation.\n\nNitro keeps those signals together so your next follow-up is based on what actually happened—not a guess.\n\n#outreach #salesfollowup #leadtracking',
+  '$0 to start. No card. No forced demo.\n\nTry Nitro on one real job today: build a page, make a post, or organize your outreach. Keep it only if it earns its place.\n\nnitrooutreach.com\n\n#entrepreneurtools #smallbusinessgrowth #nitrooutreach',
 ];
 await writeFile(`${out}/captions.txt`, captions.map((caption, i) => `POST ${i + 1}\n${caption}`).join('\n\n---\n\n'));
 console.log(out);

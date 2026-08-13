@@ -115,6 +115,18 @@ test('Reel studio uses continuity references and customer production controls', 
   assert.match(client, /Never show/);
 });
 
+test('Reel templates are distinct production systems wired through the renderer', async () => {
+  const [render, client, css] = await Promise.all([read('../api/video-render.js'), read('../public/customer/app.js'), read('../public/customer/app.css')]);
+  for (const id of ['founder_pov', 'product_proof', 'mini_doc', 'kinetic_editorial', 'cinematic_reveal', 'local_day']) {
+    assert.match(client, new RegExp(`id:'${id}'`));
+    assert.match(render, new RegExp(`${id}:`));
+  }
+  assert.match(client, /templateId,prompt:value/);
+  assert.match(render, /Production system:/);
+  assert.match(render, /Template camera language:/);
+  assert.match(css, /--template-accent/);
+});
+
 test('the two pre-release owner audit tests are removed without touching new leads', async () => {
   const source = await read('../api/owner-data.js');
   assert.match(source, /AUDIT_LEAD_CLEAN_START/);
