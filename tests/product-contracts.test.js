@@ -72,6 +72,14 @@ test('responsive contracts cover desktop, tablet, phone, and compact phone layou
   assert.match(css, /\.social-account-grid,\.dm-script-grid\{grid-template-columns:1fr\}/);
 });
 
+test('owner navigation stays viewport-bound and keeps owner shortcuts first', async () => {
+  const [client, css] = await Promise.all([read('../public/customer/app.js'), read('../public/customer/app.css')]);
+  assert.match(client, /sidebar-primary-nav/);
+  assert.ok(client.indexOf('<div class="side-label">Owner<\/div>') < client.indexOf('<div class="side-label">Workspace<\/div>'));
+  assert.match(css, /\.sidebar\{height:100dvh;overflow:hidden\}/);
+  assert.match(css, /\.sidebar-primary-nav\{[^}]*overflow-y:auto/);
+});
+
 test('protected routes show a branded loader without exposing the landing page', async () => {
   const [client, index, finalCss] = await Promise.all([
     read('../public/customer/app.js'),
@@ -156,6 +164,24 @@ test('owner visitors stay separate and show business location apart from detecte
   assert.doesNotMatch(client, /groupVisitorsByLocation/);
   assert.match(store, /businessLocation/);
   assert.match(emailCron, /businessLocation: contact\.businessLocation/);
+});
+
+test('outreach emails hide the long attribution URL behind a short CTA', async () => {
+  const source = await read('../api/email-cron.js');
+  assert.match(source, />Start free<\/a>/);
+  assert.match(source, /text: textBody \+ footerText/);
+  assert.match(source, /body: textBody/);
+  assert.doesNotMatch(source, /const trackedBody = body\.replaceAll/);
+});
+
+test('workspace navigation stays viewport-bound and resets long-page scroll between tabs', async () => {
+  const [client, css] = await Promise.all([read('../public/customer/app.js'), read('../public/customer/app.css')]);
+  assert.match(css, /\.customer-shell \.sidebar\{height:100vh;height:100dvh;max-height:100dvh;overflow-y:auto/);
+  assert.match(css, /overscroll-behavior:contain/);
+  assert.match(client, /function resetWorkspaceRoutePosition\(\)/);
+  assert.match(client, /\.desktop-quick-wrap'\)\?\.classList\.remove\('open'\)/);
+  assert.match(client, /scrollTo\(\{top:0,left:0,behavior:'instant'\}\)/);
+  assert.match(client, /state\.mobileMenu=false;resetWorkspaceRoutePosition\(\);render\(\)/);
 });
 
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {

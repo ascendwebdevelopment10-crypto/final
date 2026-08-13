@@ -289,9 +289,12 @@ export default async function handler(req, res) {
         const trackingId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
         const siteUrl = 'https://nitrooutreach.com/?utm_source=outreach&utm_medium=email&utm_campaign=automated&oid=' + encodeURIComponent(trackingId) + '&ot=' + encodeURIComponent(outreachTokenFor(trackingId));
-        const trackedBody = body.replaceAll('https://nitrooutreach.com', siteUrl);
+        // Keep the plain-text fallback and dashboard preview readable. The
+        // unique attribution URL stays behind the short HTML CTA instead of
+        // being exposed as a multi-line query string in the email body.
+        const textBody = body;
         const emailHtml = escapeHtml(body)
-          .replaceAll('https://nitrooutreach.com', '<a href="' + escapeHtml(siteUrl) + '" style="color:#ff8a4c;font-weight:700;text-decoration:underline">Visit Nitro Outreach</a>')
+          .replaceAll('https://nitrooutreach.com', '<a href="' + escapeHtml(siteUrl) + '" style="display:inline-block;margin-top:6px;padding:11px 18px;border-radius:9px;background:#111827;color:#ffffff;font-weight:800;text-decoration:none">Start free</a>')
           .replace(/\n/g, '<br>');
         const openPixelUrl = 'https://nitrooutreach.com/api/track-open?id=' + encodeURIComponent(trackingId);
         const footerText = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
@@ -301,7 +304,7 @@ export default async function handler(req, res) {
           from: OUTREACH_FROM,
           to: contact.email,
           subject,
-          text: trackedBody + footerText,
+          text: textBody + footerText,
           html: emailHtml + footerHtml,
           reply_to: OUTREACH_REPLY_TO,
           headers: {
@@ -318,7 +321,7 @@ export default async function handler(req, res) {
           id: trackingId,
           to: contact.email,
           subject,
-          body: trackedBody,
+          body: textBody,
           contactName: contact.organization_name,
           timestamp: Date.now(),
           segment: 'needs_upgrade',
