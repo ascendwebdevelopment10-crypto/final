@@ -171,6 +171,7 @@ function normalizeContact(place) {
     phone: place.phone || null,
     website_url: place.website || '',
     industry: place.type || place.subtypes || '',
+    businessLocation: place.full_address || '',
     isChain: Boolean(place.isChain),
   };
   contact.targetSegment = qualifyOutreachContact(contact);
@@ -179,21 +180,21 @@ function normalizeContact(place) {
 
 async function generateEmail(contact) {
   const company = contact.organization_name || 'your business';
-  const agency = contact.targetSegment === 'Solo / small agency';
-  const service = agency ? 'agency' : pickService();
+  const service = contact.targetSegment === 'Solo / small agency' ? 'agency' : pickService();
   const angle = replyAngle(contact.industry);
 
   const subjects = [
-    'A simpler marketing setup for ' + company,
-    'One idea for ' + company,
-    company + ' marketing question',
-    'Could this help ' + company + '?'
+    'I’ll build the first one for ' + company,
+    company + ' — want me to set this up?',
+    'A free Nitro setup for ' + company,
+    'Can I build this for ' + company + '?'
   ];
   const subject = subjects[Math.floor(Math.random() * subjects.length)];
   const opener = 'Hi ' + company + ' team,';
   const bodies = [
-    opener + '\n\nI built Nitro Outreach for small businesses that want to ' + angle + '. It puts the work in one focused workspace instead of spreading it across several apps.\n\nIf that is something you are dealing with, reply “yes” and I will send a short example for ' + company + '. You can also look around free, with no card: https://nitrooutreach.com',
-    opener + '\n\nI came across ' + company + ' and thought Nitro might fit the way a small team handles marketing. It helps you ' + angle + '.\n\nWould a two-minute example built around ' + company + ' be useful? Just reply and I will send one. Nitro is also free to try: https://nitrooutreach.com'
+    opener + '\n\nI came across ' + company + ' while looking at independent businesses that could ' + angle + '. I built Nitro to turn one offer into a website, social content, and tracked outreach without juggling separate tools.\n\nI’ll personally build your first page or post around ' + company + ' for free. No card and no forced demo. Reply “build it” or create the free account here: https://nitrooutreach.com',
+    opener + '\n\nNitro gives small businesses one place to build a website, create posts, run outreach, and see what brings people back. I thought it could be a strong fit for ' + company + ' because it is designed to help teams ' + angle + '.\n\nWant me to set up the first real example for you free? Reply “yes,” or start the account with no card here: https://nitrooutreach.com',
+    opener + '\n\nI’m offering a hands-on first setup to a few independent businesses. If you create a free Nitro account, I’ll build ' + company + '’s first website page or social post myself so you can judge the actual result.\n\nThere is no card and no sales call required. If you want one, reply “yes” or start here: https://nitrooutreach.com'
   ];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 
@@ -324,6 +325,8 @@ export default async function handler(req, res) {
           service,
           industry: contact.industry,
           targetSegment: contact.targetSegment,
+          businessLocation: contact.businessLocation,
+          businessWebsite: contact.website_url,
           providerId: sendResult?.id || sendResult?.messageId || '',
           status: 'sent',
         });

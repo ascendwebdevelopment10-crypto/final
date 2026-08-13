@@ -128,7 +128,7 @@ function groupVisitors(sessions) {
         lastViewedAt: session.lastViewedAt,
         city: session.city, region: session.region, country: session.country, device: session.device,
         referrer: session.referrer, utmSource: session.utmSource, utmMedium: session.utmMedium,
-        utmCampaign: session.utmCampaign, outreachId: session.outreachId,
+        utmCampaign: session.utmCampaign, outreachId: session.outreachId || group.outreachId,
       });
     }
     for (const path of session.pages || [session.path || '/']) {
@@ -139,9 +139,28 @@ function groupVisitors(sessions) {
       lastViewedAt: session.lastViewedAt,
       viewCount: Number(session.viewCount || 1),
       pages: session.pages || [session.path || '/'],
+      outreachId: session.outreachId || '',
     });
   }
   return [...groups.values()].sort((a, b) => Date.parse(b.lastViewedAt || 0) - Date.parse(a.lastViewedAt || 0));
+}
+
+export function enrichVisitorsWithOutreach(visitors, outreachLog) {
+  const outreachById = new Map((outreachLog || []).map(entry => [String(entry?.id || ''), entry]));
+  return (visitors || []).map(visitor => {
+    const outreachIds = [visitor.outreachId, ...(visitor.sessions || []).map(session => session.outreachId)].filter(Boolean);
+    const entry = outreachIds.map(id => outreachById.get(String(id))).find(Boolean);
+    if (!entry) return visitor;
+    return {
+      ...visitor,
+      businessName: entry.contactName || '',
+      businessLocation: entry.businessLocation || '',
+      businessWebsite: entry.businessWebsite || '',
+      contactEmail: entry.to || '',
+      industry: entry.industry || '',
+      targetSegment: entry.targetSegment || '',
+    };
+  });
 }
 
 function mountainDay(date = new Date()) {
@@ -261,7 +280,10 @@ export default async function handler(req, res) {
       }
       accounts.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       const day = mountainDay();
-      const rawVisitors = await kv.lrange('stats:site:v2:visitors', 0, 999);
+      const [rawVisitors, outreachLog] = await Promise.all([
+        kv.lrange('stats:site:v2:visitors', 0, 999),
+        getEmailLog(1000),
+      ]);
       const allVisitors = (rawVisitors || []).map(value => {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
@@ -277,7 +299,7 @@ export default async function handler(req, res) {
       const excludedVisitors = allVisitors.filter(isExcludedVisit);
       const cleanVisitors = collapseRapidPageViews(allVisitors.filter(visit => !isExcludedVisit(visit)));
       const visitors = groupVisitSessions(cleanVisitors);
-      const visitorGroups = groupVisitors(visitors);
+      const visitorGroups = enrichVisitorsWithOutreach(groupVisitors(visitors), outreachLog);
       const cleanToday = cleanVisitors.filter(visit => mountainDay(new Date(visit.viewedAt || visit.visitedAt || 0)) === day);
       const visitorsToday = groupVisitSessions(cleanToday);
       const uniqueVisitors = new Set(cleanVisitors.map(visit => visit.email || visit.visitorId).filter(Boolean)).size;

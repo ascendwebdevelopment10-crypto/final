@@ -145,6 +145,19 @@ test('the two pre-release owner audit tests are removed without touching new lea
   assert.match(source, /kv\.lrem\('growth:audits', 0, lead\.id\)/);
 });
 
+test('owner visitors stay separate and show business location apart from detected IP location', async () => {
+  const [ownerData, client, store, emailCron] = await Promise.all([
+    read('../api/owner-data.js'), read('../public/customer/app.js'), read('../lib/store.js'), read('../api/email-cron.js'),
+  ]);
+  assert.match(ownerData, /enrichVisitorsWithOutreach/);
+  assert.match(client, /Business location/);
+  assert.match(client, /Detected visit/);
+  assert.match(client, /individual visitors/);
+  assert.doesNotMatch(client, /groupVisitorsByLocation/);
+  assert.match(store, /businessLocation/);
+  assert.match(emailCron, /businessLocation: contact\.businessLocation/);
+});
+
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {
   const secretBytes = crypto.randomBytes(32);
   const secret = `whsec_${secretBytes.toString('base64')}`;
