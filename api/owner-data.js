@@ -13,6 +13,9 @@ const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'th
 const OUTREACH_TRACKING_START = Date.parse(process.env.OUTREACH_TRACKING_START || '2026-08-04T14:00:00.000Z');
 const SITE_VISIT_TRACKING_START = Date.parse(process.env.SITE_VISIT_TRACKING_START || '2026-08-04T20:33:00.000Z');
 const CONFIRMED_VISIT_TRACKING_START = Date.parse(process.env.CONFIRMED_VISIT_TRACKING_START || '2026-08-06T16:15:00.000Z');
+// The first two audit submissions were owner QA runs, not leads. Keep the
+// historical cleanup bounded so no genuine request after this release is lost.
+const AUDIT_LEAD_CLEAN_START = Date.parse('2026-08-13T02:28:01.000Z');
 
 function emailAddress(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -287,10 +290,19 @@ export default async function handler(req, res) {
       const sourceBreakdown = [...sourceCounts.entries()].map(([source, sessions]) => ({ source, sessions })).sort((a, b) => b.sessions - a.sessions);
       const auditIds = await kv.lrange('growth:audits', 0, 199);
       const auditValues = auditIds.length ? await Promise.all(auditIds.map(id => kv.get(`growth:audit:${id}`))) : [];
-      const auditLeads = auditValues.map(value => {
+      const parsedAuditLeads = auditValues.map(value => {
         if (typeof value === 'object' && value) return value;
         try { return JSON.parse(value); } catch { return null; }
-      }).filter(Boolean).map(lead => ({
+      }).filter(Boolean);
+      const ownerAuditTests = parsedAuditLeads.filter(lead => Date.parse(lead.createdAt || 0) < AUDIT_LEAD_CLEAN_START).slice(0, 2);
+      if (ownerAuditTests.length) {
+        await Promise.all(ownerAuditTests.flatMap(lead => [
+          kv.del(`growth:audit:${lead.id}`),
+          kv.lrem('growth:audits', 0, lead.id),
+        ]));
+      }
+      const removedAuditIds = new Set(ownerAuditTests.map(lead => lead.id));
+      const auditLeads = parsedAuditLeads.filter(lead => !removedAuditIds.has(lead.id)).map(lead => ({
         id: lead.id, businessName: lead.businessName, website: lead.website, industry: lead.industry,
         email: lead.email, phone: lead.phone, goal: lead.goal, status: lead.status || 'New',
         score: Number(lead.report?.overallScore || 0), summary: lead.report?.summary || '', createdAt: lead.createdAt,

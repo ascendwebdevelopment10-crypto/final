@@ -48,7 +48,9 @@ test('Reel duration pricing and UI credit display agree', async () => {
 test('owner publishing queue and all three DM response scripts are visible in the workspace', async () => {
   const client = await read('../public/customer/app.js');
   assert.match(client, /NITRO_CAMPAIGN_QUEUE=\[/);
-  assert.equal((client.match(/nitro_aug_\d+/g) || []).length, 6);
+  assert.equal((client.match(/'2026-08-[a-z-]+'/g) || []).length, 6);
+  assert.match(client, /social-queue-grid/);
+  assert.match(client, /Scheduled post preview/);
   for (const intent of ['Interested', 'Unsure', 'Not interested']) assert.match(client, new RegExp(`\\['${intent}'`));
   assert.match(client, /data-copy-dm/);
 });
@@ -89,11 +91,35 @@ test('outreach dashboard removes the redundant Delivered summary and explains co
 });
 
 test('Instagram publishing buttons inherit the selected workspace appearance', async () => {
-  const css = await read('../public/customer/app.css');
+  const [css, client] = await Promise.all([read('../public/customer/app.css'), read('../public/customer/app.js')]);
   const rule = css.match(/\.ig-post-btn\{([^}]*)\}/)?.[1] || '';
   assert.match(rule, /var\(--green\)/);
   assert.match(rule, /var\(--aqua\)/);
   assert.doesNotMatch(rule, /#f09433|#dc2743|#bc1888/i);
+  assert.match(client, /\.modal-overlay\{--green:/);
+  assert.match(css, /#customer-shell \.btn,.modal-overlay \.btn/);
+  assert.match(css, /#customer-shell \.btn-primary,.modal-overlay \.btn-primary/);
+  assert.match(css, /#customer-shell \.btn-reel,.modal-overlay \.btn-reel/);
+});
+
+test('Reel studio uses continuity references and customer production controls', async () => {
+  const [render, client] = await Promise.all([read('../api/video-render.js'), read('../public/customer/app.js')]);
+  assert.match(render, /ANTHROPIC_REEL_MODEL/);
+  assert.match(render, /quality', 'medium'/);
+  assert.match(render, /strict continuity reference/);
+  assert.match(render, /productionStyle/);
+  assert.match(render, /mustShow/);
+  assert.match(render, /referenceImage/);
+  assert.match(client, /Real business footage/);
+  assert.match(client, /Reference image \(recommended\)/);
+  assert.match(client, /Never show/);
+});
+
+test('the two pre-release owner audit tests are removed without touching new leads', async () => {
+  const source = await read('../api/owner-data.js');
+  assert.match(source, /AUDIT_LEAD_CLEAN_START/);
+  assert.match(source, /slice\(0, 2\)/);
+  assert.match(source, /kv\.lrem\('growth:audits', 0, lead\.id\)/);
 });
 
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {

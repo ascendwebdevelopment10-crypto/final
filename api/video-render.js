@@ -7,6 +7,7 @@ export const config = { maxDuration: 300 };
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001';
+const CREATIVE_MODEL = process.env.ANTHROPIC_REEL_MODEL || 'claude-sonnet-4-6';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CREDIT_COST = { 15: 1, 30: 2, 45: 3 };
 const VOICE_WORD_RANGE = { 15: [22, 26], 30: [48, 56], 45: [74, 84] };
@@ -79,14 +80,14 @@ function fallbackPlan(prompt, company, cta, direction = chooseDirection(prompt))
     ],
   };
 }
-async function createPlan({ prompt, company, industry, tone, cta, duration, direction }) {
+async function createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, mustShow, avoid }) {
   const fallback = fallbackPlan(prompt, company, cta, direction);
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
   const sceneCount = duration === 15 ? 3 : duration === 30 ? 4 : 5;
   const [minimumWords, maximumWords] = VOICE_WORD_RANGE[duration];
   const result = await anthropic.messages.create({
-    model: FAST_MODEL,
-    max_tokens: 1500,
+    model: CREATIVE_MODEL,
+    max_tokens: 2200,
     temperature: 0.7,
     messages: [{
       role: 'user',
@@ -100,6 +101,9 @@ Starting visual idea: ${direction.world}
 Starting camera move: ${direction.camera}
 Random palette seed: ${direction.palette.join(', ')}
 Story shape for this render: ${direction.storyShape}
+Production style: ${productionStyle}
+Details that must appear: ${mustShow || 'Use only concrete details from the request and business context.'}
+Details to avoid: ${avoid || 'Generic AI imagery, fake dashboards, floating icons, and meaningless technology visuals.'}
 
 Plan exactly ${sceneCount} visual beats that blend into one uninterrupted piece of footage. Each beat needs:
 - headline: a short phrase used only for the opening hook or final CTA, maximum 52 characters
@@ -235,33 +239,59 @@ const WORLD_PROMPTS = {
   customer_journey: 'one customer moving through discovery, decision and a satisfying real-world outcome in a connected environment',
 };
 
-async function createSceneArt(plan, prompt, company, tone) {
+async function generateImage(prompt, referenceImage = '') {
+  const endpoint = referenceImage ? '/v1/images/edits' : '/v1/images/generations';
+  let body;
+  let headers = { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` };
+  if (referenceImage) {
+    const match = referenceImage.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
+    if (!match) return '';
+    body = new FormData();
+    body.append('model', 'gpt-image-2');
+    body.append('prompt', prompt);
+    body.append('image', new Blob([Buffer.from(match[2], 'base64')], { type: match[1] }), 'reference.' + (match[1] === 'image/png' ? 'png' : match[1] === 'image/webp' ? 'webp' : 'jpg'));
+    body.append('size', '1024x1536');
+    body.append('quality', 'medium');
+    body.append('output_format', 'jpeg');
+    body.append('output_compression', '82');
+  } else {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify({ model: 'gpt-image-2', prompt, size: '1024x1536', quality: 'medium', output_format: 'jpeg', output_compression: 82 });
+  }
+  const response = await fetch(`https://api.openai.com${endpoint}`, { method: 'POST', headers, body });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error('Reel scene image error:', error?.error?.message || response.status);
+    return '';
+  }
+  const data = await response.json();
+  return clean(data?.data?.[0]?.b64_json, 3_500_000);
+}
+
+async function createSceneArt(plan, prompt, company, tone, productionStyle, mustShow, avoid, userReference) {
   if (!process.env.OPENAI_API_KEY) return [];
   const palette = (plan.creative?.palette || []).map(color => `#${color}`).join(', ');
-  const jobs = plan.scenes.map(async (scene, index) => {
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-image-2',
-        prompt: `Create visual beat ${index + 1} of one continuous vertical social-media commercial for ${company}.
+  const scenePrompt = (scene, index, continuity) => `Create visual beat ${index + 1} of one continuous vertical social-media commercial for ${company}.
 Overall ad request: ${prompt}
 This moment: ${WORLD_PROMPTS[scene.visual] || scene.visual}. Story beat: ${scene.headline}. Camera: ${scene.camera}.
-Style: ${tone} high-end cinematic advertising, believable depth, sophisticated lighting, richly detailed, polished color grade.
-Use this palette as inspiration: ${palette}. Keep the same cinematic world, lighting logic, subject continuity, and forward motion as the adjoining moments so long dissolves feel like one connected shot. Compose for a 9:16 frame.
-No words, captions, letters, logos, watermarks, split screens, posters, title cards, presentation panels, or flat graphic backgrounds.`,
-        size: '1024x1536',
-        quality: 'low',
-        output_format: 'jpeg',
-        output_compression: 55,
-      }),
-    });
-    if (!response.ok) return '';
-    const data = await response.json();
-    return clean(data?.data?.[0]?.b64_json, 2_500_000);
-  });
-  const results = await Promise.allSettled(jobs);
-  return results.map(result => result.status === 'fulfilled' ? result.value : '');
+Production treatment: ${productionStyle}; ${tone} high-end advertising, believable physical detail, sophisticated lighting, intentional composition, premium color grade, and natural imperfections instead of plastic AI gloss.
+Must show: ${mustShow || 'the real offer through believable action and concrete business details'}.
+Avoid: ${avoid || 'generic AI visuals, fake dashboards, floating icons, empty neon technology, warped objects, and stock-photo posing'}.
+Use this palette as inspiration: ${palette}. ${continuity} Compose for a 9:16 frame with safe space for a short opening hook or final CTA.
+No generated words, captions, letters, logos, watermarks, split screens, posters, title cards, presentation panels, or flat graphic backgrounds.`;
+  const first = plan.scenes[0];
+  const firstPrompt = scenePrompt(first, 0, userReference
+    ? 'Treat the supplied reference as the source of truth for the subject, product, space, materials, and brand feel.'
+    : 'Establish one specific hero subject, environment, wardrobe/product details, lens language, lighting direction, and art direction that every later beat must preserve.');
+  let master = await generateImage(firstPrompt, userReference);
+  if (!master && userReference) master = await generateImage(firstPrompt);
+  if (!master) return [];
+  const masterReference = `data:image/jpeg;base64,${master}`;
+  const later = await Promise.allSettled(plan.scenes.slice(1).map((scene, offset) => generateImage(
+    scenePrompt(scene, offset + 1, 'Use the supplied master frame as a strict continuity reference. Preserve the exact same hero subject, environment, materials, wardrobe/product, palette, lighting direction, lens character, and production design while advancing only the action and camera position.'),
+    masterReference,
+  )));
+  return [master, ...later.map(result => result.status === 'fulfilled' ? result.value : '')];
 }
 
 export default async function handler(req, res) {
@@ -319,6 +349,11 @@ export default async function handler(req, res) {
   const voiceMode = ['recommended', 'founder', 'warm', 'commercial', 'custom', 'none'].includes(clean(req.body?.voiceMode, 30))
     ? clean(req.body.voiceMode, 30) : 'recommended';
   const customVoiceover = clean(req.body?.customVoiceover, 1600);
+  const productionStyle = ['real_footage', 'product_demo', 'ugc', 'editorial', 'cinematic'].includes(clean(req.body?.productionStyle, 30))
+    ? clean(req.body.productionStyle, 30) : 'real_footage';
+  const mustShow = clean(req.body?.mustShow, 500);
+  const avoid = clean(req.body?.avoid, 500);
+  const referenceImage = clean(req.body?.referenceImage, 3_500_000);
   if (voiceMode === 'custom' && !customVoiceover) {
     res.status(400).json({ error: 'Add your voiceover text or choose a recommended voice style.' }); return;
   }
@@ -333,7 +368,7 @@ export default async function handler(req, res) {
   const generationStartedAt = Date.now();
   let plan;
   try {
-    plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction });
+    plan = await createPlan({ prompt, company, industry, tone, cta, duration, direction, productionStyle, mustShow, avoid });
   } catch (error) {
     console.error('Reel plan generation error:', error.message);
     plan = fallbackPlan(prompt, company, cta, direction);
@@ -351,7 +386,7 @@ export default async function handler(req, res) {
   const assetsStartedAt = Date.now();
   const [voiceover, sceneArt] = await Promise.all([
     createVoiceover(plan, tone, voiceMode, customVoiceover, duration),
-    createSceneArt(plan, prompt, company, tone),
+    createSceneArt(plan, prompt, company, tone, productionStyle, mustShow, avoid, referenceImage),
   ]);
   const jobId = `reel_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
   const now = new Date().toISOString();
