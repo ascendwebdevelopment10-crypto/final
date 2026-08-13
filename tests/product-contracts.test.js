@@ -36,24 +36,37 @@ test('website generation shows staged progress until the finished site is saved'
 test('public plan prices and allowances match the server source of truth', async () => {
   const client = await read('../public/customer/app.js');
   for (const plan of Object.values(CUSTOMER_PLANS)) {
-    assert.match(client, new RegExp(`${plan.id}:\\{id:'${plan.id}',name:'${plan.name}',monthly:${plan.monthly},yearly:${plan.yearly},credits:${plan.aiCredits === null ? 'null' : plan.aiCredits},reelCredits:${plan.reelCredits}`));
+    assert.match(client, new RegExp(`${plan.id}:\\{id:'${plan.id}',name:'${plan.name}',monthly:${plan.monthly},yearly:${plan.yearly},credits:${plan.aiCredits === null ? 'null' : plan.aiCredits},contentCredits:${plan.contentCredits}`));
   }
 });
 
-test('Stripe lifecycle restores monthly included allowances without deleting prepaid credits', async () => {
+test('Stripe lifecycle restores monthly Content allowances without deleting prepaid credits', async () => {
   const source = await read('../api/stripe-webhook.js');
   assert.match(source, /user\.usage\.aiUsed = 0/);
-  assert.match(source, /Math\.max\(Number\(user\.usage\.videoCredits \|\| 0\), Number\(plan\.reelCredits \|\| 0\)\)/);
+  assert.match(source, /Math\.max\(contentCreditBalance\(user\), Number\(plan\.contentCredits \|\| 0\)\)/);
   assert.match(source, /applyPlanAllowance\(user, plan\)/);
   assert.match(source, /applyPlanAllowance\(user, user\.subscription\.plan\)/);
 });
 
-test('Reel duration pricing and UI credit display agree', async () => {
-  const [render, client] = await Promise.all([read('../api/video-render.js'), read('../public/customer/app.js')]);
-  assert.match(render, /CREDIT_COST = \{ 15: 1, 30: 2, 45: 3 \}/);
-  assert.match(client, /15 sec · 1 credit/);
-  assert.match(client, /30 sec · 2 credits/);
-  assert.match(client, /45 sec · 3 credits/);
+test('customer Content credits are affordable and Reel Lab is owner-only', async () => {
+  const [render, client, workspace, credits] = await Promise.all([read('../api/video-render.js'), read('../public/customer/app.js'), read('../api/customer-workspace.js'), read('../api/video-credits.js')]);
+  assert.match(render, /Reel Lab is an owner-only experimental tool/);
+  assert.match(client, /OWNER-ONLY EXPERIMENT/);
+  assert.match(client, /Image · 1/);
+  assert.match(client, /Carousel · 2/);
+  assert.match(workspace, /spendContentCredits\(user, 1\)/);
+  assert.match(workspace, /spendContentCredits\(user, 2\)/);
+  assert.match(credits, /credits: 25, amountCents: 499/);
+  assert.match(credits, /credits: 2500, amountCents: 24999/);
+});
+
+test('public marketing does not promise customer Reel generation or unverified multi-platform publishing', async () => {
+  const landing = await read('../public/current-stacked-preview/index.html');
+  assert.doesNotMatch(landing, /Prompt-to-Reel|Generate Reels|CONTENT & REELS/i);
+  assert.match(landing, /schedule Instagram automatically/);
+  const client = await read('../public/customer/app.js');
+  assert.match(client, /Instagram auto-publishing is live/);
+  assert.match(client, /publishing pending approval/);
 });
 
 test('owner publishing queue and all three DM response scripts are visible in the workspace', async () => {

@@ -312,6 +312,9 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const user = await currentCustomer(req);
   if (!user) { res.status(401).json({ error: 'Customer sign-in required' }); return; }
+  if (String(user.email || '').toLowerCase() !== OWNER_EMAIL) {
+    res.status(404).json({ error: 'Reel Lab is an owner-only experimental tool.' }); return;
+  }
   if (req.method === 'GET') {
     const jobId = clean(req.query?.jobId, 100);
     if (!jobId) {

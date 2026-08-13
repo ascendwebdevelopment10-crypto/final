@@ -1,6 +1,7 @@
 import { currentCustomer, publicCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 import { planFor, publicPlans } from '../lib/customer-plans.js';
 import { createBillingPortalSession, setSubscriptionCancellation, stripeConfigured as hasStripe } from '../lib/stripe.js';
+import { contentCreditBalance, migrateContentCredits } from '../lib/content-credits.js';
 
 function clean(value, max = 100) { return String(value || '').trim().slice(0, max); }
 function nextDate(days) { const date = new Date(Date.now() + days * 86400000); return date.toISOString(); }
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
       plan: planFor(user.subscription?.plan),
       plans: publicPlans(),
       invoices: user.invoices || [],
-      creditPurchases: user.videoCreditPurchases || [],
+      creditPurchases: [...(user.contentCreditPurchases || []), ...(user.videoCreditPurchases || [])],
       stripeConfigured,
     });
     return;
@@ -39,6 +40,8 @@ export default async function handler(req, res) {
     user.subscription = plan.id === 'free'
       ? { plan: 'free', interval, status: 'active', billingMode: 'free', cancelAtPeriodEnd: false, startedAt: now }
       : { plan: plan.id, interval, status: 'trialing', billingMode: 'demo', cancelAtPeriodEnd: false, startedAt: now, trialEndsAt: nextDate(14), currentPeriodEnd: nextDate(14) };
+    migrateContentCredits(user);
+    user.usage.contentCredits = Math.max(contentCreditBalance(user), Number(plan.contentCredits || 0));
     await saveCustomer(user);
     res.status(200).json({ ok: true, subscription: user.subscription, user: publicCustomer(user), redirect: '/checkout/success' }); return;
   }

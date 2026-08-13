@@ -3,6 +3,7 @@ import { verifyWebhook } from '../lib/stripe.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 import { recordFunnelEvent } from '../lib/funnel.js';
 import { planFor } from '../lib/customer-plans.js';
+import { contentCreditBalance, LEGACY_REEL_TO_CONTENT_MULTIPLIER, migrateContentCredits } from '../lib/content-credits.js';
 
 // Stripe needs the raw request body to verify the signature.
 export const config = { api: { bodyParser: false } };
@@ -39,7 +40,8 @@ function applyPlanAllowance(user, planId) {
   // Purchased credits never disappear at renewal. The included allowance acts
   // as a monthly floor, so a customer with fewer credits is refilled while a
   // customer with a larger prepaid balance keeps it.
-  user.usage.videoCredits = Math.max(Number(user.usage.videoCredits || 0), Number(plan.reelCredits || 0));
+  migrateContentCredits(user);
+  user.usage.contentCredits = Math.max(contentCreditBalance(user), Number(plan.contentCredits || 0));
   user.usage.allowancePlan = plan.id;
   user.usage.allowanceRenewedAt = new Date().toISOString();
 }
@@ -66,7 +68,7 @@ export default async function handler(req, res) {
       const plan = s.metadata?.plan;
       const interval = s.metadata?.interval || 'monthly';
       const purchaseType = s.metadata?.purchaseType;
-      if (purchaseType === 'video_credits' && customerId) {
+      if ((purchaseType === 'content_credits' || purchaseType === 'video_credits') && customerId) {
         if (s.payment_status !== 'paid') {
           res.status(200).json({ received: true, fulfilled: false });
           return;
@@ -75,23 +77,25 @@ export default async function handler(req, res) {
         const alreadyFulfilled = await kv.get(fulfilledKey);
         if (!alreadyFulfilled) {
           const user = await loadCustomer(customerId);
-          const credits = Math.max(0, Math.min(1000, Number(s.metadata?.credits || 0)));
+          let credits = Math.max(0, Math.min(5000, Number(s.metadata?.credits || 0)));
+          if (purchaseType === 'video_credits') credits *= LEGACY_REEL_TO_CONTENT_MULTIPLIER;
           if (user && credits) {
             const stripeCustomerId = stripeId(s.customer);
             user.usage = user.usage || {};
-            user.usage.videoCredits = Number(user.usage.videoCredits || 0) + credits;
+            migrateContentCredits(user);
+            user.usage.contentCredits += credits;
             user.subscription = {
               ...(user.subscription || {}),
               stripeCustomerId: stripeCustomerId || user.subscription?.stripeCustomerId || null,
             };
-            user.videoCreditPurchases = Array.isArray(user.videoCreditPurchases) ? user.videoCreditPurchases : [];
-            user.videoCreditPurchases.unshift({
+            user.contentCreditPurchases = Array.isArray(user.contentCreditPurchases) ? user.contentCreditPurchases : [];
+            user.contentCreditPurchases.unshift({
               stripeSessionId: s.id,
               credits,
               amountTotal: Number(s.amount_total || 0),
               purchasedAt: new Date().toISOString(),
             });
-            user.videoCreditPurchases = user.videoCreditPurchases.slice(0, 50);
+            user.contentCreditPurchases = user.contentCreditPurchases.slice(0, 50);
             await saveCustomer(user);
             if (stripeCustomerId) await kv.set(`stripe:customer:${stripeCustomerId}`, customerId);
             await kv.set(fulfilledKey, '1', { ex: 365 * 24 * 60 * 60 });

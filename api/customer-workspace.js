@@ -4,6 +4,7 @@ import { currentCustomer, sameOrigin, saveCustomer, rateLimit, requestOrigin } f
 import { publishImage, publishCarousel, publishReel } from '../lib/meta.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
+import { contentCreditBalance, migrateContentCredits, spendContentCredits } from '../lib/content-credits.js';
 import { kv } from '@vercel/kv';
 
 export const config = { maxDuration: 300 };
@@ -341,6 +342,8 @@ export default async function handler(req, res) {
   const plan = planFor(user.subscription?.plan);
   const data = workspace(user);
   const creditsLeft = () => plan.aiCredits === null || user.usage.aiUsed < plan.aiCredits;
+  const isOwner = String(user.email || '').toLowerCase() === String(process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
+  const requireContentCredits = (cost) => isOwner || contentCreditBalance(user) >= cost;
 
   try {
     // ---- UPLOAD: add a customer's finished image to Content Studio ----
@@ -473,6 +476,7 @@ DESIGN QUALITY
       const promptText = clean(body.prompt, 1000);
       if (!promptText) { res.status(400).json({ error: 'Describe the image you want.' }); return; }
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      if (!requireContentCredits(1)) { res.status(402).json({ error: 'This image uses 1 Content credit. Add credits to continue.', needsContentCredits: true }); return; }
       const sizeMap = { square: '1024x1024', landscape: '1536x1024', portrait: '1024x1536' };
       const size = sizeMap[clean(body.size, 20).toLowerCase()] || '1024x1024';
       const { company, industry } = ctx(user);
@@ -483,7 +487,8 @@ DESIGN QUALITY
       const item = { id: imgId, type: 'image', topic: promptText.slice(0, 120), prompt: promptText, format: 'image', size, createdAt: new Date().toISOString() };
       data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
       user.usage.aiUsed += 1;
-      await saveCustomer(user); res.status(201).json({ ok: true, content: item, dataUrl: `data:image/png;base64,${b64}`, aiUsed: user.usage.aiUsed }); return;
+      if (!isOwner) spendContentCredits(user, 1); else migrateContentCredits(user);
+      await saveCustomer(user); res.status(201).json({ ok: true, content: item, dataUrl: `data:image/png;base64,${b64}`, aiUsed: user.usage.aiUsed, contentCredits: contentCreditBalance(user) }); return;
     }
 
     // ---- CONTENT: one-click multi-slide carousel post (image per slide) ----
@@ -491,6 +496,7 @@ DESIGN QUALITY
       const topic = clean(body.prompt || body.topic, 1000);
       if (!topic) { res.status(400).json({ error: 'Describe what the carousel is about.' }); return; }
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      if (!requireContentCredits(2)) { res.status(402).json({ error: 'A complete carousel uses 2 Content credits. Add credits to continue.', needsContentCredits: true }); return; }
       if (!process.env.OPENAI_API_KEY) { res.status(400).json({ error: 'Image generation is not set up yet.' }); return; }
       let count = parseInt(clean(body.slides, 4), 10); if (!(count >= 2 && count <= 8)) count = 5;
       const sizeMapC = { square: '1024x1024', landscape: '1536x1024', portrait: '1024x1536' };
@@ -521,7 +527,8 @@ DESIGN QUALITY
       const item = { id: id('content'), type: 'carousel', topic: topic.slice(0, 120), prompt: topic, format: 'carousel', size, slides, createdAt: new Date().toISOString() };
       data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
       user.usage.aiUsed += 1;
-      await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed }); return;
+      if (!isOwner) spendContentCredits(user, 2); else migrateContentCredits(user);
+      await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed, contentCredits: contentCreditBalance(user) }); return;
     }
 
     // ---- ASSISTANT ----

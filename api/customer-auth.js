@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         createdAt: now, updatedAt: now,
         onboarding: { step: 1, completed: false, data: {} },
         subscription: { plan: 'free', interval: 'monthly', status: 'active', billingMode: 'free', cancelAtPeriodEnd: false, startedAt: now },
-        usage: { aiUsed: 0, websites: 0, storageBytes: 0 },
+        usage: { aiUsed: 0, contentCredits: 5, websites: 0, storageBytes: 0 },
         preferences: { productUpdates: true, activityAlerts: true, billingEmails: true, weeklyReport: true },
       };
       await saveCustomer(user);
