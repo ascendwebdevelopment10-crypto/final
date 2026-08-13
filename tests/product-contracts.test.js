@@ -22,6 +22,17 @@ test('website builder UI sends a selected template and backend repairs dead CTAs
   assert.match(backend, /Never emit href="#"/);
 });
 
+test('website generation shows staged progress until the finished site is saved', async () => {
+  const [client, css] = await Promise.all([read('../public/customer/app.js'), read('../public/customer/app.css')]);
+  assert.match(client, /function websiteProgressModal/);
+  assert.match(client, /Choosing the design system/);
+  assert.match(client, /Wiring buttons and mobile layout/);
+  assert.match(client, /Your website is ready/);
+  assert.match(client, /await progress\.complete\(\)/);
+  assert.match(css, /\.website-progress/);
+  assert.match(css, /\.build-stage-list/);
+});
+
 test('public plan prices and allowances match the server source of truth', async () => {
   const client = await read('../public/customer/app.js');
   for (const plan of Object.values(CUSTOMER_PLANS)) {
