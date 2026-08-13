@@ -559,29 +559,42 @@ DESIGN QUALITY
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
       let when = clean(body.scheduledFor, 40);
       let ts = when ? Date.parse(when) : NaN;
-      const mediaType = clean(body.mediaType, 20).toLowerCase() === 'reel' ? 'reel' : 'image';
+      const requestedMedia = clean(body.mediaType, 20).toLowerCase();
+      const mediaType = requestedMedia === 'reel' || requestedMedia === 'video' ? 'video' : requestedMedia === 'text' ? 'text' : 'image';
       const mediaUrl = clean(body.mediaUrl || body.imageUrl, 600) || null;
-      if (!isNaN(ts) && !mediaUrl) {
-        res.status(400).json({ error: `Add a public ${mediaType === 'reel' ? 'MP4 video' : 'image'} URL before scheduling.` }); return;
-      }
       if (mediaUrl) {
         let parsed;
         try { parsed = new URL(mediaUrl); } catch {}
         if (!parsed || parsed.protocol !== 'https:') {
-          res.status(400).json({ error: 'Use a public HTTPS media URL that Instagram can access.' }); return;
+          res.status(400).json({ error: 'Use a public HTTPS media URL that the selected platforms can access.' }); return;
         }
       }
-      const draft = {
-        id: id('social'), text,
-        platform: clean(body.platform, 30) || 'instagram',
-        mediaType, mediaUrl, imageUrl: mediaType === 'image' ? mediaUrl : null,
+      const requestedPlatform = clean(body.platform, 30).toLowerCase() || 'instagram';
+      const allowed = ['instagram', 'facebook', 'tiktok', 'linkedin', 'youtube'];
+      if (requestedPlatform !== 'all' && !allowed.includes(requestedPlatform)) { res.status(400).json({ error: 'Choose a supported social platform.' }); return; }
+      const connected = allowed.filter(platform => platform === 'instagram'
+        ? Boolean(user.meta?.token && user.meta?.igUserId)
+        : Boolean(user.socialConnections?.[platform]?.connected && user.socialConnections?.[platform]?.accessToken));
+      const platforms = requestedPlatform === 'all' ? connected : [requestedPlatform];
+      if (!platforms.length) { res.status(400).json({ error: 'Connect at least one social account before scheduling.' }); return; }
+      const missing = platforms.filter(platform => !connected.includes(platform));
+      if (missing.length) { res.status(400).json({ error: `Connect ${missing.join(', ')} before scheduling to it.` }); return; }
+      const mediaRequired = platforms.filter(platform => ['instagram', 'tiktok', 'youtube'].includes(platform));
+      if (mediaRequired.length && !mediaUrl) { res.status(400).json({ error: `${mediaRequired.join(', ')} requires a public image or video URL.` }); return; }
+      if (platforms.includes('youtube') && mediaType !== 'video') { res.status(400).json({ error: 'YouTube scheduling requires a video. Choose Video or schedule the other channels separately.' }); return; }
+      if (platforms.includes('tiktok') && !['image', 'video'].includes(mediaType)) { res.status(400).json({ error: 'TikTok requires an image or video.' }); return; }
+      if (platforms.includes('instagram') && !['image', 'video'].includes(mediaType)) { res.status(400).json({ error: 'Instagram requires an image or video.' }); return; }
+      const groupId = id('social_group');
+      const drafts = platforms.map(platform => ({
+        id: id('social'), groupId, text, title: clean(body.title, 100), platform,
+        privacyLevel: clean(body.privacyLevel, 40), mediaType, mediaUrl,
+        imageUrl: mediaType === 'image' ? mediaUrl : null,
         scheduledFor: isNaN(ts) ? null : new Date(ts).toISOString(),
-        status: isNaN(ts) ? 'draft' : 'scheduled',
-        createdAt: new Date().toISOString(),
-      };
-      data.socialDrafts.unshift(draft);
+        status: isNaN(ts) ? 'draft' : 'scheduled', createdAt: new Date().toISOString(),
+      }));
+      data.socialDrafts.unshift(...drafts);
       await saveCustomer(user);
-      res.status(201).json({ ok: true, draft }); return;
+      res.status(201).json({ ok: true, draft: drafts[0], drafts }); return;
     }
 
     if (action === 'update-social') {
@@ -591,15 +604,18 @@ DESIGN QUALITY
       if (!draft) { res.status(404).json({ error: 'That scheduled post was not found.' }); return; }
       if (draft.status === 'published' || draft.status === 'publishing') { res.status(409).json({ error: 'Published or currently publishing posts cannot be rescheduled.' }); return; }
       const text = clean(body.text, 3000);
-      const mediaType = clean(body.mediaType, 20).toLowerCase() === 'reel' ? 'reel' : 'image';
+      const requestedMedia = clean(body.mediaType, 20).toLowerCase();
+      const mediaType = requestedMedia === 'reel' || requestedMedia === 'video' ? 'video' : requestedMedia === 'text' ? 'text' : 'image';
       const mediaUrl = clean(body.mediaUrl || body.imageUrl, 600) || null;
       const ts = Date.parse(clean(body.scheduledFor, 40));
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
       if (isNaN(ts)) { res.status(400).json({ error: 'Choose a valid publishing date and time.' }); return; }
+      if (draft.platform === 'youtube' && mediaType !== 'video') { res.status(400).json({ error: 'YouTube requires a video.' }); return; }
+      if (['instagram', 'tiktok'].includes(draft.platform) && !['image', 'video'].includes(mediaType)) { res.status(400).json({ error: `${draft.platform} requires an image or video.` }); return; }
       let parsed;
-      try { parsed = new URL(mediaUrl); } catch {}
-      if (!parsed || parsed.protocol !== 'https:') {
-        res.status(400).json({ error: 'Use a public HTTPS media URL that Instagram can access.' }); return;
+      try { if (mediaUrl) parsed = new URL(mediaUrl); } catch {}
+      if (mediaType !== 'text' && (!parsed || parsed.protocol !== 'https:')) {
+        res.status(400).json({ error: 'Use a public HTTPS media URL that the selected platform can access.' }); return;
       }
       draft.text = text;
       draft.mediaType = mediaType;

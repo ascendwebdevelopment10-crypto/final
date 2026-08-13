@@ -15,12 +15,46 @@ test('scheduled Instagram posts and Reels require public HTTPS media', async () 
     readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8'),
     readFile(new URL('../api/social-cron.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(workspace, /mediaType === 'reel'/);
+  assert.match(workspace, /requestedMedia === 'reel' \|\| requestedMedia === 'video'/);
   assert.match(workspace, /parsed\.protocol !== 'https:'/);
   assert.match(worker, /post\.status = 'publishing'/);
   assert.match(worker, /publishReel/);
   assert.match(worker, /post\.status = 'published'/);
   assert.match(worker, /post\.status = 'failed'/);
+});
+
+test('Facebook, TikTok, LinkedIn, and YouTube have real publishing adapters', async () => {
+  const [publishers, oauth, worker, workspace] = await Promise.all([
+    readFile(new URL('../lib/social-publishers.js', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/social-oauth.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/social-cron.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(publishers, /publishFacebook/);
+  assert.match(publishers, /publishTikTok/);
+  assert.match(publishers, /publishLinkedIn/);
+  assert.match(publishers, /publishYouTube/);
+  assert.match(publishers, /post\/publish\/status\/fetch/);
+  assert.match(oauth, /user\.info\.basic,video\.publish/);
+  assert.match(oauth, /refreshSocialConnection/);
+  assert.match(worker, /publishToPlatform/);
+  assert.match(worker, /tiktokPublishStatus/);
+  assert.match(workspace, /requestedPlatform === 'all'/);
+  assert.match(workspace, /data\.socialDrafts\.unshift\(\.\.\.drafts\)/);
+});
+
+test('multi-platform scheduler keeps per-platform jobs and honest media requirements', async () => {
+  const [workspace, client] = await Promise.all([
+    readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8'),
+  ]);
+  for (const platform of ['instagram', 'facebook', 'tiktok', 'linkedin', 'youtube']) {
+    assert.match(workspace, new RegExp(`['"]${platform}['"]`));
+    assert.match(client, new RegExp(`value:['"]${platform}['"]`));
+  }
+  assert.match(workspace, /YouTube scheduling requires a video/);
+  assert.match(client, /All connected platforms/);
+  assert.match(client, /each platform gets its own visible queue status/i);
 });
 
 test('social scheduler exposes a visible calendar and full queue controls', async () => {
@@ -29,14 +63,17 @@ test('social scheduler exposes a visible calendar and full queue controls', asyn
   assert.match(client, /PUBLISHING CALENDAR/);
   assert.match(client, /data-edit-social/);
   assert.match(client, /data-cancel-social/);
-  assert.match(client, /Reel \(public MP4\)/);
+  assert.match(client, /Video \/ Short \(works across all five\)/);
 });
 
 test('social connections are only publicized as connected when tokens are usable', async () => {
   const source = await readFile(new URL('../lib/customer-auth.js', import.meta.url), 'utf8');
+  const oauth = await readFile(new URL('../lib/social-oauth.js', import.meta.url), 'utf8');
   assert.match(source, /connectionStatus: healthy \? 'connected' : expired \? 'expired' : 'broken'/);
   assert.match(source, /Boolean\(token && publicMeta\.igUserId && !expired\)/);
   assert.match(source, /Boolean\(publicConnection\.connected && platformReady && !expired\)/);
+  assert.match(oauth, /SOCIAL_\$\{platform\.toUpperCase\(\)\}_ENABLED/);
+  assert.match(oauth, /enabled && creds\.id && creds\.secret && stateSecret\(\)/);
 });
 
 test('Instagram analytics includes comparisons and post-level lead/signup attribution', async () => {

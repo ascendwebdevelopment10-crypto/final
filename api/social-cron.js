@@ -1,8 +1,9 @@
 import { kv } from '@vercel/kv';
-import { metaConfigured, publishImage, publishReel } from '../lib/meta.js';
+import { publishImage, publishReel } from '../lib/meta.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { publishToPlatform, tiktokPublishStatus, usableConnection } from '../lib/social-publishers.js';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export const NITRO_SOCIAL_CAMPAIGN = [
@@ -98,37 +99,64 @@ export async function runSocialPublish() {
   const nitro = await runNitroCampaign(now);
   let published = nitro.published || 0;
   const errors = [...(nitro.errors || [])];
-  if (!metaConfigured()) return { skipped: 'customer-meta-not-configured', nitro, published, errors };
   const keys = await kv.keys('customer:user:*');
   for (const key of keys) {
     const user = await loadCustomer(key.split(':').pop());
-    if (!user?.meta?.token || !user?.meta?.igUserId) continue;
+    if (!user) continue;
     const posts = user.workspace?.socialDrafts || [];
-    const stale = posts.filter(p => p.status === 'publishing' && Date.parse(p.publishingStartedAt || 0) <= now - 15 * 60 * 1000);
+    let changed = false;
+    const pendingTikTok = posts.filter(p => p.platform === 'tiktok' && p.status === 'publishing' && p.externalPublishId);
+    for (const post of pendingTikTok) {
+      try {
+        const refreshed = await usableConnection('tiktok', user.socialConnections?.tiktok);
+        user.socialConnections.tiktok = refreshed;
+        const result = await tiktokPublishStatus(refreshed, post.externalPublishId);
+        if (result.state === 'published') { post.status = 'published'; post.mediaId = result.id; post.publishedAt = new Date().toISOString(); published += 1; }
+        else if (result.state === 'failed') { post.status = 'failed'; post.error = result.error; post.failedAt = new Date().toISOString(); errors.push({ user: user.id, platform: 'tiktok', error: result.error }); }
+        post.lastStatusCheckAt = new Date().toISOString(); changed = true;
+      } catch (error) { post.lastStatusCheckAt = new Date().toISOString(); post.statusCheckError = error.message; changed = true; }
+    }
+    const stale = posts.filter(p => p.status === 'publishing' && !(p.platform === 'tiktok' && p.externalPublishId) && Date.parse(p.publishingStartedAt || 0) <= now - 15 * 60 * 1000);
     for (const post of stale) {
       post.status = 'failed';
-      post.error = 'Publishing was interrupted before Instagram confirmed the result. Check Instagram before retrying to avoid a duplicate post.';
+      post.error = `Publishing was interrupted before ${post.platform || 'the platform'} confirmed the result. Check the account before retrying to avoid a duplicate post.`;
       post.failedAt = new Date().toISOString();
     }
     const due = posts.filter(p => p.status === 'scheduled' && p.scheduledFor && Date.parse(p.scheduledFor) <= now);
-    if (!due.length && !stale.length) continue;
-    let changed = stale.length > 0;
+    if (!due.length && !stale.length && !changed) continue;
+    changed = changed || stale.length > 0;
     for (const post of due) {
       try {
-        const mediaType = post.mediaType === 'reel' ? 'reel' : 'image';
+        const platform = String(post.platform || 'instagram').toLowerCase();
+        const mediaType = post.mediaType === 'reel' || post.mediaType === 'video' ? 'video' : post.mediaType === 'text' ? 'text' : 'image';
         const mediaUrl = post.mediaUrl || post.imageUrl;
-        if (!mediaUrl) throw new Error(`This scheduled Instagram ${mediaType === 'reel' ? 'Reel' : 'post'} has no public media URL. Add media and reschedule it.`);
         post.status = 'publishing'; post.publishingStartedAt = new Date().toISOString(); post.error = null;
         await kv.set(key, user);
-        const mediaId = mediaType === 'reel'
-          ? await publishReel(user.meta.igUserId, user.meta.token, post.text, mediaUrl)
-          : await publishImage(user.meta.igUserId, user.meta.token, post.text, mediaUrl);
-        post.status = 'published'; post.publishedAt = new Date().toISOString(); post.mediaId = mediaId;
-        published += 1; changed = true;
+        if (platform === 'instagram') {
+          if (!user.meta?.token || !user.meta?.igUserId) throw new Error('Reconnect Instagram before this post can publish.');
+          if (!mediaUrl) throw new Error('Instagram requires a public image or video URL.');
+          const mediaId = mediaType === 'video'
+            ? await publishReel(user.meta.igUserId, user.meta.token, post.text, mediaUrl)
+            : await publishImage(user.meta.igUserId, user.meta.token, post.text, mediaUrl);
+          post.status = 'published'; post.publishedAt = new Date().toISOString(); post.mediaId = mediaId; published += 1;
+        } else {
+          user.socialConnections = { ...(user.socialConnections || {}) };
+          const connection = await usableConnection(platform, user.socialConnections[platform]);
+          user.socialConnections[platform] = connection;
+          const result = await publishToPlatform(platform, connection, { ...post, mediaType });
+          post.mediaId = result.id || '';
+          if (result.state === 'publishing') { post.status = 'publishing'; post.externalPublishId = result.id; }
+          else { post.status = 'published'; post.publishedAt = new Date().toISOString(); published += 1; }
+        }
+        changed = true;
       } catch (e) {
         post.status = 'failed'; post.error = e.message; post.failedAt = new Date().toISOString(); changed = true;
-        errors.push({ user: user.id, error: e.message });
-        await notifyBestEffort({ title: 'Scheduled social post failed', message: `${user.email || user.id}: ${e.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#content' });
+        errors.push({ user: user.id, platform: post.platform || 'instagram', error: e.message });
+        if (/token|expired|reconnect|authorization/i.test(e.message) && post.platform !== 'instagram' && user.socialConnections?.[post.platform]) {
+          user.socialConnections[post.platform].connected = false;
+          user.socialConnections[post.platform].connectionStatus = 'expired';
+        }
+        await notifyBestEffort({ title: 'Scheduled social post failed', message: `${user.email || user.id} · ${post.platform || 'instagram'}: ${e.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#social' });
       }
     }
     if (changed) await kv.set(key, user);

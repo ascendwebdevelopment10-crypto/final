@@ -60,13 +60,13 @@ test('customer Content credits are affordable and Reel Lab is owner-only', async
   assert.match(credits, /credits: 2500, amountCents: 24999/);
 });
 
-test('public marketing does not promise customer Reel generation or unverified multi-platform publishing', async () => {
+test('public marketing removes customer Reel generation and matches the implemented multi-platform scheduler', async () => {
   const landing = await read('../public/current-stacked-preview/index.html');
   assert.doesNotMatch(landing, /Prompt-to-Reel|Generate Reels|CONTENT & REELS/i);
   assert.match(landing, /schedule Instagram automatically/);
   const client = await read('../public/customer/app.js');
-  assert.match(client, /Instagram auto-publishing is live/);
-  assert.match(client, /publishing pending approval/);
+  assert.match(client, /Connect every channel\. Schedule once\./);
+  assert.match(client, /All connected platforms/);
 });
 
 test('owner publishing queue and all three DM response scripts are visible in the workspace', async () => {

@@ -5,7 +5,7 @@ import {
 } from '../lib/customer-auth.js';
 import { planFor, publicPlans } from '../lib/customer-plans.js';
 import { metaConfigured } from '../lib/meta.js';
-import { socialProviderStatus } from '../lib/social-oauth.js';
+import { refreshSocialConnection, socialProviderStatus } from '../lib/social-oauth.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function bool(value) { return value === true; }
@@ -21,6 +21,15 @@ export default async function handler(req, res) {
   const user = await currentCustomer(req);
   if (!user) { res.status(401).json({ error: 'Customer sign-in required' }); return; }
   if (req.method === 'GET') {
+    let socialChanged = false;
+    for (const [platform, connection] of Object.entries(user.socialConnections || {})) {
+      const expiresAt = Date.parse(connection?.tokenExpiresAt || 0);
+      if (!connection?.connected || !Number.isFinite(expiresAt) || expiresAt > Date.now() + 5 * 60 * 1000) continue;
+      try { user.socialConnections[platform] = await refreshSocialConnection(platform, connection); }
+      catch (error) { user.socialConnections[platform] = { ...connection, connected: false, connectionStatus: 'expired', healthError: error.message }; }
+      socialChanged = true;
+    }
+    if (socialChanged) await saveCustomer(user);
     const plan = planFor(user.subscription?.plan);
     let nitroCampaignState = {};
     if (String(user.email || '').toLowerCase() === (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase()) {

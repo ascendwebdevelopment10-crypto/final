@@ -782,3 +782,4 @@
 .sidebar{height:100dvh;overflow:hidden}
 .sidebar-primary-nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;padding-right:3px}
 .sidebar-bottom{flex:0 0 auto;margin-top:0}
+.social-page-picker{display:grid;gap:7px;margin:12px 0;color:#8c837d;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.social-page-picker .select{width:100%;font-size:11px;letter-spacing:0;text-transform:none}
