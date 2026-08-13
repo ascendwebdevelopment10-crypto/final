@@ -22,10 +22,18 @@ export default async function handler(req, res) {
   if (!user) { res.status(401).json({ error: 'Customer sign-in required' }); return; }
   if (req.method === 'GET') {
     const plan = planFor(user.subscription?.plan);
+    let nitroCampaignState = {};
+    if (String(user.email || '').toLowerCase() === (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase()) {
+      try {
+        nitroCampaignState = await kv.get('nitro:social:campaign:2026-08') || {};
+        if (typeof nitroCampaignState === 'string') nitroCampaignState = JSON.parse(nitroCampaignState);
+      } catch { nitroCampaignState = {}; }
+    }
     res.status(200).json({
       user: publicCustomer(user), plan, plans: publicPlans(),
       stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
       socialProviders: { instagram: metaConfigured(), ...socialProviderStatus() },
+      nitroCampaignState,
     });
     return;
   }

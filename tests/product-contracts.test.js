@@ -164,3 +164,19 @@ test('webhook registration reports restricted Resend keys without exposing crede
   assert.match(source, /User-Agent/);
   assert.doesNotMatch(source, /console\.log\([^\n]*RESEND_API_KEY/);
 });
+
+test('important failures and business events have owner alerts', async () => {
+  const [auth, lead, stripe, social, workspace, renderCallback, webhook, sms] = await Promise.all([
+    read('../api/customer-auth.js'), read('../api/lead.js'), read('../api/stripe-webhook.js'),
+    read('../api/social-cron.js'), read('../api/customer-workspace.js'), read('../api/video-render-callback.js'),
+    read('../api/webhook.js'), read('../api/sms-webhook.js'),
+  ]);
+  assert.match(auth, /New Nitro signup/);
+  assert.match(lead, /New qualified website lead/);
+  assert.match(stripe, /Nitro payment failed/);
+  assert.match(social, /Scheduled social post failed/);
+  assert.match(workspace, /Nitro generation failed/);
+  assert.match(renderCallback, /Nitro Reel generation failed/);
+  assert.match(webhook, /New outreach reply/);
+  assert.match(sms, /New SMS reply/);
+});

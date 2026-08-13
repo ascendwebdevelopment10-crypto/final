@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { kv } from '@vercel/kv';
 import { getCustomer, saveCustomer } from '../lib/customer-auth.js';
+import { notifyBestEffort } from '../lib/ntfy.js';
 
 function clean(value, max = 2000) { return String(value || '').trim().slice(0, max); }
 function safeEqual(a, b) {
@@ -106,6 +107,7 @@ export default async function handler(req, res) {
   } else if (user) {
     job.reservedCredits = 0;
     await saveCustomer(user);
+    await notifyBestEffort({ title: 'Nitro Reel generation failed', message: `${user.email || user.id}: ${job.error}`, priority: 'high', tags: 'warning,movie_camera', click: 'https://nitrooutreach.com/app#content' });
   }
   await kv.set(`video:job:${jobId}`, JSON.stringify(job), { ex: 7 * 24 * 60 * 60 });
   res.status(200).json({ ok: true });

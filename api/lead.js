@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { socialAttributionFromRequest } from '../lib/social-links.js';
 
 // Landing-page email capture. Works WITH and WITHOUT JavaScript: the static
 // hero form posts here (form-encoded), we store the lead, then 303-redirect the
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const socialAttribution = socialAttributionFromRequest(req);
     const key = 'lead:' + email;
     const fresh = await kv.set(key, JSON.stringify({
       email,
@@ -42,6 +44,7 @@ export default async function handler(req, res) {
     if (fresh) {
       await kv.incr('stats:leads');
       await kv.lpush('leads:list', email);
+      if (socialAttribution) await kv.incr(`customer:social-leads:${socialAttribution.userId}:${socialAttribution.mediaId}`);
       await notifyBestEffort({ title: 'New qualified website lead', message: `${email} entered their email and continued to signup.`, priority: 'high', tags: 'dart,email', click: 'https://nitrooutreach.com/dashboard' });
     }
   } catch (e) {

@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     }
   }
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Set-Cookie', `nitro_social_attribution=${encodeURIComponent(String(req.query?.t || ''))}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`);
   res.writeHead(302, { Location: destination.toString() });
   res.end();
 }

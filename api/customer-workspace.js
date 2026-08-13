@@ -552,21 +552,22 @@ DESIGN QUALITY
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
       let when = clean(body.scheduledFor, 40);
       let ts = when ? Date.parse(when) : NaN;
-      const imageUrl = clean(body.imageUrl, 600) || null;
-      if (!isNaN(ts) && !imageUrl) {
-        res.status(400).json({ error: 'Add a public image URL before scheduling. Instagram cannot publish a text-only post.' }); return;
+      const mediaType = clean(body.mediaType, 20).toLowerCase() === 'reel' ? 'reel' : 'image';
+      const mediaUrl = clean(body.mediaUrl || body.imageUrl, 600) || null;
+      if (!isNaN(ts) && !mediaUrl) {
+        res.status(400).json({ error: `Add a public ${mediaType === 'reel' ? 'MP4 video' : 'image'} URL before scheduling.` }); return;
       }
-      if (imageUrl) {
+      if (mediaUrl) {
         let parsed;
-        try { parsed = new URL(imageUrl); } catch {}
+        try { parsed = new URL(mediaUrl); } catch {}
         if (!parsed || parsed.protocol !== 'https:') {
-          res.status(400).json({ error: 'Use a public HTTPS image URL that Instagram can access.' }); return;
+          res.status(400).json({ error: 'Use a public HTTPS media URL that Instagram can access.' }); return;
         }
       }
       const draft = {
         id: id('social'), text,
         platform: clean(body.platform, 30) || 'instagram',
-        imageUrl,
+        mediaType, mediaUrl, imageUrl: mediaType === 'image' ? mediaUrl : null,
         scheduledFor: isNaN(ts) ? null : new Date(ts).toISOString(),
         status: isNaN(ts) ? 'draft' : 'scheduled',
         createdAt: new Date().toISOString(),
@@ -581,19 +582,22 @@ DESIGN QUALITY
       const socialId = clean(body.id, 80);
       const draft = data.socialDrafts.find(item => item.id === socialId);
       if (!draft) { res.status(404).json({ error: 'That scheduled post was not found.' }); return; }
-      if (draft.status === 'published') { res.status(409).json({ error: 'Published posts cannot be rescheduled.' }); return; }
+      if (draft.status === 'published' || draft.status === 'publishing') { res.status(409).json({ error: 'Published or currently publishing posts cannot be rescheduled.' }); return; }
       const text = clean(body.text, 3000);
-      const imageUrl = clean(body.imageUrl, 600) || null;
+      const mediaType = clean(body.mediaType, 20).toLowerCase() === 'reel' ? 'reel' : 'image';
+      const mediaUrl = clean(body.mediaUrl || body.imageUrl, 600) || null;
       const ts = Date.parse(clean(body.scheduledFor, 40));
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
       if (isNaN(ts)) { res.status(400).json({ error: 'Choose a valid publishing date and time.' }); return; }
       let parsed;
-      try { parsed = new URL(imageUrl); } catch {}
+      try { parsed = new URL(mediaUrl); } catch {}
       if (!parsed || parsed.protocol !== 'https:') {
-        res.status(400).json({ error: 'Use a public HTTPS image URL that Instagram can access.' }); return;
+        res.status(400).json({ error: 'Use a public HTTPS media URL that Instagram can access.' }); return;
       }
       draft.text = text;
-      draft.imageUrl = imageUrl;
+      draft.mediaType = mediaType;
+      draft.mediaUrl = mediaUrl;
+      draft.imageUrl = mediaType === 'image' ? mediaUrl : null;
       draft.scheduledFor = new Date(ts).toISOString();
       draft.status = 'scheduled';
       draft.error = null;

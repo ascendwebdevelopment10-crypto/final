@@ -33,6 +33,11 @@ function metricTotal(posts, key) {
   return values.length ? values.reduce((total, value) => total + value, 0) : null;
 }
 
+function average(posts, key) {
+  const values = posts.map(post => post[key]).filter(value => Number.isFinite(value));
+  return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -54,30 +59,52 @@ export default async function handler(req, res) {
     const origin = requestOrigin(req);
     const enriched = await Promise.all(posts.map(async post => {
       const clickKey = `customer:social-clicks:${user.id}:${post.id}`;
-      const clicks = Number(await kv.get(clickKey) || 0);
+      const [clicksValue, leadsValue, signupsValue] = await Promise.all([
+        kv.get(clickKey),
+        kv.get(`customer:social-leads:${user.id}:${post.id}`),
+        kv.get(`customer:social-signups:${user.id}:${post.id}`),
+      ]);
+      const clicks = Number(clicksValue || 0), leads = Number(leadsValue || 0), signups = Number(signupsValue || 0);
+      const engagementCount = Number.isFinite(post.interactions) ? post.interactions : [post.likes, post.comments, post.shares, post.saved].filter(Number.isFinite).reduce((total, value) => total + value, 0);
+      const engagementRate = Number.isFinite(post.reach) && post.reach > 0 ? engagementCount / post.reach * 100 : null;
       let trackingUrl = '';
       if (destination) {
         const token = makeSocialLinkToken(user.id, post.id, destination);
         trackingUrl = `${origin}/api/social-link?t=${encodeURIComponent(token)}`;
       }
-      return { ...post, clicks, trackingUrl };
+      return { ...post, clicks, leads, signups, engagementRate, trackingUrl };
     }));
-    const insightValues = enriched.flatMap(post => [post.views, post.reach, post.saved, post.shares, post.interactions]);
-    const noInsightsReturned = enriched.length > 0 && !insightValues.some(Number.isFinite);
-    const missingInsights = enriched.some(post => post.insightsError && /permission|scope|authorized|access/i.test(post.insightsError)) ||
-      (noInsightsReturned && enriched.some(post => post.insightsError));
+    const averageEngagementRate = average(enriched, 'engagementRate');
+    const compared = enriched.map(post => ({
+      ...post,
+      performanceVsAverage: Number.isFinite(post.engagementRate) && Number.isFinite(averageEngagementRate) && averageEngagementRate > 0
+        ? (post.engagementRate - averageEngagementRate) / averageEngagementRate * 100
+        : null,
+    }));
+    const insightValues = compared.flatMap(post => [post.views, post.reach, post.saved, post.shares, post.interactions]);
+    const noInsightsReturned = compared.length > 0 && !insightValues.some(Number.isFinite);
+    const missingInsights = compared.some(post => post.insightsError && /permission|scope|authorized|access/i.test(post.insightsError)) ||
+      (noInsightsReturned && compared.some(post => post.insightsError));
     const payload = {
       username: user.meta.igUsername || '',
       syncedAt: new Date().toISOString(),
       destination,
       needsReconnect: missingInsights,
-      posts: enriched,
+      posts: compared,
       totals: {
-        posts: enriched.length,
-        views: metricTotal(enriched, 'views'),
-        reach: metricTotal(enriched, 'reach'),
-        interactions: metricTotal(enriched, 'interactions'),
-        clicks: metricTotal(enriched, 'clicks') || 0,
+        posts: compared.length,
+        views: metricTotal(compared, 'views'),
+        reach: metricTotal(compared, 'reach'),
+        interactions: metricTotal(compared, 'interactions'),
+        clicks: metricTotal(compared, 'clicks') || 0,
+        leads: metricTotal(compared, 'leads') || 0,
+        signups: metricTotal(compared, 'signups') || 0,
+      },
+      averages: {
+        views: average(compared, 'views'),
+        reach: average(compared, 'reach'),
+        interactions: average(compared, 'interactions'),
+        engagementRate: averageEngagementRate,
       },
     };
     await kv.set(cacheKey, JSON.stringify(payload), { ex: 300 });

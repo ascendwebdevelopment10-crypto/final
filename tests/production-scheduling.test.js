@@ -10,10 +10,47 @@ test('production runs the social publishing worker and not the disabled reply dr
   assert.equal(crons.some(job => job.path === '/api/send-pending-replies'), false, 'disabled auto-reply queue must not run every minute');
 });
 
-test('scheduled Instagram posts require public HTTPS media', async () => {
-  const source = await readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8');
-  assert.match(source, /Instagram cannot publish a text-only post/);
-  assert.match(source, /parsed\.protocol !== 'https:'/);
+test('scheduled Instagram posts and Reels require public HTTPS media', async () => {
+  const [workspace, worker] = await Promise.all([
+    readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/social-cron.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(workspace, /mediaType === 'reel'/);
+  assert.match(workspace, /parsed\.protocol !== 'https:'/);
+  assert.match(worker, /post\.status = 'publishing'/);
+  assert.match(worker, /publishReel/);
+  assert.match(worker, /post\.status = 'published'/);
+  assert.match(worker, /post\.status = 'failed'/);
+});
+
+test('social scheduler exposes a visible calendar and full queue controls', async () => {
+  const client = await readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8');
+  assert.match(client, /function socialCalendar/);
+  assert.match(client, /PUBLISHING CALENDAR/);
+  assert.match(client, /data-edit-social/);
+  assert.match(client, /data-cancel-social/);
+  assert.match(client, /Reel \(public MP4\)/);
+});
+
+test('social connections are only publicized as connected when tokens are usable', async () => {
+  const source = await readFile(new URL('../lib/customer-auth.js', import.meta.url), 'utf8');
+  assert.match(source, /connectionStatus: healthy \? 'connected' : expired \? 'expired' : 'broken'/);
+  assert.match(source, /Boolean\(token && publicMeta\.igUserId && !expired\)/);
+  assert.match(source, /Boolean\(publicConnection\.connected && platformReady && !expired\)/);
+});
+
+test('Instagram analytics includes comparisons and post-level lead/signup attribution', async () => {
+  const [insights, link, auth] = await Promise.all([
+    readFile(new URL('../api/instagram-insights.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/social-link.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/customer-auth.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(insights, /engagementRate/);
+  assert.match(insights, /performanceVsAverage/);
+  assert.match(insights, /customer:social-leads/);
+  assert.match(insights, /customer:social-signups/);
+  assert.match(link, /nitro_social_attribution/);
+  assert.match(auth, /customer:social-signups/);
 });
 
 test('Nitro campaign schedules six daily posts with deployable media', async () => {

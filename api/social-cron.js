@@ -1,5 +1,5 @@
 import { kv } from '@vercel/kv';
-import { metaConfigured, publishImage } from '../lib/meta.js';
+import { metaConfigured, publishImage, publishReel } from '../lib/meta.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 
 export const config = { maxDuration: 60 };
@@ -63,16 +63,20 @@ async function runNitroCampaign(now = Date.now()) {
     const locked = await kv.set(lockKey, '1', { nx: true, ex: 300 });
     if (!locked) continue;
     try {
+      state[post.id] = { status: 'publishing', publishingStartedAt: new Date().toISOString() };
+      await kv.set('nitro:social:campaign:2026-08', state);
       const mediaId = await publishImage(
         connection.igUserId,
         connection.accessToken,
         post.caption,
         `https://nitrooutreach.com${post.imagePath}`,
       );
-      state[post.id] = { mediaId, publishedAt: new Date().toISOString() };
+      state[post.id] = { status: 'published', mediaId, publishedAt: new Date().toISOString() };
       await kv.set('nitro:social:campaign:2026-08', state);
       published += 1;
     } catch (error) {
+      state[post.id] = { status: 'failed', error: error.message, failedAt: new Date().toISOString() };
+      await kv.set('nitro:social:campaign:2026-08', state);
       errors.push({ campaign: post.id, error: error.message });
       await kv.del(lockKey);
       await notifyBestEffort({ title: 'Nitro Instagram post failed', message: `${post.id}: ${error.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com' });
@@ -100,17 +104,29 @@ export async function runSocialPublish() {
     const user = await loadCustomer(key.split(':').pop());
     if (!user?.meta?.token || !user?.meta?.igUserId) continue;
     const posts = user.workspace?.socialDrafts || [];
+    const stale = posts.filter(p => p.status === 'publishing' && Date.parse(p.publishingStartedAt || 0) <= now - 15 * 60 * 1000);
+    for (const post of stale) {
+      post.status = 'failed';
+      post.error = 'Publishing was interrupted before Instagram confirmed the result. Check Instagram before retrying to avoid a duplicate post.';
+      post.failedAt = new Date().toISOString();
+    }
     const due = posts.filter(p => p.status === 'scheduled' && p.scheduledFor && Date.parse(p.scheduledFor) <= now);
-    if (!due.length) continue;
-    let changed = false;
+    if (!due.length && !stale.length) continue;
+    let changed = stale.length > 0;
     for (const post of due) {
       try {
-        if (!post.imageUrl) throw new Error('This scheduled Instagram post has no public image URL. Add media and reschedule it.');
-        const mediaId = await publishImage(user.meta.igUserId, user.meta.token, post.text, post.imageUrl);
+        const mediaType = post.mediaType === 'reel' ? 'reel' : 'image';
+        const mediaUrl = post.mediaUrl || post.imageUrl;
+        if (!mediaUrl) throw new Error(`This scheduled Instagram ${mediaType === 'reel' ? 'Reel' : 'post'} has no public media URL. Add media and reschedule it.`);
+        post.status = 'publishing'; post.publishingStartedAt = new Date().toISOString(); post.error = null;
+        await kv.set(key, user);
+        const mediaId = mediaType === 'reel'
+          ? await publishReel(user.meta.igUserId, user.meta.token, post.text, mediaUrl)
+          : await publishImage(user.meta.igUserId, user.meta.token, post.text, mediaUrl);
         post.status = 'published'; post.publishedAt = new Date().toISOString(); post.mediaId = mediaId;
         published += 1; changed = true;
       } catch (e) {
-        post.status = 'failed'; post.error = e.message; changed = true;
+        post.status = 'failed'; post.error = e.message; post.failedAt = new Date().toISOString(); changed = true;
         errors.push({ user: user.id, error: e.message });
         await notifyBestEffort({ title: 'Scheduled social post failed', message: `${user.email || user.id}: ${e.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#content' });
       }
