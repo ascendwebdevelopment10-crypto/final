@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { automatedOutreachBurstIdentities } from '../lib/analytics-traffic.js';
+import { automatedOutreachBurstIdentities, isKnownAutomatedTraffic } from '../lib/analytics-traffic.js';
 
 function visit(visitorId, seconds, overrides = {}) {
   return {
@@ -41,4 +41,12 @@ test('flags the scanner identity so its later unattributed page is excluded too'
   const visits = [visit('A', 0), visit('B', 5), visit('C', 10), visit('D', 15)];
   visits.push(visit('A', 20, { outreachId: '', path: '/signup' }));
   assert.equal(automatedOutreachBurstIdentities(visits).has('A'), true);
+});
+
+test('filters known crawlers, prefetches, webdriver sessions, and data-center cities', () => {
+  assert.equal(isKnownAutomatedTraffic({ userAgent: 'Googlebot/2.1' }), true);
+  assert.equal(isKnownAutomatedTraffic({ purpose: 'prefetch' }), true);
+  assert.equal(isKnownAutomatedTraffic({ webdriver: true }), true);
+  assert.equal(isKnownAutomatedTraffic({ city: 'Council+Bluffs' }), true);
+  assert.equal(isKnownAutomatedTraffic({ userAgent: 'Mozilla/5.0 Safari/605.1.15', city: 'Salt Lake City' }), false);
 });

@@ -4,11 +4,10 @@ import { currentCustomer } from '../lib/customer-auth.js';
 import { outreachTokenValid } from '../lib/sign.js';
 import { getEmailLog, trackEmailClick } from '../lib/store.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { isKnownAutomatedTraffic } from '../lib/analytics-traffic.js';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 const MOUNTAIN_TIME_ZONE = 'America/Denver';
-const BOT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|facebookexternalhit|linkedinbot|twitterbot|discordbot|headlesschrome|lighthouse|pagespeed|vercel-screenshot|google-inspectiontool|chrome-lighthouse|bytespider|semrush|ahrefs|mj12|uptimerobot|curl|wget|python-requests|node-fetch|axios|postmanruntime)/i;
-const DATA_CENTER_CITIES = new Set(['council bluffs', 'ashburn', 'boardman', 'the dalles', 'boydton']);
 
 function clean(value, max = 160) {
   return String(value || '').replace(/[\r\n]/g, ' ').trim().slice(0, max);
@@ -35,14 +34,6 @@ function deviceName(userAgent) {
 function productionHost(req) {
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().split(':')[0].toLowerCase();
   return host === 'nitrooutreach.com' || host === 'www.nitrooutreach.com';
-}
-function normalizedCity(value) {
-  const city = clean(value, 80).replace(/\+/g, ' ');
-  try { return decodeURIComponent(city).toLowerCase(); } catch { return city.toLowerCase(); }
-}
-function isLikelyDataCenter(req) {
-  const city = normalizedCity(req.headers['x-vercel-ip-city']);
-  return DATA_CENTER_CITIES.has(city);
 }
 function locationLabel(event) {
   return [event.city, event.region, event.country].filter(Boolean).join(', ') || 'Location unavailable';
@@ -92,8 +83,13 @@ export default async function handler(req, res) {
     if (!productionHost(req)) { res.status(200).json({ ok: true, excluded: 'non-production' }); return; }
     const userAgent = String(req.headers['user-agent'] || '');
     const purpose = String(req.headers.purpose || req.headers['sec-purpose'] || '');
-    const automatedClient = req.body?.webdriver === true || req.body?.visibility === 'prerender';
-    if (BOT_PATTERN.test(userAgent) || automatedClient || /prefetch|prerender/i.test(purpose) || isLikelyDataCenter(req)) {
+    if (isKnownAutomatedTraffic({
+      userAgent,
+      purpose,
+      webdriver: req.body?.webdriver,
+      visibility: req.body?.visibility,
+      city: req.headers['x-vercel-ip-city'],
+    })) {
       res.status(200).json({ ok: true, excluded: 'automated' }); return;
     }
 

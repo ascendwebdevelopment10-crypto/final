@@ -42,8 +42,8 @@
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/send-pending-replies",
-      "schedule": "*/1 * * * *"
+      "path": "/api/social-cron",
+      "schedule": "*/5 * * * *"
     }
   ],
   "redirects": [

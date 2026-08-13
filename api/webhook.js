@@ -1,9 +1,42 @@
 import { Resend } from 'resend';
+import crypto from 'node:crypto';
+import { kv } from '@vercel/kv';
 import { addToSuppression, logReply, recordEmailEvent } from '../lib/store.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FORWARD_TO_EMAIL = 'nitrooutreach@outlook.com';
+export const config = { api: { bodyParser: false } };
+
+async function rawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function decodeSecret(value) {
+  const raw = String(value || '').replace(/^whsec_/, '');
+  try { return Buffer.from(raw, 'base64'); } catch { return Buffer.alloc(0); }
+}
+
+export function validWebhookSignature(payload, req, secret) {
+  const id = String(req.headers['svix-id'] || '');
+  const timestamp = String(req.headers['svix-timestamp'] || '');
+  const supplied = String(req.headers['svix-signature'] || '');
+  if (!id || !timestamp || !supplied || !secret) return false;
+  const seconds = Number(timestamp);
+  if (!Number.isFinite(seconds) || Math.abs(Date.now() / 1000 - seconds) > 300) return false;
+  const key = decodeSecret(secret);
+  if (!key.length) return false;
+  const expected = crypto.createHmac('sha256', key).update(`${id}.${timestamp}.${payload}`).digest();
+  return supplied.split(' ').some(part => {
+    const encoded = part.startsWith('v1,') ? part.slice(3) : '';
+    if (!encoded) return false;
+    try {
+      const received = Buffer.from(encoded, 'base64');
+      return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+    } catch { return false; }
+  });
+}
 
 function address(value) {
   const raw = String(value || '').trim();
@@ -23,7 +56,11 @@ async function receivedEmail(emailId) {
 export default async function handler(req, res) {
     if (req.method !== 'POST') { res.status(405).end(); return; }
     try {
-          const event = req.body;
+          const payload = await rawBody(req);
+          const secret = process.env.RESEND_WEBHOOK_SECRET || await kv.get('outreach:resend:webhook-secret');
+          if (!validWebhookSignature(payload, req, secret)) { res.status(401).json({ error: 'Invalid webhook signature' }); return; }
+          const event = JSON.parse(payload);
+          const resend = new Resend(process.env.RESEND_API_KEY);
           const type = event?.type;
 
       const data = event?.data || {};

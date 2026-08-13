@@ -4,6 +4,7 @@ import { getEmailEngagement, getEmailEvents, getEmailLog, getReplies } from '../
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 import { funnelSummary } from '../lib/funnel.js';
 import { automatedOutreachBurstIdentities } from '../lib/analytics-traffic.js';
+import { automatedOpenIds, likelyHumanOpen } from '../lib/outreach-analytics.js';
 
 // Owner-only business data, gated by the owner's own customer login (no separate admin session).
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
@@ -176,24 +177,21 @@ function deliveryStatus(status) {
   return ['opened', 'clicked'].includes(value) ? 'delivered' : value;
 }
 
-export function resolvedDeliveryStatus({ providerStatus, webhookStatus, replied, openCount, visitCount, confirmedVisitCount }) {
+export function resolvedDeliveryStatus({ providerStatus, webhookStatus, replied }) {
   const provider = deliveryStatus(providerStatus);
   const webhook = deliveryStatus(webhookStatus);
   const failureStatuses = new Set(['bounced', 'failed', 'complained', 'suppressed']);
   const failure = [webhook, provider].find(status => failureStatuses.has(status));
   if (failure) return failure;
   if (replied) return 'replied';
-  if (
-    provider === 'delivered' || webhook === 'delivered' ||
-    Number(openCount || 0) > 0 || Number(visitCount || 0) > 0 || Number(confirmedVisitCount || 0) > 0
-  ) return 'delivered';
+  if (provider === 'delivered' || webhook === 'delivered') return 'delivered';
   if (webhook === 'delivery_delayed' || provider === 'delivery_delayed') return 'delivery_delayed';
   return webhook !== 'sent' ? webhook : provider;
 }
 
-export function firstDeliveryEvidence(entry, providerEvent, reply, firstOpenedAt, firstVisitedAt, firstConfirmedAt) {
+export function firstDeliveryEvidence(entry, providerEvent, reply) {
   const providerDeliveredAt = deliveryStatus(providerEvent?.status) === 'delivered' ? Number(providerEvent?.timestamp || 0) : 0;
-  const candidates = [providerDeliveredAt, Number(firstOpenedAt || 0), Number(firstVisitedAt || 0), Number(firstConfirmedAt || 0), Number(reply?.timestamp || 0)]
+  const candidates = [providerDeliveredAt, Number(reply?.timestamp || 0)]
     .filter(value => Number.isFinite(value) && value > 0);
   return candidates.length ? Math.min(...candidates) : Number(entry.timestamp || 0) || null;
 }
@@ -332,7 +330,7 @@ export default async function handler(req, res) {
 
     if (action === 'outreach') {
       const [allLog, allReplies, events, engagement, webhook, resendEvents, confirmedCounts, confirmedFirst, confirmedLast, confirmedReasons, confirmedUrls] = await Promise.all([
-        getEmailLog(300), getReplies(300), getEmailEvents(), getEmailEngagement(), ensureOutreachWebhook(), recentResendEvents(),
+        getEmailLog(null), getReplies(1000), getEmailEvents(), getEmailEngagement(), ensureOutreachWebhook(), recentResendEvents(),
         kv.hgetall('email:confirmed-visits:count'), kv.hgetall('email:confirmed-visits:first'),
         kv.hgetall('email:confirmed-visits:last'), kv.hgetall('email:confirmed-visits:reason'),
         kv.hgetall('email:confirmed-visits:url'),
@@ -350,6 +348,7 @@ export default async function handler(req, res) {
           const providerStatus = resendEvents.get(String(entry.providerId || '')) || providerEvent?.status || entry.status || 'sent';
           const reply = repliesBySender.get(emailAddress(entry.to));
           const openCount = Number(engagement.opens?.[entry.id] || 0);
+          const knownAutomatedOpenCount = Number(engagement.automatedOpens?.[entry.id] || 0);
           const firstOpenedAt = Number(engagement.opensFirst?.[entry.id] || 0) || null;
           const lastOpenedAt = Number(engagement.opensLast?.[entry.id] || 0) || null;
           const visitCount = Number(engagement.clicks?.[entry.id] || 0);
@@ -362,12 +361,9 @@ export default async function handler(req, res) {
             providerStatus,
             webhookStatus: providerEvent?.status,
             replied: !!reply,
-            openCount,
-            visitCount,
-            confirmedVisitCount,
           });
           const deliveredAt = ['delivered', 'replied'].includes(normalizedProviderStatus)
-            ? firstDeliveryEvidence(entry, providerEvent, reply, firstOpenedAt, firstVisitedAt, firstConfirmedAt)
+            ? firstDeliveryEvidence(entry, providerEvent, reply)
             : null;
           return {
             ...entry,
@@ -380,6 +376,7 @@ export default async function handler(req, res) {
                 : ''
             ),
             openCount,
+            knownAutomatedOpenCount,
             opened: openCount > 0,
             firstOpenedAt,
             lastOpenedAt,
@@ -399,27 +396,41 @@ export default async function handler(req, res) {
             reply: reply ? { from: reply.from, subject: reply.subject, body: reply.body, timestamp: reply.timestamp } : null,
           };
         });
+      const automatedOpens = automatedOpenIds(log);
+      for (const entry of log) {
+        entry.automatedOpen = automatedOpens.has(entry.id);
+        entry.likelyHumanOpen = likelyHumanOpen(entry, automatedOpens);
+      }
       const today = mountainDay();
       const todayLog = log.filter(entry => happenedOnMountainDay(entry.timestamp, today));
       const todayCount = todayLog.length;
       const replied = log.filter(entry => entry.replied).length;
       const delivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status)).length;
-      const opened = log.filter(entry => entry.opened).length;
+      const rawOpened = log.filter(entry => entry.opened).length;
+      const opened = log.filter(entry => entry.likelyHumanOpen).length;
+      const filteredOpens = log.filter(entry => entry.automatedOpen).length;
       const linkLoads = log.filter(entry => entry.linkLoaded).length;
       const confirmedVisits = log.filter(entry => entry.confirmedVisit).length;
       const failed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status)).length;
       const todayReplied = log.filter(entry => entry.replied && happenedOnMountainDay(entry.reply?.timestamp, today)).length;
       const todayDelivered = log.filter(entry => ['delivered', 'replied'].includes(entry.status) && happenedOnMountainDay(entry.deliveredAt, today)).length;
-      const todayOpened = log.filter(entry => entry.opened && happenedOnMountainDay(entry.firstOpenedAt, today)).length;
+      const todayOpened = log.filter(entry => entry.likelyHumanOpen && happenedOnMountainDay(entry.firstOpenedAt, today)).length;
+      const todayFilteredOpens = log.filter(entry => entry.automatedOpen && happenedOnMountainDay(entry.firstOpenedAt, today)).length;
       const todayLinkLoads = log.filter(entry => entry.linkLoaded && happenedOnMountainDay(entry.firstVisitedAt, today)).length;
       const todayConfirmedVisits = log.filter(entry => entry.confirmedVisit && happenedOnMountainDay(entry.firstConfirmedAt, today)).length;
       const todayFailed = log.filter(entry => ['bounced', 'failed', 'complained', 'suppressed'].includes(entry.status) && happenedOnMountainDay(entry.statusAt, today)).length;
+      for (const entry of log) {
+        entry.rawOpenCount = entry.openCount;
+        entry.opened = entry.likelyHumanOpen;
+        if (!entry.likelyHumanOpen) entry.openCount = 0;
+      }
       res.status(200).json({
         trackingStart: new Date(OUTREACH_TRACKING_START).toISOString(),
         siteVisitTrackingStart: new Date(SITE_VISIT_TRACKING_START).toISOString(),
         confirmedVisitTrackingStart: new Date(CONFIRMED_VISIT_TRACKING_START).toISOString(),
         webhook,
-        log,
+        log: log.slice(0, 500),
+        logCount: log.length,
         stats: {
           todayEmailSent: todayCount,
           totalEmailSent: log.length,
@@ -429,6 +440,9 @@ export default async function handler(req, res) {
           todayDelivered,
           opened,
           todayOpened,
+          rawOpened,
+          filteredOpens,
+          todayFilteredOpens,
           linkLoads,
           todayLinkLoads,
           confirmedVisits,

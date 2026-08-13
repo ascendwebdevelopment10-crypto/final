@@ -126,13 +126,17 @@ async function generateWebsite(prompt) {
   }
   throw anthropicError || new Error('No website-generation provider is available.');
 }
-const WEBSITE_LAYOUTS = [
-  'an offset split hero with the headline low on the left and a tall image panel breaking the grid on the right',
-  'a full-bleed photographic hero with the headline anchored in a compact floating panel near the lower edge',
-  'an editorial hero with oversized type spanning the width, a narrow copy column, and overlapping image tiles',
-  'a centered cinematic hero followed by an intentionally uneven two-column story section',
-  'a left-side vertical navigation treatment with the hero content and imagery arranged on a wide canvas',
-  'a modular magazine-style hero made from one dominant image, a small detail image, and staggered text blocks',
+export const WEBSITE_TEMPLATES = [
+  { id: 'editorial', name: 'Editorial', layout: 'an editorial masthead with oversized type, a narrow story column, overlapping image tiles, fine rules, and a magazine-like service index' },
+  { id: 'split', name: 'Split Impact', layout: 'an offset split hero with the headline low on the left, a tall image breaking the grid on the right, and alternating edge-to-edge service panels' },
+  { id: 'cinematic', name: 'Cinematic', layout: 'a full-bleed photographic hero with a compact copy panel near the lower edge, followed by wide visual chapters and a dark immersive closing CTA' },
+  { id: 'bento', name: 'Bento', layout: 'a modular bento hero with one dominant visual, compact proof and service modules of different sizes, and a calm full-width story section' },
+  { id: 'sidebar', name: 'Sidecar', layout: 'a left-side vertical navigation and brand rail with content and imagery arranged on a wide right-hand canvas; collapse the rail into a compact mobile header' },
+  { id: 'storefront', name: 'Storefront', layout: 'a welcoming local-business storefront hero, a horizontal offer menu, location and hours treatment, human story, and an obvious booking/contact path' },
+  { id: 'showcase', name: 'Showcase', layout: 'a portfolio-led composition with a restrained intro, large staggered project or service imagery, short captions, and a strong inquiry footer' },
+  { id: 'command', name: 'Command Center', layout: 'a product-led hero with crisp interface-inspired panels, a dense capability map, workflow timeline, integration strip, and direct trial CTA' },
+  { id: 'organic', name: 'Organic', layout: 'a warm flowing composition with rounded image windows, tactile color fields, an intimate story section, gentle service arcs, and generous breathing room' },
+  { id: 'luxury', name: 'Luxury Minimal', layout: 'a highly restrained composition with immense negative space, refined type, one dominant image per chapter, hairline dividers, and a quiet high-intent CTA' },
 ];
 const WEBSITE_SECTION_RHYTHMS = [
   'alternate full-width image bands with compact text sections; place services before credibility and the process near the end',
@@ -194,7 +198,7 @@ const WEBSITE_IMAGE_SETS = {
     'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=85',
   ],
 };
-function websiteDirection(industry, user, usedSignatures = [], businessBrief = '') {
+function websiteDirection(industry, user, usedSignatures = [], businessBrief = '', requestedTemplate = '') {
   const value = clean(industry, 120).toLowerCase();
   const requestedBrand = clean(businessBrief, 800);
   const hasExplicitBrandDirection = /(hard brand|brand rules?|colou?r palette|typography|font system|wordmark|no gradients?|only (?:black|white|charcoal|graphite|silver|grey|gray))/i.test(requestedBrand);
@@ -228,7 +232,8 @@ function websiteDirection(industry, user, usedSignatures = [], businessBrief = '
   }
   const used = new Set(usedSignatures.filter(Boolean));
   const imageCount = WEBSITE_IMAGE_SETS[category].length;
-  const totalRecipes = WEBSITE_LAYOUTS.length * WEBSITE_SECTION_RHYTHMS.length * WEBSITE_SURFACES.length * WEBSITE_TYPE_STYLES.length * imageCount;
+  const requestedIndex = WEBSITE_TEMPLATES.findIndex(template => template.id === requestedTemplate);
+  const totalRecipes = WEBSITE_TEMPLATES.length * WEBSITE_SECTION_RHYTHMS.length * WEBSITE_SURFACES.length * WEBSITE_TYPE_STYLES.length * imageCount;
   const bytes = randomBytes(2);
   const start = bytes.readUInt16BE(0) % totalRecipes;
   let selection;
@@ -238,7 +243,7 @@ function websiteDirection(industry, user, usedSignatures = [], businessBrief = '
     const typeIndex = recipe % WEBSITE_TYPE_STYLES.length; recipe = Math.floor(recipe / WEBSITE_TYPE_STYLES.length);
     const surfaceIndex = recipe % WEBSITE_SURFACES.length; recipe = Math.floor(recipe / WEBSITE_SURFACES.length);
     const rhythmIndex = recipe % WEBSITE_SECTION_RHYTHMS.length; recipe = Math.floor(recipe / WEBSITE_SECTION_RHYTHMS.length);
-    const layoutIndex = recipe % WEBSITE_LAYOUTS.length;
+    const layoutIndex = requestedIndex >= 0 ? requestedIndex : recipe % WEBSITE_TEMPLATES.length;
     const signature = `${layoutIndex}-${rhythmIndex}-${surfaceIndex}-${typeIndex}-${imageOffset}`;
     selection = { layoutIndex, rhythmIndex, surfaceIndex, typeIndex, imageOffset, signature };
     if (!used.has(signature)) break;
@@ -247,7 +252,8 @@ function websiteDirection(industry, user, usedSignatures = [], businessBrief = '
   const orderedImages = images.map((_, index) => images[(index + selection.imageOffset) % images.length]);
   return {
     signature: selection.signature,
-    brief: `${personality}. ${brandColors}\n- Composition: ${WEBSITE_LAYOUTS[selection.layoutIndex]}.\n- Page rhythm: ${WEBSITE_SECTION_RHYTHMS[selection.rhythmIndex]}.\n- Surface treatment: ${WEBSITE_SURFACES[selection.surfaceIndex]}.\n- Typography: ${WEBSITE_TYPE_STYLES[selection.typeIndex]}.\n- Approved photography: ${orderedImages.join(' | ')}. Use at least two of these as meaningful background or editorial images with readable overlays.`,
+    template: WEBSITE_TEMPLATES[selection.layoutIndex],
+    brief: `${personality}. ${brandColors}\n- Template family: ${WEBSITE_TEMPLATES[selection.layoutIndex].name}.\n- Composition: ${WEBSITE_TEMPLATES[selection.layoutIndex].layout}.\n- Page rhythm: ${WEBSITE_SECTION_RHYTHMS[selection.rhythmIndex]}.\n- Surface treatment: ${WEBSITE_SURFACES[selection.surfaceIndex]}.\n- Typography: ${WEBSITE_TYPE_STYLES[selection.typeIndex]}.\n- Approved photography: ${orderedImages.join(' | ')}. Use at least two of these as meaningful background or editorial images with readable overlays.`,
   };
 }
 async function generateCampaign(prompt) {
@@ -315,6 +321,10 @@ function repairHtml(h) {
   if (opens > closes) t += '\n</style>';
   if (/<body/i.test(t) && !/<\/body>/i.test(t)) t += '\n</body>';
   if (/<html/i.test(t) && !/<\/html>/i.test(t)) t += '\n</html>';
+  // Generated sites have no JavaScript, so every CTA must resolve somewhere.
+  // A model occasionally emits a placeholder href; send it to the contact
+  // section instead of leaving a dead control.
+  t = t.replace(/href\s*=\s*(["'])#\1/gi, 'href="#contact"');
   return t;
 }
 
@@ -386,7 +396,8 @@ export default async function handler(req, res) {
       const audience = clean(body.audience, 500);
       const action = clean(body.primaryAction, 180);
       const contact = clean(body.contact, 300);
-      const design = websiteDirection(industry, user, data.websites.slice(0, 20).map(site => site.designSignature), about);
+      const templateId = clean(body.template, 40).toLowerCase();
+      const design = websiteDirection(industry, user, data.websites.slice(0, 20).map(site => site.designSignature), about, templateId);
       const prompt = `Build a polished, conversion-focused one-page website as one self-contained HTML file.
 
 BUSINESS BRIEF
@@ -423,6 +434,7 @@ DESIGN QUALITY
 - Do not use the same repeated three-column card grid for multiple sections. Vary alignment, scale, shape, and placement so the page has a distinctive silhouette.
 - Use strong typography hierarchy, generous spacing, layered cards, tasteful shadows, hover states, and one or two restrained decorative details. Use gradients only when the business brief permits them and they fit the requested brand system.
 - Responsive at mobile, tablet, and desktop widths. Use semantic HTML, visible focus styles, accessible contrast, descriptive link text, and reduced-motion support.
+- Every action must be an <a> with a working href. Use supplied phone/email/booking links when available; otherwise link to an existing section such as #services, #about, #faq, or #contact. Never emit href="#" or a button that does nothing.
 - Include a specific <title> and meta description.`;
       const startedAt = Date.now();
       const generated = await generateWebsite(prompt);
@@ -430,7 +442,7 @@ DESIGN QUALITY
       if (!html || html.length < 600 || !/<body/i.test(html)) { res.status(502).json({ error: 'The site could not be generated. Please try again.' }); return; }
       const siteId = id('site');
       const generationMs = Date.now() - startedAt;
-      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, designSignature: design.signature, createdAt: new Date().toISOString(), generationMs };
+      const website = { id: siteId, name, industry, status: 'ready', url: `/api/site?id=${siteId}`, templateId: design.template.id, templateName: design.template.name, designSignature: design.signature, createdAt: new Date().toISOString(), generationMs };
       data.websites.unshift(website);
       user.usage.websites = data.websites.length;
       user.usage.aiUsed += 1;
@@ -540,10 +552,21 @@ DESIGN QUALITY
       if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
       let when = clean(body.scheduledFor, 40);
       let ts = when ? Date.parse(when) : NaN;
+      const imageUrl = clean(body.imageUrl, 600) || null;
+      if (!isNaN(ts) && !imageUrl) {
+        res.status(400).json({ error: 'Add a public image URL before scheduling. Instagram cannot publish a text-only post.' }); return;
+      }
+      if (imageUrl) {
+        let parsed;
+        try { parsed = new URL(imageUrl); } catch {}
+        if (!parsed || parsed.protocol !== 'https:') {
+          res.status(400).json({ error: 'Use a public HTTPS image URL that Instagram can access.' }); return;
+        }
+      }
       const draft = {
         id: id('social'), text,
         platform: clean(body.platform, 30) || 'instagram',
-        imageUrl: clean(body.imageUrl, 600) || null,
+        imageUrl,
         scheduledFor: isNaN(ts) ? null : new Date(ts).toISOString(),
         status: isNaN(ts) ? 'draft' : 'scheduled',
         createdAt: new Date().toISOString(),
@@ -551,6 +574,47 @@ DESIGN QUALITY
       data.socialDrafts.unshift(draft);
       await saveCustomer(user);
       res.status(201).json({ ok: true, draft }); return;
+    }
+
+    if (action === 'update-social') {
+      if (plan.id === 'free') { res.status(403).json({ error: 'Social scheduling starts on the Starter plan.' }); return; }
+      const socialId = clean(body.id, 80);
+      const draft = data.socialDrafts.find(item => item.id === socialId);
+      if (!draft) { res.status(404).json({ error: 'That scheduled post was not found.' }); return; }
+      if (draft.status === 'published') { res.status(409).json({ error: 'Published posts cannot be rescheduled.' }); return; }
+      const text = clean(body.text, 3000);
+      const imageUrl = clean(body.imageUrl, 600) || null;
+      const ts = Date.parse(clean(body.scheduledFor, 40));
+      if (!text) { res.status(400).json({ error: 'Enter post copy first.' }); return; }
+      if (isNaN(ts)) { res.status(400).json({ error: 'Choose a valid publishing date and time.' }); return; }
+      let parsed;
+      try { parsed = new URL(imageUrl); } catch {}
+      if (!parsed || parsed.protocol !== 'https:') {
+        res.status(400).json({ error: 'Use a public HTTPS image URL that Instagram can access.' }); return;
+      }
+      draft.text = text;
+      draft.imageUrl = imageUrl;
+      draft.scheduledFor = new Date(ts).toISOString();
+      draft.status = 'scheduled';
+      draft.error = null;
+      draft.updatedAt = new Date().toISOString();
+      await saveCustomer(user);
+      res.status(200).json({ ok: true, draft }); return;
+    }
+
+    if (action === 'cancel-social-schedule') {
+      const socialId = clean(body.id, 80);
+      const draft = data.socialDrafts.find(item => item.id === socialId);
+      if (!draft) { res.status(404).json({ error: 'That scheduled post was not found.' }); return; }
+      if (draft.status !== 'scheduled' && draft.status !== 'failed') {
+        res.status(409).json({ error: 'Only scheduled or failed posts can be moved back to drafts.' }); return;
+      }
+      draft.status = 'draft';
+      draft.scheduledFor = null;
+      draft.error = null;
+      draft.updatedAt = new Date().toISOString();
+      await saveCustomer(user);
+      res.status(200).json({ ok: true, draft }); return;
     }
 
     // ---- ADS: build a real, detailed campaign plan ----

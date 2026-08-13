@@ -2,6 +2,7 @@ import { kv } from '@vercel/kv';
 import { verifyWebhook } from '../lib/stripe.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 import { recordFunnelEvent } from '../lib/funnel.js';
+import { planFor } from '../lib/customer-plans.js';
 
 // Stripe needs the raw request body to verify the signature.
 export const config = { api: { bodyParser: false } };
@@ -29,6 +30,18 @@ function unixDate(value) {
 
 function stripeId(value) {
   return typeof value === 'string' ? value : value?.id || null;
+}
+
+function applyPlanAllowance(user, planId) {
+  const plan = planFor(planId);
+  user.usage = user.usage || {};
+  user.usage.aiUsed = 0;
+  // Purchased credits never disappear at renewal. The included allowance acts
+  // as a monthly floor, so a customer with fewer credits is refilled while a
+  // customer with a larger prepaid balance keeps it.
+  user.usage.videoCredits = Math.max(Number(user.usage.videoCredits || 0), Number(plan.reelCredits || 0));
+  user.usage.allowancePlan = plan.id;
+  user.usage.allowanceRenewedAt = new Date().toISOString();
 }
 
 async function customerIdForStripeObject(object) {
@@ -100,6 +113,7 @@ export default async function handler(req, res) {
             stripeSubscriptionId,
             startedAt: new Date().toISOString(),
           };
+          applyPlanAllowance(user, plan);
           await saveCustomer(user);
           if (stripeCustomerId) await kv.set(`stripe:customer:${stripeCustomerId}`, customerId);
           if (stripeSubscriptionId) await kv.set(`stripe:subscription:${stripeSubscriptionId}`, customerId);
@@ -142,6 +156,7 @@ export default async function handler(req, res) {
           user.invoices = user.invoices.slice(0, 50);
         }
         user.subscription = { ...(user.subscription || {}), status: 'active', billingMode: 'stripe' };
+        applyPlanAllowance(user, user.subscription.plan);
         await saveCustomer(user);
         try { await recordFunnelEvent('paid', `customer:${user.id}`, { email: user.email, source: 'stripe' }); }
         catch (error) { console.error('Paid funnel tracking failed:', error.message); }

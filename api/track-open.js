@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import { getEmailLog, trackEmailOpen } from '../lib/store.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
+import { isKnownAutomatedTraffic } from '../lib/analytics-traffic.js';
 
 const PIXEL_GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64');
 
@@ -32,9 +33,14 @@ export default async function handler(req, res) {
     try {
           if (id) {
               const trackingId = String(id);
+              const automated = isKnownAutomatedTraffic({
+                  userAgent: req.headers['user-agent'],
+                  purpose: req.headers.purpose || req.headers['sec-purpose'],
+                  city: req.headers['x-vercel-ip-city'],
+              });
               const alreadyOpened = await kv.hget('email:opens:first', trackingId);
-              await trackEmailOpen(trackingId);
-              if (!alreadyOpened) {
+              await trackEmailOpen(trackingId, { automated });
+              if (!automated && !alreadyOpened) {
                   try { await notifyFirstOpen(trackingId); } catch (e) { console.error('Open push notification failed:', e.message); }
               }
           }

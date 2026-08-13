@@ -5,6 +5,7 @@ import { kv } from '@vercel/kv';
 import { fetchOsmLeadPool, OSM_TAGS } from '../lib/leads.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
+import { emailMatchesBusinessWebsite, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
 
 export const config = { maxDuration: 300 };
 
@@ -25,15 +26,6 @@ const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
 
 const SERVICES = ['website', 'ads', 'app'];
 function pickService() { return SERVICES[Math.floor(Math.random() * SERVICES.length)]; }
-
-const AGENCY_TYPES = new Set(['advertising_agency', 'it', 'employment_agency', 'consulting', 'photographer']);
-const TARGET_TYPES = new Set(OSM_TAGS.map(tag => String(tag).split('=')[1]).filter(Boolean));
-
-export function qualifyOutreachContact(contact) {
-  const industry = String(contact?.industry || '').trim().toLowerCase();
-  if (!contact?.organization_name || contact?.isChain || !TARGET_TYPES.has(industry)) return null;
-  return AGENCY_TYPES.has(industry) ? 'Solo / small agency' : 'Independent small business';
-}
 
 function mountainDate() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -107,6 +99,7 @@ function extractEmails(html, pageUrl) {
   const candidates = [...found]
     .map(email => email.toLowerCase().replace(/^mailto:/, '').trim())
     .filter(isLikelyRealEmail)
+    .filter(email => emailMatchesBusinessWebsite(email, pageUrl))
     .filter(email => !junk.some(domain => email.endsWith('@' + domain)));
   const roleOrder = ['info','contact','hello','sales','office','admin','team','booking','appointments','support'];
   return candidates.sort((a, b) => {
@@ -185,29 +178,22 @@ function normalizeContact(place) {
 }
 
 async function generateEmail(contact) {
-  const firstName = contact.first_name || 'there';
   const company = contact.organization_name || 'your business';
   const agency = contact.targetSegment === 'Solo / small agency';
   const service = agency ? 'agency' : pickService();
+  const angle = replyAngle(contact.industry);
 
   const subjects = [
-    'Quick idea for ' + company,
-    'Marketing help for ' + company + '?',
-    'A simpler way to run ' + company + "'s marketing",
-    'Helping ' + company + ' get more customers',
-    'One tool for all of ' + company + "'s marketing"
+    'A simpler marketing setup for ' + company,
+    'One idea for ' + company,
+    company + ' marketing question',
+    'Could this help ' + company + '?'
   ];
   const subject = subjects[Math.floor(Math.random() * subjects.length)];
-
-  const opener = ['Hi ' + firstName + ',', 'Hey ' + firstName + ',', 'Hi ' + firstName + ' -'][Math.floor(Math.random() * 3)];
-
-  const bodies = agency ? [
-    opener + '\n\nI built Nitro Outreach for small agencies that need to create and manage more client marketing without adding a pile of tools. It brings websites, social posts, Reels, ad planning, and outreach into one workspace.\n\nIt is free to start, no credit card: https://nitrooutreach.com\n\nThought it could help ' + company + ' handle more work without adding more overhead.',
-    opener + '\n\nNitro Outreach gives solo and small agencies one place to build client websites, create social content and Reels, plan ads, and keep outreach organized.\n\nIt may help ' + company + ' save production time or take on more clients. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply here.'
-  ] : [
-    opener + '\n\nI run Nitro Outreach, an all-in-one marketing platform. One login builds your website, social posts, Reels, and ad campaigns - so ' + company + ' can replace a pile of separate tools and save time and money.\n\nIt is free to start, no credit card. If it sounds useful, take a look: https://nitrooutreach.com\n\nEither way, wishing ' + company + ' a great week.',
-    opener + '\n\nMost small teams juggle five different tools to keep their marketing going. Nitro Outreach puts it all in one place - website, social, Reels, and ads - built with AI from a single login.\n\nThought it might save ' + company + ' some time. It is free to try, no card needed: https://nitrooutreach.com\n\nHappy to answer any questions - just reply to this email.',
-    opener + '\n\nI built Nitro Outreach to help businesses like ' + company + ' handle their marketing in one spot - website, social posts, Reels, and ad campaigns - without hiring an agency or stitching apps together.\n\nIt is free to start, no credit card: https://nitrooutreach.com\n\nWorth a look if you have a couple of minutes.'
+  const opener = 'Hi ' + company + ' team,';
+  const bodies = [
+    opener + '\n\nI built Nitro Outreach for small businesses that want to ' + angle + '. It puts the work in one focused workspace instead of spreading it across several apps.\n\nIf that is something you are dealing with, reply “yes” and I will send a short example for ' + company + '. You can also look around free, with no card: https://nitrooutreach.com',
+    opener + '\n\nI came across ' + company + ' and thought Nitro might fit the way a small team handles marketing. It helps you ' + angle + '.\n\nWould a two-minute example built around ' + company + ' be useful? Just reply and I will send one. Nitro is also free to try: https://nitrooutreach.com'
   ];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 
@@ -250,7 +236,7 @@ export default async function handler(req, res) {
     const emailableLeads = [];
     const seen = new Set();
     async function consider(contact) {
-      if (!contact.email || !isLikelyRealEmail(contact.email)) return;
+      if (!contact.email || !isLikelyRealEmail(contact.email) || !emailMatchesBusinessWebsite(contact.email, contact.website_url)) return;
       const key = contact.email.toLowerCase();
       if (seen.has(key) || await wasEmailed(key) || await isSuppressed(key)) return;
       seen.add(key);
