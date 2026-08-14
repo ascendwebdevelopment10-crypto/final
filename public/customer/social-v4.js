@@ -4,6 +4,7 @@
   let queued=false,activePlatform='instagram';
   const brandFromText=value=>{const s=String(value||'').toLowerCase();return brands.find(b=>s.includes(b))||''};
   const num=value=>{const m=String(value||'').match(/\d+/);return m?Number(m[0]):0};
+  const safe=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function setBrand(el,brand){if(el&&brand)el.dataset.brand=brand}
   function clearBrands(page){page.querySelectorAll('[data-brand]').forEach(el=>el.removeAttribute('data-brand'));}
   function brandDedicatedHosts(page){
@@ -36,13 +37,20 @@
     toolbar.insertAdjacentElement('afterend',section);
   }
   function browserMarkup(){
-    return `<section class="social-platform-browser glass-card" id="social-platform-browser"><div class="platform-browser-head"><div><span class="eyebrow">PLATFORM POSTS</span><h3>Browse posts by platform</h3><p>Choose a channel to see only that platform's published content and results.</p></div><button class="btn btn-sm" type="button" data-platform-refresh>Refresh</button></div><div class="platform-browser-tabs">${brands.map(b=>`<button type="button" data-platform-tab="${b}" class="${b===activePlatform?'active':''}"><span data-brand="${b}"></span>${names[b]}</button>`).join('')}</div><div class="platform-browser-summary" id="platform-browser-summary"></div><div class="platform-browser-posts" id="platform-browser-posts"><div class="platform-browser-loading">Loading ${names[activePlatform]} posts…</div></div></section>`;
+    return `<section class="social-platform-browser glass-card" id="social-platform-browser"><div class="platform-browser-head"><div><span class="eyebrow">PLATFORM POSTS</span><h3>Browse posts by platform</h3><p>Choose a channel to see its posts, creative previews, and results in one place.</p></div><button class="btn btn-sm" type="button" data-platform-refresh>Refresh</button></div><div class="platform-browser-tabs">${brands.map(b=>`<button type="button" data-platform-tab="${b}" class="${b===activePlatform?'active':''}"><span data-brand="${b}"></span>${names[b]}</button>`).join('')}</div><div class="platform-browser-summary" id="platform-browser-summary"></div><div class="platform-browser-posts" id="platform-browser-posts"><div class="platform-browser-loading">Loading ${names[activePlatform]} posts…</div></div></section>`;
   }
   function metric(label,value){const clean=value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?Number(value).toLocaleString():'—';return `<span><small>${label}</small><b>${clean}</b></span>`}
+  function mediaPreview(group,variant,title){
+    const source=group.thumbnailUrl||variant.thumbnailUrl||group.mediaUrl||variant.mediaUrl||'';
+    const mediaType=String(group.mediaType||variant.mediaType||'').toLowerCase();
+    if(!source)return `<div class="platform-post-thumb is-fallback" data-brand="${safe(variant.platform||activePlatform)}"><span>${safe(title.slice(0,1).toUpperCase())}</span></div>`;
+    if(mediaType==='video'||mediaType==='reel')return `<div class="platform-post-thumb is-video"><video src="${safe(group.mediaUrl||variant.mediaUrl||source)}" poster="${safe(group.thumbnailUrl||variant.thumbnailUrl||'')}" muted playsinline preload="metadata"></video><i>▶</i></div>`;
+    return `<div class="platform-post-thumb"><img src="${safe(source)}" alt="${safe(title)} preview" loading="lazy"></div>`;
+  }
   function postRow(group,platform){
     const variants=group.platforms||[],variant=variants.find(v=>String(v.platform).toLowerCase()===platform)||variants[0]||{};
     const title=group.title||String(group.text||'Untitled post').split('\n')[0].slice(0,100),date=variant.publishedAt||group.publishedAt||group.scheduledFor;
-    return `<article class="platform-post-row"><span class="platform-post-logo" data-brand="${platform}"></span><div class="platform-post-copy"><b>${String(title).replace(/[&<>]/g,'')}</b><p>${String(group.text||'').replace(/[&<>]/g,'').slice(0,150)}</p><small>${date?new Date(date).toLocaleString():'Published content'}</small></div><div class="platform-post-metrics">${metric('Views',variant.views)}${metric('Reach',variant.reach)}${metric('Likes',variant.likes)}${metric('Comments',variant.comments)}${metric('Shares',variant.shares)}</div>${variant.permalink?`<a class="platform-post-open" href="${variant.permalink}" target="_blank" rel="noopener">Open ↗</a>`:''}</article>`;
+    return `<article class="platform-post-row">${mediaPreview(group,variant,title)}<div class="platform-post-copy"><div class="platform-post-title"><span class="platform-post-logo" data-brand="${platform}"></span><b>${safe(title)}</b></div><p>${safe(String(group.text||'').slice(0,150))}</p><small>${date?new Date(date).toLocaleString():'Published content'}</small></div><div class="platform-post-metrics">${metric('Views',variant.views)}${metric('Reach',variant.reach)}${metric('Likes',variant.likes)}${metric('Comments',variant.comments)}${metric('Shares',variant.shares)}</div>${variant.permalink?`<a class="platform-post-open" href="${safe(variant.permalink)}" target="_blank" rel="noopener">Open ↗</a>`:''}</article>`;
   }
   async function loadPlatform(platform,force=false){
     activePlatform=platform;
@@ -54,7 +62,7 @@
       const t=data.totals||{};
       if(summary)summary.innerHTML=`${metric('Published',t.published)}${metric('Views',t.views)}${metric('Reach',t.reach)}${metric('Engagement',t.engagement)}${metric('Clicks',t.clicks)}${metric('Conversions',Number(t.leads||0)+Number(t.signups||0))}`;
       posts.innerHTML=(data.posts||[]).length?data.posts.map(g=>postRow(g,platform)).join(''):`<div class="platform-browser-empty"><span data-brand="${platform}"></span><b>No ${names[platform]} posts yet</b><p>Published posts will appear here.</p></div>`;
-    }catch(err){posts.innerHTML=`<div class="platform-browser-empty"><b>${err.message}</b><p>Try refreshing this platform.</p></div>`;}
+    }catch(err){posts.innerHTML=`<div class="platform-browser-empty"><b>${safe(err.message)}</b><p>Try refreshing this platform.</p></div>`;}
   }
   function buildBrowser(page){
     page.querySelector('.social-performance')?.classList.add('social-performance-hidden-v4');
@@ -68,12 +76,16 @@
       loadPlatform(activePlatform,false);
     }
   }
+  function cleanQueue(queue){
+    queue.classList.add('social-queue-hidden-v4');
+    queue.setAttribute('aria-hidden','true');
+  }
   function bindEmptyCompose(page){page.querySelectorAll('[data-open-social-compose]').forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.addEventListener('click',()=>page.querySelector('[data-workspace-action="social"]')?.click());});}
   function enhance(){
     if(location.hash!=='#social')return;
     const page=document.querySelector('.socials-workspace');if(!page)return;
     const toolbar=page.querySelector('.socials-toolbar'),calendar=page.querySelector('.social-calendar'),queue=page.querySelector('.social-queue-primary');if(!toolbar||!calendar||!queue)return;
-    clearBrands(page);brandDedicatedHosts(page);addDays(calendar);createStats(page,toolbar,calendar,queue);buildBrowser(page);bindEmptyCompose(page);
+    clearBrands(page);brandDedicatedHosts(page);addDays(calendar);createStats(page,toolbar,calendar,queue);cleanQueue(queue);buildBrowser(page);bindEmptyCompose(page);
     const create=toolbar.querySelector('[data-workspace-action="social"]');if(create)create.textContent='+ Create Post';
   }
   function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}
