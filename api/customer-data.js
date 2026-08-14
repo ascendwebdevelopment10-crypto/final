@@ -38,10 +38,11 @@ export default async function handler(req, res) {
         if (typeof nitroCampaignState === 'string') nitroCampaignState = JSON.parse(nitroCampaignState);
       } catch { nitroCampaignState = {}; }
     }
+    const isOwner = String(user.email || '').toLowerCase() === (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
     res.status(200).json({
       user: publicCustomer(user), plan, plans: publicPlans(),
       stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
-      socialProviders: { instagram: metaConfigured(), ...socialProviderStatus() },
+      socialProviders: { instagram: metaConfigured(), ...socialProviderStatus({ allowUnreleased: isOwner }) },
       nitroCampaignState,
     });
     return;

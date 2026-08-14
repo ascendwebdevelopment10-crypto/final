@@ -1,5 +1,5 @@
 import { currentCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
-import { signSocialState, socialAuthorizationUrl, validSocialPlatform } from '../lib/social-oauth.js';
+import { signSocialState, socialAuthorizationUrl, socialProviderAvailable, validSocialPlatform } from '../lib/social-oauth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -9,6 +9,10 @@ export default async function handler(req, res) {
   if (!validSocialPlatform(platform) && !(req.method === 'POST' && platform === 'instagram')) { res.status(400).json({ error: 'Unsupported social platform' }); return; }
   try {
     if (req.method === 'GET') {
+      const isOwner = String(user.email || '').toLowerCase() === (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
+      if (!socialProviderAvailable(platform, { allowUnreleased: isOwner })) {
+        res.status(503).json({ error: 'This social connection is not available yet.' }); return;
+      }
       res.writeHead(302, { Location: socialAuthorizationUrl(platform, signSocialState(user.id, platform)) });
       res.end(); return;
     }
