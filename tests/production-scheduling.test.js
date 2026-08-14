@@ -54,7 +54,8 @@ test('multi-platform scheduler keeps per-platform jobs and honest media requirem
   }
   assert.match(workspace, /YouTube scheduling requires a video/);
   assert.match(client, /All public-ready connected platforms/);
-  assert.match(client, /each platform gets its own visible queue status/i);
+  assert.match(client, /id:`\$\{post\.id\}:\$\{platform\}`/);
+  assert.match(client, /groupId:post\.id,platform/);
 });
 
 test('social scheduler exposes a visible calendar and full queue controls', async () => {
