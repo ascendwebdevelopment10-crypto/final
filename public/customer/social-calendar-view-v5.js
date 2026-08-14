@@ -1,19 +1,20 @@
 (()=>{
-  const safe=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safe=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   let queued=false;
 
   function removeGreyPlaceholder(card){
-    [...card.children].forEach(el=>{
-      if(el.classList.contains('calendar-post-thumb-v4')) return;
-      if(el.classList.contains('calendar-platforms')) return;
-      if(el.matches('em,strong,small')) return;
+    // The real creative is .calendar-post-thumb-v4. Anything else that is an
+    // empty visual box inside a calendar card is legacy placeholder UI.
+    card.querySelectorAll('*').forEach(el=>{
+      if(el===card) return;
+      if(el.closest('.calendar-post-thumb-v4')) return;
+      if(el.closest('.calendar-platforms')) return;
+      if(el.matches('em,strong,small,.calendar-platform')) return;
       if(el.querySelector('img,video,svg,.calendar-platform')) return;
       if(el.textContent.trim()) return;
-      const r=el.getBoundingClientRect();
-      if(r.width>=18&&r.width<=52&&r.height>=18&&r.height<=52){
-        el.remove();
-      }
+      el.remove();
     });
+    card.classList.add('calendar-no-placeholder-v6');
   }
 
   function ensureViewer(){
@@ -47,7 +48,6 @@
     media.innerHTML=src
       ? isVideo?`<video src="${safe(src)}" controls playsinline preload="metadata"></video>`:`<img src="${safe(src)}" alt="Post creative">`
       : `<div class="calendar-post-viewer-empty">No media preview available</div>`;
-
     const time=card.querySelector('em')?.textContent?.trim()||'';
     const type=card.querySelector('strong')?.textContent?.trim()||'Post';
     const caption=card.querySelector('small')?.textContent?.trim()||'Scheduled social post';
@@ -70,13 +70,8 @@
       card.setAttribute('aria-label','View scheduled post');
       if(card.dataset.viewerBound==='1')return;
       card.dataset.viewerBound='1';
-      card.addEventListener('click',e=>{
-        if(e.target.closest('a,button'))return;
-        openViewer(card);
-      });
-      card.addEventListener('keydown',e=>{
-        if(e.key==='Enter'||e.key===' '){e.preventDefault();openViewer(card)}
-      });
+      card.addEventListener('click',e=>{if(!e.target.closest('a,button'))openViewer(card)});
+      card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openViewer(card)}});
     });
   }
 
