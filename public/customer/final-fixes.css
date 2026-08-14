@@ -1,6 +1,57 @@
+@import url('/customer/social-calendar-polish.css?v=20260813d');
+@import url('/customer/social-redesign-v2.css?v=20260813b');
+
 body{overflow-x:hidden}
 .route-loading-shell{min-height:100vh;display:grid;place-items:center;align-content:center;gap:28px;background:radial-gradient(circle at 50% 35%,#3a211455,transparent 32%),#080605;color:#f2ece8}
 .route-loading-brand{display:flex;align-items:center;gap:12px;font:800 17px Manrope}
 .route-loading-card{display:flex;align-items:center;gap:12px;color:#8e8782;font-size:12px}
 .route-loading-card i{width:18px;height:18px;border:2px solid #3a302a;border-top-color:var(--green);border-radius:50%;animation:route-spin .8s linear infinite}
 @keyframes route-spin{to{transform:rotate(360deg)}}
+
+/* Live /app Socials screen — match the approved command-center mockup. */
+#customer-shell .socials-workspace{gap:14px!important;max-width:none!important}
+#customer-shell .socials-toolbar{padding:4px 0 10px!important;border:0!important;background:transparent!important}
+#customer-shell .socials-toolbar .eyebrow{display:none!important}
+#customer-shell .socials-toolbar h2{font-size:28px!important;margin:0 0 5px!important}
+#customer-shell .socials-toolbar p{margin:0!important;color:#8e8e96!important;font-size:11px!important}
+#customer-shell .socials-toolbar [data-workspace-action="social"]{font-size:0!important;background:#f3f3f4!important;color:#111!important;border-color:#fff!important;min-width:132px!important;height:40px!important}
+#customer-shell .socials-toolbar [data-workspace-action="social"]::before{content:'+  Create Post';font-size:11px!important;font-weight:800!important}
+
+/* Turn the existing connection overview into the compact top summary bar. */
+#customer-shell .social-overview{display:flex!important;min-height:76px!important;padding:14px 18px!important;border:1px solid #ffffff0d!important;border-radius:14px!important;background:linear-gradient(145deg,#171719,#111113)!important}
+#customer-shell .social-overview-count{font-size:30px!important;color:#fff!important}
+#customer-shell .social-overview-count small{font-size:12px!important;color:#777780!important}
+#customer-shell .social-overview b{font-size:12px!important}
+#customer-shell .social-overview p{font-size:9px!important;color:#7f7f87!important}
+#customer-shell .social-overview-pips i{height:7px!important;min-width:32px!important;border-radius:99px!important;background:#29292e!important}
+
+/* Calendar: five readable columns, no horizontal crop. */
+#customer-shell .social-calendar{box-shadow:0 18px 50px #00000024!important}
+#customer-shell .social-calendar-days{width:100%!important;min-width:0!important}
+#customer-shell .social-calendar-days>article{min-width:0!important;min-height:300px!important}
+#customer-shell .calendar-post{min-height:62px!important}
+#customer-shell .calendar-post>small{font-size:9.5px!important}
+#customer-shell .calendar-platform{width:22px!important;height:22px!important}
+
+/* Queue becomes a compact management table instead of oversized cards. */
+#customer-shell .social-queue-primary{box-shadow:0 18px 50px #00000020!important}
+#customer-shell .social-queue-card{min-height:86px!important}
+#customer-shell .social-queue-media{width:116px!important;height:64px!important}
+#customer-shell .social-queue-copy h4{font-size:11px!important}
+#customer-shell .social-queue-copy>p{font-size:8.5px!important}
+
+/* Keep connected accounts lower-priority and compact below scheduling. */
+#customer-shell .social-account-grid{margin-top:4px!important}
+#customer-shell .social-account-card{opacity:.93!important}
+
+@media(max-width:1200px){
+  #customer-shell .social-calendar-days{grid-template-columns:repeat(5,minmax(180px,1fr))!important;overflow-x:auto!important}
+  #customer-shell .social-calendar-days>article:nth-child(n){display:block!important}
+  #customer-shell .social-calendar-days>article{min-width:180px!important}
+  #customer-shell .social-queue-card{grid-template-columns:110px 120px minmax(210px,1fr) 150px 80px!important}
+}
+@media(max-width:760px){
+  #customer-shell .social-overview{align-items:flex-start!important;flex-direction:column!important}
+  #customer-shell .social-calendar-days{display:flex!important}
+  #customer-shell .social-calendar-days>article{min-width:86%!important}
+}
