@@ -1,18 +1,22 @@
-/* One-click weekly scheduling + final calendar placeholder cleanup */
+/* One-click weekly scheduling + undo */
 #customer-shell .calendar-post>div:empty:not(.calendar-platforms),
 #customer-shell .calendar-post>span:empty:not(.calendar-post-thumb-v4):not(.calendar-platform){display:none!important}
 #customer-shell .calendar-post{cursor:pointer!important}
 #customer-shell .calendar-post:hover{border-color:#ffffff24!important;background:#10151c!important}
 
-#customer-shell .social-week-auto-btn{height:38px;padding:0 15px;border:1px solid #7258ff;border-radius:10px;background:linear-gradient(135deg,#7c3cff,#268cff);color:white;font:800 10px Manrope;letter-spacing:.01em;cursor:pointer;box-shadow:0 8px 24px #4e50ff22;white-space:nowrap}
+#customer-shell .social-week-auto-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:auto}
+#customer-shell .social-week-actions{display:flex;align-items:center;gap:8px}
+#customer-shell .social-week-auto-btn,#customer-shell .social-week-undo-btn{height:38px;padding:0 15px;border-radius:10px;font:800 10px Manrope;letter-spacing:.01em;cursor:pointer;white-space:nowrap}
+#customer-shell .social-week-auto-btn{border:1px solid #7258ff;background:linear-gradient(135deg,#7c3cff,#268cff);color:white;box-shadow:0 8px 24px #4e50ff22}
 #customer-shell .social-week-auto-btn:hover{filter:brightness(1.08)}
-#customer-shell .social-week-auto-btn:disabled{opacity:.65;cursor:wait}
-#customer-shell .social-week-auto-note{display:block;margin-top:4px;color:#717a86;font-size:8px;font-weight:600}
-#customer-shell .social-week-auto-wrap{display:flex;align-items:center;gap:10px;margin-left:auto}
+#customer-shell .social-week-undo-btn{border:1px solid #ffffff16;background:#121820;color:#c9d0d8}
+#customer-shell .social-week-undo-btn:hover{background:#18212b;border-color:#ffffff2a;color:#fff}
+#customer-shell .social-week-auto-btn:disabled,#customer-shell .social-week-undo-btn:disabled{opacity:.65;cursor:wait}
+#customer-shell .social-week-auto-note{display:block;color:#717a86;font-size:8px;font-weight:600}
 
 #customer-shell .is-empty-day .empty-day-body{display:grid!important;place-items:center!important}
 #customer-shell .is-empty-day .empty-day-cta{display:none!important}
 #customer-shell .social-empty-simple{display:grid;place-items:center;gap:5px;color:#626c78;text-align:center;font-size:8px}
 #customer-shell .social-empty-simple b{color:#9aa3ae;font:700 9px Manrope}
 
-@media(max-width:800px){#customer-shell .social-week-auto-wrap{width:100%;margin:8px 0 0}#customer-shell .social-week-auto-btn{width:100%}}
+@media(max-width:800px){#customer-shell .social-week-auto-wrap{width:100%;margin:8px 0 0;align-items:stretch}#customer-shell .social-week-actions{display:grid;grid-template-columns:1fr 1fr}#customer-shell .social-week-auto-btn,#customer-shell .social-week-undo-btn{width:100%}}
