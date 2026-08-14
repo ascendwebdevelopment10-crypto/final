@@ -1,0 +1,50 @@
+/* Nitro top-of-page layout polish: Content + Socials */
+#customer-shell .section-toolbar{min-height:0!important}
+#customer-shell .section-toolbar>div:first-child{min-width:0}
+
+/* Content: keep the title readable and turn the control pile into a deliberate toolbar. */
+#customer-shell .app-content:has(.content-actions)>.section-toolbar{display:grid!important;grid-template-columns:minmax(250px,.72fr) minmax(520px,1.28fr)!important;align-items:start!important;gap:28px!important;padding:26px 12px 24px!important;margin:0 0 8px!important;border-bottom:1px solid rgba(255,255,255,.07)!important}
+#customer-shell .app-content:has(.content-actions)>.section-toolbar h2{margin:0 0 8px!important;font:800 30px/1.05 Manrope!important;letter-spacing:-.04em!important}
+#customer-shell .app-content:has(.content-actions)>.section-toolbar>div:first-child>p{max-width:360px!important;margin:0!important;line-height:1.55!important;color:#858c96!important}
+#customer-shell .content-actions{display:grid!important;grid-template-columns:auto repeat(3,max-content)!important;justify-content:end!important;align-items:center!important;gap:8px!important;width:100%!important}
+#customer-shell .content-actions .video-credit-pill{grid-column:1/2;grid-row:1;justify-self:end;white-space:nowrap!important;min-height:42px!important;display:inline-flex!important;align-items:center!important}
+#customer-shell .content-actions [data-workspace-action="content"]{grid-column:4;grid-row:1;min-width:120px!important}
+#customer-shell .content-actions [data-buy-video-credits]{grid-column:2;grid-row:1}
+#customer-shell .content-actions [data-upload-images]{grid-column:3;grid-row:1}
+#customer-shell .content-actions [data-workspace-action="video"]{grid-column:2;grid-row:2}
+#customer-shell .content-actions [data-workspace-action="content-carousel"]{grid-column:3;grid-row:2}
+#customer-shell .content-actions [data-workspace-action="content-image"]{grid-column:4;grid-row:2}
+#customer-shell .content-actions .btn{min-height:42px!important;white-space:nowrap!important}
+#customer-shell .content-actions .ux-page-primary{transform:none!important;box-shadow:0 10px 28px rgba(0,0,0,.28)!important}
+#customer-shell .app-content:has(.content-actions)>.section-toolbar>.ux-page-purpose{grid-column:1/-1!important;margin:0!important;padding-top:2px!important;color:#6f7782!important}
+
+/* Socials: one compact header row instead of headline + floating upgrade + duplicate helper copy. */
+#customer-shell .socials-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:28px!important;padding:18px 2px 20px!important;border-bottom:1px solid rgba(255,255,255,.07)!important}
+#customer-shell .socials-toolbar>div:first-child{max-width:720px!important}
+#customer-shell .socials-toolbar .eyebrow{margin-bottom:9px!important}
+#customer-shell .socials-toolbar h2{font:800 30px/1.04 Manrope!important;letter-spacing:-.04em!important;margin:0 0 8px!important;max-width:none!important}
+#customer-shell .socials-toolbar p{max-width:690px!important;font-size:12px!important;line-height:1.55!important;color:#858c96!important}
+#customer-shell .socials-toolbar>.btn{min-width:176px!important;height:44px!important;padding:0 18px!important;justify-self:end!important}
+#customer-shell .socials-toolbar>.ux-page-purpose{display:none!important}
+
+@media(max-width:1050px){
+ #customer-shell .app-content:has(.content-actions)>.section-toolbar{grid-template-columns:1fr!important;gap:16px!important}
+ #customer-shell .content-actions{justify-content:start!important;grid-template-columns:repeat(3,max-content)!important}
+ #customer-shell .content-actions .video-credit-pill{grid-column:1;grid-row:1;justify-self:start}
+ #customer-shell .content-actions [data-buy-video-credits]{grid-column:2;grid-row:1}
+ #customer-shell .content-actions [data-workspace-action="content"]{grid-column:3;grid-row:1}
+ #customer-shell .content-actions [data-upload-images]{grid-column:1;grid-row:2}
+ #customer-shell .content-actions [data-workspace-action="content-carousel"]{grid-column:2;grid-row:2}
+ #customer-shell .content-actions [data-workspace-action="content-image"]{grid-column:3;grid-row:2}
+ #customer-shell .content-actions [data-workspace-action="video"]{grid-column:auto;grid-row:auto}
+}
+@media(max-width:700px){
+ #customer-shell .app-content:has(.content-actions)>.section-toolbar{padding:18px 0!important}
+ #customer-shell .content-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+ #customer-shell .content-actions>*{grid-column:auto!important;grid-row:auto!important;width:100%!important;justify-content:center!important}
+ #customer-shell .content-actions .video-credit-pill{grid-column:1/-1!important;justify-self:stretch!important}
+ #customer-shell .content-actions [data-workspace-action="content"]{grid-column:1/-1!important;grid-row:2!important}
+ #customer-shell .socials-toolbar{grid-template-columns:1fr!important;gap:14px!important;padding:16px 0 18px!important}
+ #customer-shell .socials-toolbar>.btn{justify-self:stretch!important;width:100%!important}
+ #customer-shell .socials-toolbar h2{font-size:26px!important}
+}
