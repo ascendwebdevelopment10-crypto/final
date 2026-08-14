@@ -2,123 +2,17 @@
   const safe=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
   let queued=false;
-
-  function removeGreyPlaceholder(card){
-    card.querySelectorAll('*').forEach(el=>{
-      if(el===card) return;
-      if(el.closest('.calendar-post-thumb-v4')) return;
-      if(el.closest('.calendar-platforms')) return;
-      if(el.matches('em,strong,small,.calendar-platform')) return;
-      if(el.querySelector('img,video,svg,.calendar-platform')) return;
-      if(el.textContent.trim()) return;
-      el.remove();
-    });
-    card.classList.add('calendar-no-placeholder-v6');
-  }
-
-  function localInputValue(value){
-    const d=new Date(value);if(Number.isNaN(d.getTime()))return '';
-    const pad=n=>String(n).padStart(2,'0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  async function findDraft(card){
-    try{
-      const res=await fetch('/api/customer-data',{cache:'no-store'});const data=await res.json();
-      if(!res.ok)return null;
-      const drafts=(data.user?.workspace?.socialDrafts||[]).filter(x=>x.status==='scheduled'&&Date.parse(x.scheduledFor||0)>Date.now());
-      const caption=norm(card.getAttribute('data-full-caption')||card.querySelector('small')?.textContent||'');
-      const thumb=card.querySelector('.calendar-post-thumb-v4 img,.calendar-post-thumb-v4 video');
-      const src=String(thumb?.currentSrc||thumb?.src||'');
-      let best=null,bestScore=-1;
-      for(const item of drafts){
-        const text=norm(item.text||'');const title=norm(item.title||'');let score=0;
-        if(caption&&text.includes(caption))score+=8;
-        if(caption&&caption.includes(text.slice(0,Math.min(36,text.length))))score+=5;
-        if(caption&&title&&caption.includes(title))score+=4;
-        if(src&&item.mediaUrl&&src.includes(String(item.mediaUrl).split('/').pop()))score+=3;
-        if(score>bestScore){best=item;bestScore=score;}
-      }
-      return bestScore>0?best:null;
-    }catch{return null;}
-  }
-
-  function ensureViewer(){
-    let modal=document.getElementById('calendar-post-viewer-v5');
-    if(modal) return modal;
-    modal=document.createElement('div');
-    modal.id='calendar-post-viewer-v5';
-    modal.className='calendar-post-viewer-v5';
-    modal.setAttribute('aria-hidden','true');
-    modal.innerHTML=`<div class="calendar-post-viewer-backdrop" data-close-post-viewer></div><section class="calendar-post-viewer-panel" role="dialog" aria-modal="true" aria-label="Post preview"><button type="button" class="calendar-post-viewer-close" data-close-post-viewer aria-label="Close">×</button><div class="calendar-post-viewer-media" id="calendar-post-viewer-media"></div><div class="calendar-post-viewer-copy"><span class="calendar-post-viewer-kicker">SCHEDULED POST</span><h3 id="calendar-post-viewer-title">Scheduled post</h3><div class="calendar-post-viewer-meta" id="calendar-post-viewer-meta"></div><form id="calendar-post-edit-form" class="calendar-post-edit-form"><label>Post title<input id="calendar-post-edit-title" maxlength="180" type="text"></label><label>Caption<textarea id="calendar-post-edit-caption" rows="7" maxlength="5000"></textarea></label><label>Post date & time<input id="calendar-post-edit-time" type="datetime-local"></label><div class="calendar-post-edit-actions"><button type="button" class="calendar-post-edit-cancel" data-close-post-viewer>Cancel</button><button type="submit" class="calendar-post-edit-save">Save changes</button></div><p class="calendar-post-edit-status" id="calendar-post-edit-status"></p></form></div></section>`;
-    document.body.appendChild(modal);
-    modal.querySelectorAll('[data-close-post-viewer]').forEach(btn=>btn.addEventListener('click',()=>closeViewer()));
-    modal.querySelector('#calendar-post-edit-form').addEventListener('submit',saveViewer);
-    addEventListener('keydown',e=>{if(e.key==='Escape')closeViewer()});
-    return modal;
-  }
-
-  function closeViewer(){
-    const modal=document.getElementById('calendar-post-viewer-v5');
-    if(!modal)return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden','true');
-    document.body.classList.remove('post-viewer-open-v5');
-  }
-
-  async function saveViewer(e){
-    e.preventDefault();const modal=ensureViewer();const btn=modal.querySelector('.calendar-post-edit-save');const status=modal.querySelector('#calendar-post-edit-status');
-    const groupId=modal.dataset.groupId||'';const id=modal.dataset.draftId||'';
-    if(!groupId&&!id){status.textContent='This post could not be matched to a scheduled draft.';return;}
-    const title=modal.querySelector('#calendar-post-edit-title').value.trim();
-    const text=modal.querySelector('#calendar-post-edit-caption').value.trim();
-    const local=modal.querySelector('#calendar-post-edit-time').value;
-    const scheduledFor=local?new Date(local).toISOString():'';
-    btn.disabled=true;btn.textContent='Saving…';status.textContent='';
-    try{
-      const res=await fetch('/api/social-post-edit',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({groupId,id,title,text,scheduledFor})});
-      const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Could not save post.');
-      status.textContent=`Saved${data.updated>1?` across ${data.updated} platform jobs`:''}.`;
-      btn.textContent='Saved ✓';setTimeout(()=>location.reload(),650);
-    }catch(err){status.textContent=err.message||'Could not save post.';btn.disabled=false;btn.textContent='Save changes';}
-  }
-
-  async function openViewer(card){
-    const modal=ensureViewer();
-    const thumb=card.querySelector('.calendar-post-thumb-v4 img,.calendar-post-thumb-v4 video');
-    const isVideo=thumb?.tagName==='VIDEO';const src=thumb?.currentSrc||thumb?.src||'';
-    const media=modal.querySelector('#calendar-post-viewer-media');
-    media.innerHTML=src?isVideo?`<video src="${safe(src)}" controls playsinline preload="metadata"></video>`:`<img src="${safe(src)}" alt="Post creative">`:`<div class="calendar-post-viewer-empty">No media preview available</div>`;
-    const time=card.querySelector('em')?.textContent?.trim()||'';const type=card.querySelector('strong')?.textContent?.trim()||'Post';
-    const caption=card.getAttribute('data-full-caption')||card.querySelector('small')?.textContent?.trim()||'Scheduled social post';
-    const platforms=[...card.querySelectorAll('.calendar-platform')].map(el=>el.getAttribute('title')||el.dataset.brand||'').filter(Boolean);
-    modal.querySelector('#calendar-post-viewer-title').textContent=caption;
-    modal.querySelector('#calendar-post-viewer-meta').innerHTML=`<span>${safe(type)}</span>${time?`<span>${safe(time)}</span>`:''}${platforms.length?`<span>${safe(platforms.join(' · '))}</span>`:''}`;
-    modal.querySelector('#calendar-post-edit-status').textContent='Loading editable post…';
-    modal.querySelector('#calendar-post-edit-title').value='';modal.querySelector('#calendar-post-edit-caption').value=caption;modal.querySelector('#calendar-post-edit-time').value='';
-    modal.dataset.groupId='';modal.dataset.draftId='';
-    modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');document.body.classList.add('post-viewer-open-v5');
-    const draft=await findDraft(card);
-    if(draft){
-      modal.dataset.groupId=draft.groupId||'';modal.dataset.draftId=draft.id||'';
-      modal.querySelector('#calendar-post-edit-title').value=draft.title||'';
-      modal.querySelector('#calendar-post-edit-caption').value=draft.text||caption;
-      modal.querySelector('#calendar-post-edit-time').value=localInputValue(draft.scheduledFor);
-      modal.querySelector('#calendar-post-edit-status').textContent=draft.groupId?'Changes apply to this post on every scheduled platform.':'';
-    }else modal.querySelector('#calendar-post-edit-status').textContent='Preview only — this post is not an editable future draft.';
-  }
-
-  function enhance(){
-    if(location.hash!=='#social')return;
-    document.querySelectorAll('#customer-shell .calendar-post').forEach(card=>{
-      removeGreyPlaceholder(card);card.classList.add('calendar-post-clickable-v5');card.setAttribute('tabindex','0');card.setAttribute('role','button');card.setAttribute('aria-label','View and edit scheduled post');
-      if(card.dataset.viewerBound==='1')return;card.dataset.viewerBound='1';
-      card.addEventListener('click',e=>{if(!e.target.closest('a,button'))openViewer(card)});
-      card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openViewer(card)}});
-    });
-  }
-
-  function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}
-  new MutationObserver(schedule).observe(document.documentElement,{subtree:true,childList:true});
-  addEventListener('load',schedule);addEventListener('hashchange',schedule);schedule();
+  function removeGreyPlaceholder(card){card.querySelectorAll('*').forEach(el=>{if(el===card||el.closest('.calendar-post-thumb-v4')||el.closest('.calendar-platforms')||el.matches('em,strong,small,.calendar-platform')||el.querySelector('img,video,svg,.calendar-platform')||el.textContent.trim())return;el.remove()});card.classList.add('calendar-no-placeholder-v6')}
+  function localInputValue(value){const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
+  function minsFromLocal(v){if(!v)return 690;const d=new Date(v);return d.getHours()*60+d.getMinutes()}
+  function timeLabel(mins){mins=Math.max(0,Math.min(1435,Number(mins)||0));const h=Math.floor(mins/60),m=mins%60,ap=h>=12?'PM':'AM',hh=h%12||12;return `${hh}:${String(m).padStart(2,'0')} ${ap}`}
+  function applyMinutesToLocal(local,mins){let d=local?new Date(local):new Date();if(Number.isNaN(d.getTime()))d=new Date();d.setHours(Math.floor(mins/60),mins%60,0,0);return localInputValue(d)}
+  async function findDraft(card){try{const res=await fetch('/api/customer-data',{cache:'no-store'}),data=await res.json();if(!res.ok)return null;const drafts=(data.user?.workspace?.socialDrafts||[]).filter(x=>x.status==='scheduled'&&Date.parse(x.scheduledFor||0)>Date.now());const caption=norm(card.getAttribute('data-full-caption')||card.querySelector('small')?.textContent||''),thumb=card.querySelector('.calendar-post-thumb-v4 img,.calendar-post-thumb-v4 video'),src=String(thumb?.currentSrc||thumb?.src||'');let best=null,bestScore=-1;for(const item of drafts){const text=norm(item.text||''),title=norm(item.title||'');let score=0;if(caption&&text.includes(caption))score+=8;if(caption&&caption.includes(text.slice(0,Math.min(36,text.length))))score+=5;if(caption&&title&&caption.includes(title))score+=4;if(src&&item.mediaUrl&&src.includes(String(item.mediaUrl).split('/').pop()))score+=3;if(score>bestScore){best=item;bestScore=score}}return bestScore>0?best:null}catch{return null}}
+  function syncTimeSlider(modal,fromSlider=false){const input=modal.querySelector('#calendar-post-edit-time'),range=modal.querySelector('#calendar-post-time-slider'),label=modal.querySelector('#calendar-post-time-label');if(!input||!range||!label)return;if(fromSlider)input.value=applyMinutesToLocal(input.value,Number(range.value));else range.value=String(minsFromLocal(input.value));label.textContent=timeLabel(range.value)}
+  function ensureViewer(){let modal=document.getElementById('calendar-post-viewer-v5');if(modal)return modal;modal=document.createElement('div');modal.id='calendar-post-viewer-v5';modal.className='calendar-post-viewer-v5';modal.setAttribute('aria-hidden','true');modal.innerHTML=`<div class="calendar-post-viewer-backdrop" data-close-post-viewer></div><section class="calendar-post-viewer-panel" role="dialog" aria-modal="true" aria-label="Post preview"><button type="button" class="calendar-post-viewer-close" data-close-post-viewer aria-label="Close">×</button><div class="calendar-post-viewer-media" id="calendar-post-viewer-media"></div><div class="calendar-post-viewer-copy"><span class="calendar-post-viewer-kicker">SCHEDULED POST</span><h3 id="calendar-post-viewer-title">Scheduled post</h3><div class="calendar-post-viewer-meta" id="calendar-post-viewer-meta"></div><form id="calendar-post-edit-form" class="calendar-post-edit-form"><label>Post title<input id="calendar-post-edit-title" maxlength="180" type="text"></label><label>Caption<textarea id="calendar-post-edit-caption" rows="7" maxlength="5000"></textarea></label><label>Post date & time<input id="calendar-post-edit-time" type="datetime-local"></label><div class="calendar-post-time-control"><button type="button" id="calendar-post-time-button" class="calendar-post-time-button"><span>Posting time</span><strong id="calendar-post-time-label">11:30 AM</strong></button><div id="calendar-post-time-popover" class="calendar-post-time-popover"><div class="calendar-post-time-scale"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11:55 PM</span></div><input id="calendar-post-time-slider" class="calendar-post-time-slider" type="range" min="0" max="1435" step="5" value="690"><small>Drag to choose the exact posting time in 5-minute steps.</small></div></div><div class="calendar-post-edit-actions"><button type="button" class="calendar-post-edit-cancel" data-close-post-viewer>Cancel</button><button type="submit" class="calendar-post-edit-save">Save changes</button></div><p class="calendar-post-edit-status" id="calendar-post-edit-status"></p></form></div></section>`;document.body.appendChild(modal);modal.querySelectorAll('[data-close-post-viewer]').forEach(btn=>btn.addEventListener('click',closeViewer));modal.querySelector('#calendar-post-edit-form').addEventListener('submit',saveViewer);const timeBtn=modal.querySelector('#calendar-post-time-button'),pop=modal.querySelector('#calendar-post-time-popover'),range=modal.querySelector('#calendar-post-time-slider'),input=modal.querySelector('#calendar-post-edit-time');timeBtn.addEventListener('click',()=>pop.classList.toggle('is-open'));range.addEventListener('input',()=>syncTimeSlider(modal,true));input.addEventListener('change',()=>syncTimeSlider(modal,false));addEventListener('keydown',e=>{if(e.key==='Escape')closeViewer()});return modal}
+  function closeViewer(){const modal=document.getElementById('calendar-post-viewer-v5');if(!modal)return;modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');modal.querySelector('#calendar-post-time-popover')?.classList.remove('is-open');document.body.classList.remove('post-viewer-open-v5')}
+  async function saveViewer(e){e.preventDefault();const modal=ensureViewer(),btn=modal.querySelector('.calendar-post-edit-save'),status=modal.querySelector('#calendar-post-edit-status'),groupId=modal.dataset.groupId||'',id=modal.dataset.draftId||'';if(!groupId&&!id){status.textContent='This post could not be matched to a scheduled draft.';return}const title=modal.querySelector('#calendar-post-edit-title').value.trim(),text=modal.querySelector('#calendar-post-edit-caption').value.trim(),local=modal.querySelector('#calendar-post-edit-time').value,scheduledFor=local?new Date(local).toISOString():'';btn.disabled=true;btn.textContent='Saving…';status.textContent='';try{const res=await fetch('/api/social-post-edit',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({groupId,id,title,text,scheduledFor})}),data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Could not save post.');status.textContent=`Saved${data.updated>1?` across ${data.updated} platform jobs`:''}.`;btn.textContent='Saved ✓';setTimeout(()=>location.reload(),650)}catch(err){status.textContent=err.message||'Could not save post.';btn.disabled=false;btn.textContent='Save changes'}}
+  async function openViewer(card){const modal=ensureViewer(),thumb=card.querySelector('.calendar-post-thumb-v4 img,.calendar-post-thumb-v4 video'),isVideo=thumb?.tagName==='VIDEO',src=thumb?.currentSrc||thumb?.src||'',media=modal.querySelector('#calendar-post-viewer-media');media.innerHTML=src?(isVideo?`<video src="${safe(src)}" controls playsinline preload="metadata"></video>`:`<img src="${safe(src)}" alt="Post creative">`):`<div class="calendar-post-viewer-empty">No media preview available</div>`;const time=card.querySelector('em')?.textContent?.trim()||'',type=card.querySelector('strong')?.textContent?.trim()||'Post',caption=card.getAttribute('data-full-caption')||card.querySelector('small')?.textContent?.trim()||'Scheduled social post',platforms=[...card.querySelectorAll('.calendar-platform')].map(el=>el.getAttribute('title')||el.dataset.brand||'').filter(Boolean);modal.querySelector('#calendar-post-viewer-title').textContent=caption;modal.querySelector('#calendar-post-viewer-meta').innerHTML=`<span>${safe(type)}</span>${time?`<span>${safe(time)}</span>`:''}${platforms.length?`<span>${safe(platforms.join(' · '))}</span>`:''}`;modal.querySelector('#calendar-post-edit-status').textContent='Loading editable post…';modal.querySelector('#calendar-post-edit-title').value='';modal.querySelector('#calendar-post-edit-caption').value=caption;modal.querySelector('#calendar-post-edit-time').value='';modal.dataset.groupId='';modal.dataset.draftId='';modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');document.body.classList.add('post-viewer-open-v5');const draft=await findDraft(card);if(draft){modal.dataset.groupId=draft.groupId||'';modal.dataset.draftId=draft.id||'';modal.querySelector('#calendar-post-edit-title').value=draft.title||'';modal.querySelector('#calendar-post-edit-caption').value=draft.text||caption;modal.querySelector('#calendar-post-edit-time').value=localInputValue(draft.scheduledFor);modal.querySelector('#calendar-post-edit-status').textContent=draft.groupId?'Changes apply to this post on every scheduled platform.':''}else modal.querySelector('#calendar-post-edit-status').textContent='Preview only — this post is not an editable future draft.';syncTimeSlider(modal,false)}
+  function enhance(){if(location.hash!=='#social')return;document.querySelectorAll('#customer-shell .calendar-post').forEach(card=>{removeGreyPlaceholder(card);card.classList.add('calendar-post-clickable-v5');card.setAttribute('tabindex','0');card.setAttribute('role','button');card.setAttribute('aria-label','View and edit scheduled post');if(card.dataset.viewerBound==='1')return;card.dataset.viewerBound='1';card.addEventListener('click',e=>{if(!e.target.closest('a,button'))openViewer(card)});card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openViewer(card)}})})}
+  function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}new MutationObserver(schedule).observe(document.documentElement,{subtree:true,childList:true});addEventListener('load',schedule);addEventListener('hashchange',schedule);schedule();
 })();
