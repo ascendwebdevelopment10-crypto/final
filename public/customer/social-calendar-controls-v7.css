@@ -1,0 +1,20 @@
+#customer-shell .social-calendar-days.is-hidden-v7{display:none!important}
+#customer-shell .social-month-view-v7{display:none;padding:14px;grid-template-columns:repeat(7,minmax(150px,1fr));gap:8px;overflow:auto;max-height:620px;background:#0a0f15;border-top:1px solid #ffffff0d}
+#customer-shell .social-month-view-v7.is-visible-v7{display:grid!important}
+#customer-shell .month-day{min-height:150px;border:1px solid #ffffff0d;border-radius:10px;background:#0c1219;overflow:hidden}
+#customer-shell .month-day>header{display:flex;justify-content:space-between;padding:9px 10px;border-bottom:1px solid #ffffff0b}
+#customer-shell .month-day>header small{color:#66717e;font:700 7px Manrope;letter-spacing:.08em}
+#customer-shell .month-day>header b{color:#dfe5eb;font:800 10px Manrope}
+#customer-shell .month-day>div{display:grid;gap:6px;padding:7px}
+#customer-shell .month-empty{padding:12px 6px;color:#58626f;font:600 9px Manrope}
+#customer-shell .month-post-card{display:grid;grid-template-columns:34px 1fr;gap:7px;width:100%;padding:6px;border:1px solid #ffffff0d;border-radius:8px;background:#101720;color:#fff;text-align:left;cursor:pointer}
+#customer-shell .month-post-card:hover{border-color:#6c7cff66;background:#131c27}
+#customer-shell .month-post-thumb{width:34px;height:34px;border-radius:6px;overflow:hidden;background:#111821}
+#customer-shell .month-post-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+#customer-shell .month-post-card b{display:block;font:700 8px/1.25 Manrope;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#customer-shell .month-post-card small,#customer-shell .month-post-card i{display:block;margin-top:3px;color:#727d89;font:600 7px Manrope;font-style:normal}
+#customer-shell .month-loading{grid-column:1/-1;padding:30px;text-align:center;color:#78838f;font:700 10px Manrope}
+#customer-shell .social-calendar .panel-head button.active-v7{background:#182131!important;color:#fff!important;border-color:#6c7cff66!important}
+.calendar-post-delete{height:38px;padding:0 14px;border-radius:9px;border:1px solid #ff4f6940;background:#251016;color:#ff7488;font:800 9px Manrope;cursor:pointer}.calendar-post-delete:hover{background:#32131b;border-color:#ff4f6970}.calendar-post-edit-actions>span{flex:1}
+@media(max-width:900px){#customer-shell .social-month-view-v7{grid-template-columns:repeat(3,minmax(150px,1fr))}}
+@media(max-width:620px){#customer-shell .social-month-view-v7{grid-template-columns:1fr 1fr}.calendar-post-edit-actions{flex-wrap:wrap}.calendar-post-edit-actions>span{display:none}.calendar-post-delete{margin-right:auto}}
