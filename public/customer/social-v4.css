@@ -12,6 +12,13 @@
 #customer-shell .empty-day-cta>strong{font-size:10px;color:#f2f4f7}
 #customer-shell .empty-day-cta>span{font-size:8px}
 
+/* Real creative thumbnails inside the weekly calendar */
+#customer-shell .calendar-post{position:relative!important;padding-left:50px!important;overflow:hidden!important}
+#customer-shell .calendar-post-thumb-v4{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:7px;overflow:hidden;background:#11161d;border:1px solid #ffffff14;display:block;z-index:2;box-shadow:0 4px 12px #0004}
+#customer-shell .calendar-post-thumb-v4 img,#customer-shell .calendar-post-thumb-v4 video{width:100%;height:100%;display:block;object-fit:cover;background:#0e1319}
+#customer-shell .calendar-post-thumb-v4.is-video i{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:9px;font-style:normal;text-shadow:0 1px 5px #000}
+#customer-shell .calendar-post>.calendar-post-thumb-v4+div:first-of-type:empty{display:none!important}
+
 /* Never put a second logo on whole cards. Only dedicated logo hosts render a mark. */
 #customer-shell .social-account-card[data-brand]::before,#customer-shell .social-queue-card[data-brand]::before,#customer-shell .social-performance-card[data-brand]::before,#customer-shell .social-platform-result[data-brand]::before{display:none!important;content:none!important}
 #customer-shell .social-platform-mark[data-brand]{font-size:0!important;width:38px!important;height:38px!important;display:grid!important;place-items:center!important;background:transparent!important;border:0!important}
