@@ -46,11 +46,20 @@ export const NITRO_SOCIAL_CAMPAIGN = [
 ];
 
 async function runNitroCampaign(now = Date.now()) {
-  let connection = await kv.get('instagram:connection');
-  if (typeof connection === 'string') { try { connection = JSON.parse(connection); } catch { connection = null; } }
-  if (!connection?.igUserId || !connection?.accessToken) {
-    return { published: 0, errors: [], skipped: 'nitro-instagram-not-connected' };
+  let instagram = await kv.get('instagram:connection');
+  if (typeof instagram === 'string') { try { instagram = JSON.parse(instagram); } catch { instagram = null; } }
+  const ownerEmail = String(process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
+  const ownerId = await kv.get(`customer:email:${ownerEmail}`);
+  const owner = ownerId ? await loadCustomer(String(ownerId)) : null;
+  const targets = [];
+  if (instagram?.igUserId && instagram?.accessToken) targets.push({ platform: 'instagram', connection: instagram });
+  for (const platform of ['facebook', 'linkedin', 'tiktok']) {
+    const candidate = owner?.socialConnections?.[platform];
+    if (!candidate?.connected || (platform === 'tiktok' && candidate.publicPublishingApproved !== true)) continue;
+    try { targets.push({ platform, connection: await usableConnection(platform, candidate) }); }
+    catch (error) { await notifyBestEffort({ title: `Nitro ${platform} connection needs attention`, message: error.message, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#social' }); }
   }
+  if (!targets.length) return { published: 0, errors: [], skipped: 'nitro-public-socials-not-connected' };
 
   let state = await kv.get('nitro:social:campaign:2026-08');
   if (typeof state === 'string') { try { state = JSON.parse(state); } catch { state = {}; } }
@@ -59,28 +68,36 @@ async function runNitroCampaign(now = Date.now()) {
   const errors = [];
 
   for (const post of NITRO_SOCIAL_CAMPAIGN) {
-    if (state[post.id]?.mediaId || Date.parse(post.scheduledFor) > now) continue;
-    const lockKey = `nitro:social:publish-lock:${post.id}`;
-    const locked = await kv.set(lockKey, '1', { nx: true, ex: 300 });
-    if (!locked) continue;
-    try {
-      state[post.id] = { status: 'publishing', publishingStartedAt: new Date().toISOString() };
-      await kv.set('nitro:social:campaign:2026-08', state);
-      const mediaId = await publishImage(
-        connection.igUserId,
-        connection.accessToken,
-        post.caption,
-        `https://nitrooutreach.com${post.imagePath}`,
-      );
-      state[post.id] = { status: 'published', mediaId, publishedAt: new Date().toISOString() };
-      await kv.set('nitro:social:campaign:2026-08', state);
-      published += 1;
-    } catch (error) {
-      state[post.id] = { status: 'failed', error: error.message, failedAt: new Date().toISOString() };
-      await kv.set('nitro:social:campaign:2026-08', state);
-      errors.push({ campaign: post.id, error: error.message });
-      await kv.del(lockKey);
-      await notifyBestEffort({ title: 'Nitro Instagram post failed', message: `${post.id}: ${error.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com' });
+    if (Date.parse(post.scheduledFor) > now) continue;
+    const legacy = state[post.id] || {}, platforms = { ...(legacy.platforms || {}) };
+    if (legacy.mediaId && !platforms.instagram) platforms.instagram = { status: legacy.status || 'published', mediaId: legacy.mediaId, publishedAt: legacy.publishedAt };
+    for (const target of targets) {
+      if (platforms[target.platform]?.mediaId) continue;
+      const lockKey = `nitro:social:publish-lock:${post.id}:${target.platform}`;
+      const locked = await kv.set(lockKey, '1', { nx: true, ex: 300 });
+      if (!locked) continue;
+      try {
+        platforms[target.platform] = { status: 'publishing', publishingStartedAt: new Date().toISOString() };
+        state[post.id] = { ...legacy, platforms };
+        await kv.set('nitro:social:campaign:2026-08', state);
+        const mediaUrl = `https://nitrooutreach.com${post.imagePath}`;
+        const result = target.platform === 'instagram'
+          ? { id: await publishImage(target.connection.igUserId, target.connection.accessToken, post.caption, mediaUrl) }
+          : await publishToPlatform(target.platform, target.connection, { text: post.caption, mediaType: 'image', mediaUrl });
+        platforms[target.platform] = { status: 'published', mediaId: result.id || '', publishedAt: new Date().toISOString() };
+        state[post.id] = target.platform === 'instagram'
+          ? { ...legacy, ...platforms.instagram, platforms }
+          : { ...legacy, platforms };
+        await kv.set('nitro:social:campaign:2026-08', state);
+        published += 1;
+      } catch (error) {
+        platforms[target.platform] = { status: 'failed', error: error.message, failedAt: new Date().toISOString() };
+        state[post.id] = { ...legacy, platforms };
+        await kv.set('nitro:social:campaign:2026-08', state);
+        errors.push({ campaign: post.id, platform: target.platform, error: error.message });
+        await kv.del(lockKey);
+        await notifyBestEffort({ title: `Nitro ${target.platform} post failed`, message: `${post.id}: ${error.message}`, priority: 'high', tags: 'warning,camera', click: 'https://nitrooutreach.com/app#social' });
+      }
     }
   }
   return { published, errors };

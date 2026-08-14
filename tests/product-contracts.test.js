@@ -66,7 +66,7 @@ test('public marketing removes customer Reel generation and matches the implemen
   assert.match(landing, /schedule Instagram automatically/);
   const client = await read('../public/customer/app.js');
   assert.match(client, /Connect every channel\. Schedule once\./);
-  assert.match(client, /All connected platforms/);
+  assert.match(client, /All public-ready connected platforms/);
 });
 
 test('owner publishing queue and all three DM response scripts are visible in the workspace', async () => {

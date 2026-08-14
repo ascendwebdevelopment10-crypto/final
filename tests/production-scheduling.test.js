@@ -53,7 +53,7 @@ test('multi-platform scheduler keeps per-platform jobs and honest media requirem
     assert.match(client, new RegExp(`value:['"]${platform}['"]`));
   }
   assert.match(workspace, /YouTube scheduling requires a video/);
-  assert.match(client, /All connected platforms/);
+  assert.match(client, /All public-ready connected platforms/);
   assert.match(client, /each platform gets its own visible queue status/i);
 });
 
@@ -64,6 +64,30 @@ test('social scheduler exposes a visible calendar and full queue controls', asyn
   assert.match(client, /data-edit-social/);
   assert.match(client, /data-cancel-social/);
   assert.match(client, /Video \/ Short \(works across all five\)/);
+  assert.match(client, /social-calendar-legend/);
+  assert.match(client, /calendar-platforms/);
+});
+
+test('cross-platform analytics groups one creative into honest per-platform results', async () => {
+  const [analytics, client, css] = await Promise.all([
+    readFile(new URL('../api/social-analytics.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/app.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(analytics, /facebookMetrics/);
+  assert.match(analytics, /youtubeMetrics/);
+  assert.match(analytics, /groupId/);
+  assert.match(client, /data-social-analytics-platform/);
+  assert.match(client, /One post\. Separate results by platform\./);
+  assert.match(css, /\.social-performance-card/);
+  assert.match(css, /\.social-platform-result/);
+});
+
+test('all-platform scheduling excludes unaudited public TikTok jobs', async () => {
+  const workspace = await readFile(new URL('../api/customer-workspace.js', import.meta.url), 'utf8');
+  assert.match(workspace, /publicPublishingApproved === true/);
+  assert.match(workspace, /TikTok public auto-publishing is awaiting audit approval/);
+  assert.match(workspace, /const publicReady = compatible\.filter/);
 });
 
 test('social connections are only publicized as connected when tokens are usable', async () => {

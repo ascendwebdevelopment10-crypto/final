@@ -575,10 +575,15 @@ DESIGN QUALITY
       const connected = allowed.filter(platform => platform === 'instagram'
         ? Boolean(user.meta?.token && user.meta?.igUserId)
         : Boolean(user.socialConnections?.[platform]?.connected && user.socialConnections?.[platform]?.accessToken));
-      const platforms = requestedPlatform === 'all' ? connected : [requestedPlatform];
+      const compatible = connected.filter(platform => mediaType === 'video' || (mediaType === 'image' && platform !== 'youtube') || (mediaType === 'text' && ['facebook', 'linkedin'].includes(platform)));
+      const publicReady = compatible.filter(platform => platform !== 'tiktok' || user.socialConnections?.tiktok?.publicPublishingApproved === true);
+      const platforms = requestedPlatform === 'all' ? publicReady : [requestedPlatform];
       if (!platforms.length) { res.status(400).json({ error: 'Connect at least one social account before scheduling.' }); return; }
       const missing = platforms.filter(platform => !connected.includes(platform));
       if (missing.length) { res.status(400).json({ error: `Connect ${missing.join(', ')} before scheduling to it.` }); return; }
+      if (platforms.includes('tiktok') && user.socialConnections?.tiktok?.publicPublishingApproved !== true && clean(body.privacyLevel, 40) !== 'SELF_ONLY') {
+        res.status(400).json({ error: 'TikTok public auto-publishing is awaiting audit approval. Choose Private for a TikTok-only test, or choose All public-ready platforms.' }); return;
+      }
       const mediaRequired = platforms.filter(platform => ['instagram', 'tiktok', 'youtube'].includes(platform));
       if (mediaRequired.length && !mediaUrl) { res.status(400).json({ error: `${mediaRequired.join(', ')} requires a public image or video URL.` }); return; }
       if (platforms.includes('youtube') && mediaType !== 'video') { res.status(400).json({ error: 'YouTube scheduling requires a video. Choose Video or schedule the other channels separately.' }); return; }
