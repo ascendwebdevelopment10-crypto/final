@@ -1,10 +1,19 @@
 (()=>{
   const brands=['instagram','facebook','tiktok','linkedin','youtube'];
   const names={instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',linkedin:'LinkedIn',youtube:'YouTube'};
-  let queued=false,activePlatform='instagram';
+  const nitroCampaign=[
+    {text:'Five tabs do not make a marketing system.',mediaUrl:'/social/aug-2026/01-one-workspace.jpg',mediaType:'image'},
+    {text:'Quick question: does your website create the next conversation',mediaUrl:'/social/aug-2026/02-website.jpg',mediaType:'image'},
+    {text:'The content chain:',mediaUrl:'/social/aug-2026/03-content.jpg',mediaType:'image'},
+    {text:'Your future self does not want to remember',mediaUrl:'/social/aug-2026/04-social.jpg',mediaType:'image'},
+    {text:'Opened is curiosity. Clicked is intent.',mediaUrl:'/social/aug-2026/05-outreach.jpg',mediaType:'image'},
+    {text:'$0 to start. No card. No forced demo.',mediaUrl:'/social/aug-2026/06-start-free.jpg',mediaType:'image'},
+  ];
+  let queued=false,activePlatform='instagram',calendarMediaLoaded=false;
   const brandFromText=value=>{const s=String(value||'').toLowerCase();return brands.find(b=>s.includes(b))||''};
   const num=value=>{const m=String(value||'').match(/\d+/);return m?Number(m[0]):0};
   const safe=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const norm=value=>String(value||'').toLowerCase().replace(/\s+/g,' ').trim();
   function setBrand(el,brand){if(el&&brand)el.dataset.brand=brand}
   function clearBrands(page){page.querySelectorAll('[data-brand]').forEach(el=>el.removeAttribute('data-brand'));}
   function brandDedicatedHosts(page){
@@ -76,16 +85,41 @@
       loadPlatform(activePlatform,false);
     }
   }
-  function cleanQueue(queue){
-    queue.classList.add('social-queue-hidden-v4');
-    queue.setAttribute('aria-hidden','true');
+  function cleanQueue(queue){queue.classList.add('social-queue-hidden-v4');queue.setAttribute('aria-hidden','true');}
+  function calendarThumbMarkup(item){
+    const url=item.thumbnailUrl||item.mediaUrl||item.imageUrl||'';
+    if(!url)return '';
+    const type=String(item.mediaType||'').toLowerCase();
+    return type==='video'||type==='reel'
+      ? `<span class="calendar-post-thumb-v4 is-video"><video src="${safe(url)}" muted playsinline preload="metadata"></video><i>▶</i></span>`
+      : `<span class="calendar-post-thumb-v4"><img src="${safe(url)}" alt="" loading="lazy"></span>`;
+  }
+  function applyCalendarMedia(calendar,items){
+    calendar.querySelectorAll('.calendar-post').forEach(card=>{
+      if(card.querySelector('.calendar-post-thumb-v4'))return;
+      const cardText=norm(card.textContent);
+      const match=items.find(item=>{const t=norm(item.text||item.title||'');return t&&((t.length>22&&cardText.includes(t.slice(0,Math.min(44,t.length))))||(cardText.length>16&&t.includes(cardText.slice(0,Math.min(32,cardText.length)))));});
+      if(!match)return;
+      const markup=calendarThumbMarkup(match);if(markup)card.insertAdjacentHTML('afterbegin',markup);
+    });
+  }
+  async function hydrateCalendarMedia(calendar){
+    if(calendarMediaLoaded){applyCalendarMedia(calendar,nitroCampaign);return;}
+    calendarMediaLoaded=true;
+    let items=[...nitroCampaign];
+    try{
+      const res=await fetch('/api/customer-data');
+      const data=await res.json();
+      if(res.ok){items=[...(data.user?.workspace?.socialDrafts||[]),...items];}
+    }catch{}
+    applyCalendarMedia(calendar,items);
   }
   function bindEmptyCompose(page){page.querySelectorAll('[data-open-social-compose]').forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.addEventListener('click',()=>page.querySelector('[data-workspace-action="social"]')?.click());});}
   function enhance(){
     if(location.hash!=='#social')return;
     const page=document.querySelector('.socials-workspace');if(!page)return;
     const toolbar=page.querySelector('.socials-toolbar'),calendar=page.querySelector('.social-calendar'),queue=page.querySelector('.social-queue-primary');if(!toolbar||!calendar||!queue)return;
-    clearBrands(page);brandDedicatedHosts(page);addDays(calendar);createStats(page,toolbar,calendar,queue);cleanQueue(queue);buildBrowser(page);bindEmptyCompose(page);
+    clearBrands(page);brandDedicatedHosts(page);addDays(calendar);createStats(page,toolbar,calendar,queue);cleanQueue(queue);buildBrowser(page);bindEmptyCompose(page);hydrateCalendarMedia(calendar);
     const create=toolbar.querySelector('[data-workspace-action="social"]');if(create)create.textContent='+ Create Post';
   }
   function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}
