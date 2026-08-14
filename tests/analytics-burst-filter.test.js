@@ -43,8 +43,11 @@ test('flags the scanner identity so its later unattributed page is excluded too'
   assert.equal(automatedOutreachBurstIdentities(visits).has('A'), true);
 });
 
-test('filters known crawlers, prefetches, webdriver sessions, and data-center cities', () => {
+test('filters known crawlers, mail proxies, prefetches, webdriver sessions, and data-center cities', () => {
   assert.equal(isKnownAutomatedTraffic({ userAgent: 'Googlebot/2.1' }), true);
+  assert.equal(isKnownAutomatedTraffic({ userAgent: 'GoogleImageProxy' }), true);
+  assert.equal(isKnownAutomatedTraffic({ userAgent: 'Proofpoint URL Defense' }), true);
+  assert.equal(isKnownAutomatedTraffic({ userAgent: 'Mimecast Security Scanner' }), true);
   assert.equal(isKnownAutomatedTraffic({ purpose: 'prefetch' }), true);
   assert.equal(isKnownAutomatedTraffic({ webdriver: true }), true);
   assert.equal(isKnownAutomatedTraffic({ city: 'Council+Bluffs' }), true);
