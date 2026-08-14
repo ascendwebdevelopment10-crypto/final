@@ -12,8 +12,11 @@
   }
   function scheduleTimes(){
     const out=[];const now=new Date();
-    for(let i=1;i<=7;i++){
-      const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,11,30,0,0);
+    const day=now.getDay();
+    const daysUntilMonday=((8-day)%7)||7;
+    const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()+daysUntilMonday,11,30,0,0);
+    for(let i=0;i<7;i++){
+      const d=new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i,11,30,0,0);
       out.push(d.toISOString());
     }
     return out;
@@ -25,13 +28,13 @@
     });
   }
   async function generateWeek(btn){
-    if(busy)return;busy=true;const original=btn.textContent;btn.disabled=true;btn.textContent='Building your week…';
+    if(busy)return;busy=true;const original=btn.textContent;btn.disabled=true;btn.textContent='Building next week…';
     try{
       const res=await fetch('/api/social-week',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schedule:scheduleTimes()})});
       const data=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(data.error||'Could not build the week.');
       sessionStorage.setItem('nitroLastAutoWeekBatch',data.batchId||'');
-      btn.textContent=`✓ ${data.days} posts scheduled`;
+      btn.textContent=`✓ Next week scheduled`;
       setTimeout(()=>location.reload(),700);
     }catch(err){
       btn.textContent=original;btn.disabled=false;busy=false;
@@ -59,7 +62,7 @@
     const calendar=page.querySelector('.social-calendar');if(!calendar)return;
     const head=calendar.querySelector('.panel-head');if(!head||head.querySelector('.social-week-auto-wrap'))return;
     const wrap=document.createElement('div');wrap.className='social-week-auto-wrap';
-    wrap.innerHTML='<div class="social-week-actions"><button type="button" class="social-week-auto-btn">Generate 7-Day Schedule</button><button type="button" class="social-week-undo-btn">Undo Generated Week</button></div><span class="social-week-auto-note">Generate a week or remove the latest generated week</span>';
+    wrap.innerHTML='<div class="social-week-actions"><button type="button" class="social-week-auto-btn">Generate Next Week</button><button type="button" class="social-week-undo-btn">Undo Generated Week</button></div><span class="social-week-auto-note">Creates Monday–Sunday of the next calendar week</span>';
     head.appendChild(wrap);
     wrap.querySelector('.social-week-auto-btn').addEventListener('click',e=>generateWeek(e.currentTarget));
     wrap.querySelector('.social-week-undo-btn').addEventListener('click',e=>undoWeek(e.currentTarget));
