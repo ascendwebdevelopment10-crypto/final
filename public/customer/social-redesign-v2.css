@@ -1,0 +1,63 @@
+/* Nitro Socials full redesign — 2026-08-13 */
+#customer-shell .socials-workspace{display:grid;gap:16px}
+#customer-shell .socials-toolbar{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:18px!important;padding:2px 0 2px!important}
+#customer-shell .socials-toolbar h2{font-size:30px!important;letter-spacing:-.035em!important;margin:3px 0 5px!important}
+#customer-shell .socials-toolbar p{font-size:12px!important;color:#9b9b9f!important;max-width:650px!important}
+#customer-shell .socials-toolbar>.btn{min-height:42px!important;padding:0 18px!important;border-radius:9px!important;font-size:12px!important;background:#f4f4f5!important;color:#111!important;border-color:#fff!important;box-shadow:none!important}
+#customer-shell .social-overview{display:none!important}
+
+.social-v2-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.social-v2-stat{min-height:96px;padding:15px 16px;border:1px solid #ffffff0d;border-radius:13px;background:linear-gradient(145deg,#171719,#111113);display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center}
+.social-v2-stat-icon{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:#ffffff08;border:1px solid #ffffff0c}
+.social-v2-stat small{display:block;color:#8b8b92;font-size:9px;margin-bottom:4px}.social-v2-stat strong{display:block;color:#f6f6f7;font:800 22px Manrope}.social-v2-stat span{display:block;color:#777780;font-size:8px;margin-top:4px}
+
+#customer-shell .social-calendar{padding:0!important;border:1px solid #ffffff10!important;border-radius:16px!important;overflow:hidden!important;background:#111114!important}
+#customer-shell .social-calendar .panel-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:17px 18px!important;margin:0!important;border-bottom:1px solid #ffffff10!important;background:#131316!important}
+#customer-shell .social-calendar .panel-head>div>span,#customer-shell .social-calendar .panel-head p,#customer-shell .social-calendar .panel-head>span{display:none!important}
+#customer-shell .social-calendar .panel-head h3{margin:0!important;font:800 16px Manrope!important;color:#f2f2f4!important}
+#customer-shell .social-calendar .panel-head::after{content:'WEEK VIEW';display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border:1px solid #ffffff12;border-radius:8px;background:#1a1a1f;color:#b8b8bf;font-size:8px;font-weight:800;letter-spacing:.07em}
+#customer-shell .social-calendar-legend{display:none!important}
+#customer-shell .social-calendar-days{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-auto-columns:auto!important;gap:0!important;overflow:visible!important;padding:0!important;scroll-snap-type:none!important}
+#customer-shell .social-calendar-days>article{border:0!important;border-right:1px solid #ffffff0d!important;border-radius:0!important;background:#111114!important;min-height:318px!important;box-shadow:none!important}
+#customer-shell .social-calendar-days>article:nth-child(n+6){display:none!important}
+#customer-shell .social-calendar-days>article:nth-child(5){border-right:0!important}
+#customer-shell .social-calendar-days header{display:block!important;padding:14px 14px 12px!important;border-bottom:1px solid #ffffff0b!important;background:#121215!important}
+#customer-shell .social-calendar-days header small{display:block!important;color:#85858c!important;font-size:8px!important;letter-spacing:.09em!important;margin-bottom:5px!important}
+#customer-shell .social-calendar-days header b{font:800 12px Manrope!important;color:#f0f0f2!important}
+#customer-shell .social-calendar-days article>div{display:grid!important;gap:9px!important;padding:10px!important}
+#customer-shell .calendar-post{display:grid!important;grid-template-columns:30px 1fr auto!important;grid-template-areas:'icon time status' 'icon copy copy'!important;align-items:center!important;column-gap:8px!important;row-gap:2px!important;min-height:58px!important;padding:8px!important;border:1px solid #ffffff0c!important;border-left:3px solid var(--content-color)!important;border-radius:9px!important;background:#17171a!important;box-shadow:none!important}
+#customer-shell .calendar-post:before{content:'✦';grid-area:icon;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--content-color) 18%,#0b0b0d);color:var(--content-color);font-size:11px;font-weight:900}
+#customer-shell .calendar-post em{grid-area:time!important;color:#a0a0a7!important;font-size:8px!important}
+#customer-shell .calendar-post>strong{grid-area:status!important;justify-self:end!important;color:#c8c8ce!important;font-size:7px!important;text-transform:uppercase!important;letter-spacing:.05em!important;padding:3px 5px!important;border-radius:5px!important;background:#ffffff07!important}
+#customer-shell .calendar-post>small{grid-area:copy!important;color:#f0f0f2!important;font-size:9px!important;line-height:1.25!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#customer-shell .calendar-platforms{grid-column:1/-1!important;display:flex!important;gap:4px!important;padding:3px 0 0 38px!important}
+#customer-shell .calendar-platform{width:20px!important;height:20px!important;border-radius:6px!important;background:#0d0d10!important}
+
+#customer-shell .social-queue-primary{padding:0!important;border:1px solid #ffffff10!important;border-radius:16px!important;background:#111114!important;overflow:hidden!important}
+#customer-shell .social-queue-primary>.panel-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0!important;padding:17px 18px!important;border-bottom:1px solid #ffffff10!important;background:#131316!important}
+#customer-shell .social-queue-primary>.panel-head .eyebrow,#customer-shell .social-queue-primary>.panel-head p{display:none!important}
+#customer-shell .social-queue-primary>.panel-head h3{margin:0!important;font:800 16px Manrope!important;color:#f2f2f4!important}
+#customer-shell .social-queue-primary>.panel-head>span{font-size:9px!important;color:#9b9ba2!important;background:#ffffff08!important;padding:5px 8px!important;border-radius:999px!important}
+#customer-shell .social-queue-grid{display:grid!important;grid-template-columns:1fr!important;gap:0!important}
+#customer-shell .social-queue-grid:before{content:'POST   ·   PLATFORM                              CONTENT                                      SCHEDULED FOR                    STATUS             ACTIONS';display:block;padding:11px 18px;border-bottom:1px solid #ffffff0d;background:#161619;color:#74747b;font-size:7px;font-weight:850;letter-spacing:.08em;white-space:pre}
+#customer-shell .social-queue-card{display:grid!important;grid-template-columns:140px 150px minmax(260px,1fr) 180px 110px 96px!important;gap:14px!important;align-items:center!important;min-height:92px!important;padding:10px 18px!important;border:0!important;border-bottom:1px solid #ffffff0c!important;border-radius:0!important;background:#111114!important}
+#customer-shell .social-queue-card:last-child{border-bottom:0!important}
+#customer-shell .social-queue-media{width:128px!important;height:70px!important;min-height:0!important;border-radius:8px!important}
+#customer-shell .social-queue-media>span{font-size:7px!important;padding:4px!important}
+#customer-shell .social-queue-copy{display:contents!important;padding:0!important}
+#customer-shell .social-queue-meta{grid-column:2!important;grid-row:1!important;display:block!important;font-size:9px!important;color:#bdbdc3!important}
+#customer-shell .social-queue-meta .status-pill{display:none!important}
+#customer-shell .social-queue-copy h4{grid-column:3!important;grid-row:1!important;margin:0!important;font:750 11px Manrope!important;color:#f1f1f3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#customer-shell .social-queue-copy>p{grid-column:3!important;grid-row:1!important;margin-top:26px!important;max-height:34px!important;overflow:hidden!important;color:#8e8e95!important;font-size:8px!important;line-height:1.35!important}
+#customer-shell .social-queue-time{grid-column:4!important;grid-row:1!important;margin:0!important}
+#customer-shell .social-queue-time b{font-size:9px!important;color:#d9d9de!important}.social-queue-time span{font-size:8px!important;color:#7d7d84!important}
+#customer-shell .social-queue-actions{position:static!important;grid-column:6!important;grid-row:1!important;display:flex!important;justify-content:flex-end!important;gap:6px!important}
+#customer-shell .social-queue-actions .btn,#customer-shell .social-queue-actions .card-del{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;border-radius:7px!important;font-size:0!important}
+#customer-shell .social-queue-actions .btn:before{content:'✎';font-size:12px}.social-queue-actions .card-del:before{content:'×';font-size:16px}
+
+#customer-shell .social-account-grid{margin-top:2px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:10px!important}
+#customer-shell .social-account-card{min-height:165px!important;padding:15px!important;border-radius:13px!important;background:#111114!important}
+#customer-shell .social-performance,#customer-shell .dm-playbook{margin-top:2px!important}
+
+@media(max-width:1200px){.social-v2-stats{grid-template-columns:repeat(3,minmax(0,1fr))}#customer-shell .social-calendar-days{grid-template-columns:repeat(3,minmax(0,1fr))!important}#customer-shell .social-calendar-days>article:nth-child(n+4){display:none!important}#customer-shell .social-queue-card{grid-template-columns:120px 120px minmax(220px,1fr) 150px 86px!important}.social-queue-actions{display:none!important}#customer-shell .social-account-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:760px){#customer-shell .socials-toolbar{flex-direction:column!important}.social-v2-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.social-v2-stat{min-height:84px}.social-v2-stat:nth-child(5){grid-column:1/-1}#customer-shell .social-calendar-days{display:flex!important;overflow-x:auto!important}#customer-shell .social-calendar-days>article{display:block!important;min-width:84%!important}#customer-shell .social-calendar-days>article:nth-child(n+6){display:none!important}#customer-shell .social-queue-grid:before{display:none!important}#customer-shell .social-queue-card{grid-template-columns:86px 1fr!important;grid-template-rows:auto auto auto!important;gap:8px 12px!important;min-height:130px!important;padding:12px!important}#customer-shell .social-queue-media{grid-row:1/4;width:86px!important;height:108px!important}#customer-shell .social-queue-meta{grid-column:2!important;grid-row:1!important}#customer-shell .social-queue-copy h4{grid-column:2!important;grid-row:2!important}#customer-shell .social-queue-copy>p{display:none!important}#customer-shell .social-queue-time{grid-column:2!important;grid-row:3!important}.social-v2-stat strong{font-size:18px!important}#customer-shell .social-account-grid{grid-template-columns:1fr!important}}
