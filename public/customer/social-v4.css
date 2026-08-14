@@ -1,0 +1,54 @@
+/* Socials v4 cleanup */
+#customer-shell .social-performance-hidden-v4{display:none!important}
+#customer-shell .social-v4-stats{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important}
+#customer-shell .social-calendar-days{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;width:100%!important;overflow:visible!important}
+#customer-shell .social-calendar-days>article{display:block!important;min-width:0!important;min-height:310px!important}
+#customer-shell .social-calendar-days>article:nth-child(n+8){display:none!important}
+#customer-shell .social-calendar-days>article.is-empty-day{background:#0c1117!important}
+#customer-shell .empty-day-body{height:250px!important;display:grid!important;place-items:center!important;padding:10px!important}
+#customer-shell .empty-day-cta{border:0;background:transparent;display:grid;place-items:center;gap:8px;color:#89919c;cursor:pointer;font-family:inherit}
+#customer-shell .empty-day-cta>b{width:42px;height:42px;border:1px dashed #657080;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:400}
+#customer-shell .empty-day-cta>strong{font-size:10px;color:#f2f4f7}
+#customer-shell .empty-day-cta>span{font-size:8px}
+
+/* Never put a second logo on whole cards. Only dedicated logo hosts render a mark. */
+#customer-shell .social-account-card[data-brand]::before,#customer-shell .social-queue-card[data-brand]::before,#customer-shell .social-performance-card[data-brand]::before,#customer-shell .social-platform-result[data-brand]::before{display:none!important;content:none!important}
+#customer-shell .social-platform-mark[data-brand]{font-size:0!important;width:38px!important;height:38px!important;display:grid!important;place-items:center!important;background:transparent!important;border:0!important}
+#customer-shell .social-platform-mark[data-brand]::before{width:34px!important;height:34px!important;flex:0 0 34px!important;margin:0!important}
+#customer-shell .social-queue-meta[data-brand]::before{width:26px!important;height:26px!important;flex:0 0 26px!important;margin:0!important}
+#customer-shell .calendar-platform[data-brand]::before{position:absolute!important;inset:2px!important;width:auto!important;height:auto!important;margin:0!important}
+
+/* Platform browser replaces the giant individual result cards */
+#customer-shell .social-platform-browser{padding:0!important;border:1px solid #ffffff10!important;border-radius:14px!important;overflow:hidden!important;background:#0c1117!important;box-shadow:none!important}
+#customer-shell .platform-browser-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border-bottom:1px solid #ffffff0d;background:#0e131a}
+#customer-shell .platform-browser-head .eyebrow{font-size:8px;letter-spacing:.14em;color:#8b93a0}
+#customer-shell .platform-browser-head h3{margin:4px 0 4px;font:800 17px Manrope;color:#fff}
+#customer-shell .platform-browser-head p{margin:0;color:#858d98;font-size:10px}
+#customer-shell .platform-browser-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid #ffffff0d;background:#0b1016}
+#customer-shell .platform-browser-tabs button{height:44px;border:1px solid #ffffff0e;border-radius:9px;background:#111720;color:#a8afb9;display:flex;align-items:center;justify-content:center;gap:8px;font:700 10px Manrope;cursor:pointer}
+#customer-shell .platform-browser-tabs button.active{background:#181f2a;color:#fff;border-color:#ffffff22;box-shadow:inset 0 0 0 1px #ffffff08}
+#customer-shell .platform-browser-tabs [data-brand]::before{width:22px!important;height:22px!important;flex:0 0 22px!important;margin:0!important}
+#customer-shell .platform-browser-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-bottom:1px solid #ffffff0d}
+#customer-shell .platform-browser-summary>span{padding:12px 14px;border-right:1px solid #ffffff0d;background:#0e1319}
+#customer-shell .platform-browser-summary>span:last-child{border-right:0}
+#customer-shell .platform-browser-summary small{display:block;color:#747c87;font-size:7px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+#customer-shell .platform-browser-summary b{font:800 15px Manrope;color:#fff}
+#customer-shell .platform-browser-posts{display:grid}
+#customer-shell .platform-post-row{display:grid;grid-template-columns:34px minmax(240px,1.35fr) minmax(360px,1fr) 70px;gap:14px;align-items:center;padding:13px 16px;border-bottom:1px solid #ffffff0c;background:#0c1117}
+#customer-shell .platform-post-row:last-child{border-bottom:0}
+#customer-shell .platform-post-logo[data-brand]::before{width:30px!important;height:30px!important;flex:0 0 30px!important;margin:0!important}
+#customer-shell .platform-post-copy b{display:block;color:#f4f6f8;font:750 11px Manrope;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#customer-shell .platform-post-copy p{margin:0 0 5px;color:#8c949e;font-size:8px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#customer-shell .platform-post-copy small{color:#666f7a;font-size:7px}
+#customer-shell .platform-post-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+#customer-shell .platform-post-metrics span{padding:7px 8px;border:1px solid #ffffff0c;border-radius:7px;background:#10161d}
+#customer-shell .platform-post-metrics small{display:block;color:#68717c;font-size:6px;text-transform:uppercase;margin-bottom:3px}
+#customer-shell .platform-post-metrics b{font:750 9px Manrope;color:#e9edf1}
+#customer-shell .platform-post-open{justify-self:end;color:#9ca5b0;font-size:8px;text-decoration:none}
+#customer-shell .platform-browser-loading,#customer-shell .platform-browser-empty{min-height:150px;display:grid;place-items:center;align-content:center;gap:7px;text-align:center;color:#7f8792;font-size:10px;padding:30px}
+#customer-shell .platform-browser-empty [data-brand]::before{width:34px!important;height:34px!important;margin:0 auto 4px!important}
+#customer-shell .platform-browser-empty b{color:#f0f2f5;font:750 12px Manrope}
+#customer-shell .platform-browser-empty p{margin:0;color:#737c87;font-size:9px}
+
+@media(max-width:1250px){#customer-shell .social-calendar-days{grid-template-columns:repeat(7,minmax(145px,1fr))!important;overflow-x:auto!important}#customer-shell .social-calendar-days>article{min-width:145px!important}#customer-shell .platform-post-row{grid-template-columns:30px minmax(220px,1fr) minmax(300px,1fr)}#customer-shell .platform-post-open{display:none}}
+@media(max-width:800px){#customer-shell .social-v4-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}#customer-shell .social-v4-stats .social-exact-stat:last-child{grid-column:1/-1}#customer-shell .platform-browser-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}#customer-shell .platform-browser-summary{grid-template-columns:repeat(3,minmax(0,1fr))}#customer-shell .platform-post-row{grid-template-columns:30px 1fr}.platform-post-metrics{grid-column:1/-1!important}.platform-browser-head{align-items:flex-start!important;flex-direction:column}}
