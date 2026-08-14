@@ -19,6 +19,16 @@ async function json(url, options = {}) {
   return data;
 }
 
+async function instagramMediaPreview(mediaId, token) {
+  if (!mediaId || !token) return { mediaUrl: '', thumbnailUrl: '' };
+  try {
+    const data = await json(`https://graph.instagram.com/${encodeURIComponent(mediaId)}?fields=media_url,thumbnail_url&access_token=${encodeURIComponent(token)}`);
+    return { mediaUrl: clean(data.media_url, 2000), thumbnailUrl: clean(data.thumbnail_url, 2000) };
+  } catch {
+    return { mediaUrl: '', thumbnailUrl: '' };
+  }
+}
+
 async function attribution(userId, mediaId) {
   if (!mediaId) return { clicks: 0, leads: 0, signups: 0 };
   const [clicks, leads, signups] = await Promise.all([
@@ -57,7 +67,7 @@ async function youtubeMetrics(connection, job) {
     const data = await json(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${encodeURIComponent(job.mediaId)}`, { headers: { Authorization: `Bearer ${connection.accessToken}` } });
     const video = data.items?.[0], stats = video?.statistics || {};
     if (!video) return { analyticsNote: 'YouTube did not return this video to the connected channel.' };
-    return { permalink: `https://www.youtube.com/watch?v=${encodeURIComponent(job.mediaId)}`, publishedAt: video.snippet?.publishedAt || job.publishedAt, views: number(stats.viewCount), reach: null, likes: number(stats.likeCount), comments: number(stats.commentCount), shares: null, saves: null };
+    return { permalink: `https://www.youtube.com/watch?v=${encodeURIComponent(job.mediaId)}`, publishedAt: video.snippet?.publishedAt || job.publishedAt, thumbnailUrl: video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url || '', views: number(stats.viewCount), reach: null, likes: number(stats.likeCount), comments: number(stats.commentCount), shares: null, saves: null };
   } catch (error) { return { analyticsNote: `YouTube analytics are temporarily unavailable: ${error.message}` }; }
 }
 
@@ -65,6 +75,7 @@ function baseVariant(job) {
   return {
     platform: clean(job.platform, 30) || 'instagram', status: clean(job.status, 30) || 'published',
     mediaId: clean(job.mediaId, 200), publishedAt: job.publishedAt || '', permalink: '',
+    mediaUrl: clean(job.mediaUrl || job.imageUrl, 2000), thumbnailUrl: clean(job.thumbnailUrl, 2000), mediaType: clean(job.mediaType, 30),
     views: null, reach: null, likes: null, comments: null, shares: null, saves: null,
     clicks: 0, leads: 0, signups: 0,
   };
@@ -86,9 +97,11 @@ export default async function handler(req, res) {
   try {
     const groups = new Map();
     const add = (key, post, variant) => {
-      const group = groups.get(key) || { id: key, groupId: post.groupId || key, title: post.title || '', text: post.text || '', mediaType: post.mediaType || 'image', mediaUrl: post.mediaUrl || post.imageUrl || '', scheduledFor: post.scheduledFor || '', publishedAt: post.publishedAt || '', platforms: [] };
+      const group = groups.get(key) || { id: key, groupId: post.groupId || key, title: post.title || '', text: post.text || '', mediaType: post.mediaType || 'image', mediaUrl: post.mediaUrl || post.imageUrl || variant.mediaUrl || '', thumbnailUrl: post.thumbnailUrl || variant.thumbnailUrl || '', scheduledFor: post.scheduledFor || '', publishedAt: post.publishedAt || '', platforms: [] };
       if (!group.text && post.text) group.text = post.text;
       if (!group.title && post.title) group.title = post.title;
+      if (!group.mediaUrl && (post.mediaUrl || post.imageUrl || variant.mediaUrl)) group.mediaUrl = post.mediaUrl || post.imageUrl || variant.mediaUrl;
+      if (!group.thumbnailUrl && (post.thumbnailUrl || variant.thumbnailUrl)) group.thumbnailUrl = post.thumbnailUrl || variant.thumbnailUrl;
       group.platforms.push(variant); groups.set(key, group);
     };
 
@@ -119,12 +132,14 @@ export default async function handler(req, res) {
       for (const post of instagram) {
         const linkedJob = allJobs.find(job => job.platform === 'instagram' && job.mediaId === post.id);
         const tracked = await attribution(user.id, post.id);
+        const preview = await instagramMediaPreview(post.id, user.meta.token);
         const variant = {
           platform: 'instagram', status: 'published', mediaId: post.id, publishedAt: post.timestamp || linkedJob?.publishedAt || '', permalink: post.permalink || '',
+          mediaUrl: linkedJob?.mediaUrl || linkedJob?.imageUrl || preview.mediaUrl || '', thumbnailUrl: preview.thumbnailUrl || '', mediaType: linkedJob?.mediaType || (post.productType === 'REELS' || post.mediaType === 'VIDEO' ? 'video' : post.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : 'image'),
           views: number(post.views), reach: number(post.reach), likes: number(post.likes), comments: number(post.comments), shares: number(post.shares), saves: number(post.saved), ...tracked,
           analyticsNote: post.insightsError ? 'Instagram did not return every metric for this post.' : '',
         };
-        add(linkedJob?.groupId || `instagram:${post.id}`, linkedJob || { id: post.id, text: post.caption || '', mediaType: post.productType === 'REELS' || post.mediaType === 'VIDEO' ? 'video' : post.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : 'image', publishedAt: post.timestamp }, variant);
+        add(linkedJob?.groupId || `instagram:${post.id}`, linkedJob || { id: post.id, text: post.caption || '', mediaType: variant.mediaType, mediaUrl: preview.mediaUrl, thumbnailUrl: preview.thumbnailUrl, publishedAt: post.timestamp }, variant);
       }
     }
 
