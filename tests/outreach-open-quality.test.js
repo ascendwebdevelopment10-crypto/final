@@ -9,6 +9,8 @@ function email(id, sentSeconds, openedSeconds, overrides = {}) {
     id,
     timestamp: base + sentSeconds * 1000,
     firstOpenedAt: base + openedSeconds * 1000,
+    lastOpenedAt: base + openedSeconds * 1000,
+    openCount: 1,
     opened: true,
     ...overrides,
   };
@@ -38,6 +40,28 @@ test('keeps an ordinary delayed open and human-confirmed engagement', () => {
 test('filters requests already identified as automated at ingestion', () => {
   const entry = email('known', 0, 420, { knownAutomatedOpenCount: 1 });
   assert.equal(automatedOpenIds([entry]).has('known'), true);
+});
+
+test('recovers a message when a scanner opens first and a later browser opens separately', () => {
+  const entry = email('scanner-then-human', 0, 8, {
+    openCount: 2,
+    knownAutomatedOpenCount: 1,
+    lastOpenedAt: base + 8 * 60 * 1000,
+  });
+  const automated = automatedOpenIds([entry]);
+  assert.equal(automated.has(entry.id), false);
+  assert.equal(likelyHumanOpen(entry, automated), true);
+});
+
+test('does not recover repeated scanner-only requests', () => {
+  const entry = email('scanner-only', 0, 8, {
+    openCount: 2,
+    knownAutomatedOpenCount: 2,
+    lastOpenedAt: base + 8 * 60 * 1000,
+  });
+  const automated = automatedOpenIds([entry]);
+  assert.equal(automated.has(entry.id), true);
+  assert.equal(likelyHumanOpen(entry, automated), false);
 });
 
 test('does not turn an open or link load into a provider delivery event', () => {
