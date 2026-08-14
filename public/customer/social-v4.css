@@ -11,22 +11,21 @@
 #customer-shell .empty-day-cta>b{width:42px;height:42px;border:1px dashed #657080;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:400}
 #customer-shell .empty-day-cta>strong{font-size:10px;color:#f2f4f7}
 #customer-shell .empty-day-cta>span{font-size:8px}
-
-/* Real creative thumbnails inside the weekly calendar */
 #customer-shell .calendar-post{position:relative!important;padding-left:50px!important;overflow:hidden!important}
 #customer-shell .calendar-post-thumb-v4{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:7px;overflow:hidden;background:#11161d;border:1px solid #ffffff14;display:block;z-index:2;box-shadow:0 4px 12px #0004}
 #customer-shell .calendar-post-thumb-v4 img,#customer-shell .calendar-post-thumb-v4 video{width:100%;height:100%;display:block;object-fit:cover;background:#0e1319}
 #customer-shell .calendar-post-thumb-v4.is-video i{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:9px;font-style:normal;text-shadow:0 1px 5px #000}
 #customer-shell .calendar-post>.calendar-post-thumb-v4+div:first-of-type:empty{display:none!important}
-
-/* Never put a second logo on whole cards. Only dedicated logo hosts render a mark. */
 #customer-shell .social-account-card[data-brand]::before,#customer-shell .social-queue-card[data-brand]::before,#customer-shell .social-performance-card[data-brand]::before,#customer-shell .social-platform-result[data-brand]::before{display:none!important;content:none!important}
-#customer-shell .social-platform-mark[data-brand]{font-size:0!important;width:38px!important;height:38px!important;display:grid!important;place-items:center!important;background:transparent!important;border:0!important}
-#customer-shell .social-platform-mark[data-brand]::before{width:34px!important;height:34px!important;flex:0 0 34px!important;margin:0!important}
+#customer-shell .social-platform-mark[data-brand]{font-size:0!important;width:38px!important;height:38px!important;display:grid!important;place-items:center!important;background:transparent!important;border:0!important;position:relative!important;overflow:hidden!important}
+#customer-shell .social-platform-mark[data-brand]::before{content:''!important;display:block!important;width:34px!important;height:34px!important;flex:0 0 34px!important;margin:0!important;border-radius:8px!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important}
+#customer-shell .social-platform-mark[data-brand="instagram"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3CradialGradient id='g' cx='30%25' cy='100%25' r='120%25'%3E%3Cstop offset='0' stop-color='%23ffd600'/%3E%3Cstop offset='.45' stop-color='%23ff0169'/%3E%3Cstop offset='1' stop-color='%23d300c5'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Crect x='5.3' y='5.3' width='13.4' height='13.4' rx='4' fill='none' stroke='white' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='3.2' fill='none' stroke='white' stroke-width='1.8'/%3E%3Ccircle cx='16.6' cy='7.6' r='1.1' fill='white'/%3E%3C/svg%3E")!important}
+#customer-shell .social-platform-mark[data-brand="facebook"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%231877f2'/%3E%3Cpath fill='white' d='M13.7 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.3-1.5 1.6-1.5H17V3.6c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1V10H8v3.1h2.6v8h3.1Z'/%3E%3C/svg%3E")!important}
+#customer-shell .social-platform-mark[data-brand="tiktok"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23050505'/%3E%3Cpath fill='%2325f4ee' d='M13.2 4.4h2.4c.2 1.7 1.2 2.8 2.8 3.2V10c-1.1 0-2-.3-2.8-.8v5.2a5.1 5.1 0 1 1-4.4-5v2.4a2.7 2.7 0 1 0 1.9 2.6V4.4Z'/%3E%3Cpath fill='%23fe2c55' d='M14.2 4.4h1.4c.2 1.7 1.2 2.8 2.8 3.2v1.2c-1.6-.4-2.7-1.4-3.2-2.8v8.4a4.5 4.5 0 0 1-4.5 4.5 4.6 4.6 0 0 1-2.5-.8c.6.4 1.4.6 2.2.6a4.5 4.5 0 0 0 4.5-4.5V6.1c-.3-.5-.5-1.1-.7-1.7Z' opacity='.85'/%3E%3C/svg%3E")!important}
+#customer-shell .social-platform-mark[data-brand="linkedin"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%230a66c2'/%3E%3Cpath fill='white' d='M6.6 8.1A1.8 1.8 0 1 0 6.6 4.5a1.8 1.8 0 0 0 0 3.6ZM5.1 19.5h3V9.8h-3v9.7Zm4.8 0h3v-4.8c0-1.3.2-2.6 1.9-2.6 1.6 0 1.7 1.6 1.7 2.7v4.7h3v-5.3c0-3.1-.7-5.4-4.2-5.4-1.7 0-2.8.9-3.3 1.8v-.8H9.9v9.7Z'/%3E%3C/svg%3E")!important}
+#customer-shell .social-platform-mark[data-brand="youtube"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23ff0000'/%3E%3Cpath d='m10 8 6 4-6 4V8Z' fill='white'/%3E%3C/svg%3E")!important}
 #customer-shell .social-queue-meta[data-brand]::before{width:26px!important;height:26px!important;flex:0 0 26px!important;margin:0!important}
 #customer-shell .calendar-platform[data-brand]::before{position:absolute!important;inset:2px!important;width:auto!important;height:auto!important;margin:0!important}
-
-/* Platform browser replaces the giant individual result cards */
 #customer-shell .social-platform-browser{padding:0!important;border:1px solid #ffffff10!important;border-radius:14px!important;overflow:hidden!important;background:#0c1117!important;box-shadow:none!important;margin-top:16px!important}
 #customer-shell .platform-browser-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border-bottom:1px solid #ffffff0d;background:#0e131a}
 #customer-shell .platform-browser-head .eyebrow{font-size:8px;letter-spacing:.14em;color:#8b93a0}
@@ -63,6 +62,5 @@
 #customer-shell .platform-browser-empty [data-brand]::before{width:34px!important;height:34px!important;margin:0 auto 4px!important}
 #customer-shell .platform-browser-empty b{color:#f0f2f5;font:750 12px Manrope}
 #customer-shell .platform-browser-empty p{margin:0;color:#737c87;font-size:9px}
-
 @media(max-width:1250px){#customer-shell .social-calendar-days{grid-template-columns:repeat(7,minmax(145px,1fr))!important;overflow-x:auto!important}#customer-shell .social-calendar-days>article{min-width:145px!important}#customer-shell .platform-post-row{grid-template-columns:72px minmax(210px,1fr) minmax(280px,1fr)}#customer-shell .platform-post-open{display:none}}
 @media(max-width:800px){#customer-shell .social-v4-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}#customer-shell .social-v4-stats .social-exact-stat:last-child{grid-column:1/-1}#customer-shell .platform-browser-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}#customer-shell .platform-browser-summary{grid-template-columns:repeat(3,minmax(0,1fr))}#customer-shell .platform-post-row{grid-template-columns:64px 1fr}#customer-shell .platform-post-thumb{width:58px;height:58px}.platform-post-metrics{grid-column:1/-1!important}.platform-browser-head{align-items:flex-start!important;flex-direction:column}}
