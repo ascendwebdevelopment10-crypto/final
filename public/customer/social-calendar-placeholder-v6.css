@@ -1,0 +1,5 @@
+/* Final calendar placeholder cleanup: only the real creative thumbnail should occupy the media slot. */
+#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4):not(.calendar-platforms):not(.calendar-platform):not(em):not(strong):not(small){display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4)::before,
+#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4)::after{display:none!important;content:none!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6{padding-left:50px!important}
