@@ -1,104 +1,38 @@
 {
   "version": 2,
   "crons": [
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 16 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 17 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 19 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 22 * * *"
-    },
-    {
-      "path": "/api/email-cron",
-      "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/social-cron",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/outreach-followup-cron",
-      "schedule": "30 18 * * 1-6"
-    }
+    {"path":"/api/email-cron","schedule":"0 14 * * *"},
+    {"path":"/api/email-cron","schedule":"0 15 * * *"},
+    {"path":"/api/email-cron","schedule":"0 16 * * *"},
+    {"path":"/api/email-cron","schedule":"0 17 * * *"},
+    {"path":"/api/email-cron","schedule":"0 18 * * *"},
+    {"path":"/api/email-cron","schedule":"0 19 * * *"},
+    {"path":"/api/email-cron","schedule":"0 20 * * *"},
+    {"path":"/api/email-cron","schedule":"0 21 * * *"},
+    {"path":"/api/email-cron","schedule":"0 22 * * *"},
+    {"path":"/api/email-cron","schedule":"0 23 * * *"},
+    {"path":"/api/social-cron","schedule":"*/5 * * * *"},
+    {"path":"/api/outreach-followup-cron","schedule":"30 18 * * 1-6"}
   ],
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "final-phi-swart.vercel.app"
-        }
-      ],
-      "destination": "https://nitrooutreach.com/:path*",
-      "permanent": true
+      "source":"/:path*",
+      "has":[{"type":"host","value":"final-phi-swart.vercel.app"}],
+      "destination":"https://nitrooutreach.com/:path*",
+      "permanent":true
     }
   ],
   "rewrites": [
-    {
-      "source": "/dashboard",
-      "destination": "/api/dashboard"
-    },
-    {
-      "source": "/logs",
-      "destination": "/api/logs"
-    },
-    {
-      "source": "/suppressed",
-      "destination": "/api/suppressed"
-    },
-    {
-      "source": "/unsubscribe",
-      "destination": "/api/unsubscribe"
-    },
-    {
-      "source": "/webhook",
-      "destination": "/api/webhook"
-    },
-    {
-      "source": "/sms-webhook",
-      "destination": "/api/sms-webhook"
-    },
-    {
-      "source": "/pipeline",
-      "destination": "/api/pipeline"
-    },
-    {
-      "source": "/reset-data",
-      "destination": "/api/reset-data"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    {"source":"/dashboard","destination":"/api/dashboard"},
+    {"source":"/logs","destination":"/api/logs"},
+    {"source":"/suppressed","destination":"/api/suppressed"},
+    {"source":"/unsubscribe","destination":"/api/unsubscribe"},
+    {"source":"/webhook","destination":"/api/webhook"},
+    {"source":"/sms-webhook","destination":"/api/sms-webhook"},
+    {"source":"/pipeline","destination":"/api/pipeline"},
+    {"source":"/reset-data","destination":"/api/reset-data"},
+    {"source":"/app","destination":"/api/customer-page?route=/app"},
+    {"source":"/app/:path*","destination":"/api/customer-page?route=/app/:path*"},
+    {"source":"/(.*)","destination":"/index.html"}
   ]
 }
