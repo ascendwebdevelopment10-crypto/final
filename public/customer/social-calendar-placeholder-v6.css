@@ -1,5 +1,13 @@
-/* Final calendar placeholder cleanup: only the real creative thumbnail should occupy the media slot. */
-#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4):not(.calendar-platforms):not(.calendar-platform):not(em):not(strong):not(small){display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
-#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4)::before,
-#customer-shell .calendar-post.calendar-no-placeholder-v6 > :empty:not(.calendar-post-thumb-v4)::after{display:none!important;content:none!important}
-#customer-shell .calendar-post.calendar-no-placeholder-v6{padding-left:50px!important}
+/* Definitive calendar media cleanup: one real creative thumbnail, no legacy icon/placeholder boxes. */
+#customer-shell .calendar-post.calendar-no-placeholder-v6{display:block!important;position:relative!important;padding:8px 8px 8px 50px!important;min-height:62px!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6::before,
+#customer-shell .calendar-post.calendar-no-placeholder-v6::after{display:none!important;content:none!important;background:none!important;border:0!important;box-shadow:none!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6>.calendar-post-thumb-v4{display:block!important;position:absolute!important;left:8px!important;top:50%!important;transform:translateY(-50%)!important;width:32px!important;height:32px!important;margin:0!important;padding:0!important;border-radius:7px!important;overflow:hidden!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6>.calendar-post-thumb-v4 img,
+#customer-shell .calendar-post.calendar-no-placeholder-v6>.calendar-post-thumb-v4 video{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6>em,
+#customer-shell .calendar-post.calendar-no-placeholder-v6>strong{display:inline-block!important;vertical-align:middle!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6>small{display:block!important;margin-top:4px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#customer-shell .calendar-post.calendar-no-placeholder-v6>.calendar-platforms{display:flex!important;gap:4px!important;margin-top:5px!important;padding:0!important}
+/* Hide any direct legacy child that is not actual post content. This kills the remaining grey square and old black icon tile. */
+#customer-shell .calendar-post.calendar-no-placeholder-v6>:not(.calendar-post-thumb-v4):not(em):not(strong):not(small):not(.calendar-platforms){display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
