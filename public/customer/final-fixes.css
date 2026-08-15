@@ -2,10 +2,11 @@
 @import url('/customer/social-redesign-v2.css?v=20260813b');
 
 body{overflow-x:hidden}
-.route-loading-shell{min-height:100vh;display:grid;place-items:center;align-content:center;gap:28px;background:radial-gradient(circle at 50% 35%,#3a211455,transparent 32%),#080605;color:#f2ece8}
-.route-loading-brand{display:flex;align-items:center;gap:12px;font:800 17px Manrope}
-.route-loading-card{display:flex;align-items:center;gap:12px;color:#8e8782;font-size:12px}
-.route-loading-card i{width:18px;height:18px;border:2px solid #3a302a;border-top-color:var(--green);border-radius:50%;animation:route-spin .8s linear infinite}
+.route-loading-shell{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;background:radial-gradient(circle at 50% 42%,rgba(58,33,20,.42),transparent 30%),linear-gradient(180deg,#090706,#080908 52%,#060606);color:#f2ece8;text-align:center}
+.route-loading-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font:800 18px Manrope;letter-spacing:-.02em}
+.route-loading-brand .brand-mark{margin:0!important;width:52px;height:52px;border-radius:16px;box-shadow:0 14px 42px rgba(255,107,0,.18),inset 0 1px 0 rgba(255,255,255,.28)}
+.route-loading-card{display:flex;align-items:center;justify-content:center;gap:10px;min-width:220px;padding:11px 16px;border:1px solid rgba(255,255,255,.07);border-radius:999px;background:rgba(255,255,255,.025);color:#8e8782;font-size:12px;box-shadow:0 16px 46px rgba(0,0,0,.22)}
+.route-loading-card i{width:16px;height:16px;flex:0 0 16px;border:2px solid #3a302a;border-top-color:var(--green);border-radius:50%;animation:route-spin .8s linear infinite}
 @keyframes route-spin{to{transform:rotate(360deg)}}
 
 /* Live /app Socials screen — match the approved command-center mockup. */
@@ -51,6 +52,9 @@ body{overflow-x:hidden}
   #customer-shell .social-queue-card{grid-template-columns:110px 120px minmax(210px,1fr) 150px 80px!important}
 }
 @media(max-width:760px){
+  .route-loading-shell{min-height:100dvh;padding:24px}
+  .route-loading-brand{font-size:17px}
+  .route-loading-card{min-width:200px}
   #customer-shell .social-overview{align-items:flex-start!important;flex-direction:column!important}
   #customer-shell .social-calendar-days{display:flex!important}
   #customer-shell .social-calendar-days>article{min-width:86%!important}
