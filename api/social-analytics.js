@@ -42,11 +42,12 @@ async function attribution(userId, mediaId) {
 async function facebookMetrics(connection, job) {
   if (!connection?.pageAccessToken || !job.mediaId) return { analyticsNote: 'Facebook has not confirmed a reportable post ID yet.' };
   const version = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
-  const fields = 'id,created_time,permalink_url,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
+  const fields = 'id,created_time,message,full_picture,permalink_url,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
   try {
     const data = await json(`https://graph.facebook.com/${version}/${encodeURIComponent(job.mediaId)}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(connection.pageAccessToken)}`);
     const result = {
       permalink: data.permalink_url || '', publishedAt: data.created_time || job.publishedAt,
+      mediaUrl: data.full_picture || job.mediaUrl || job.imageUrl || '',
       likes: number(data.reactions?.summary?.total_count),
       comments: number(data.comments?.summary?.total_count), shares: number(data.shares?.count), saves: null,
     };
@@ -54,11 +55,20 @@ async function facebookMetrics(connection, job) {
       const insightData = await json(`https://graph.facebook.com/${version}/${encodeURIComponent(job.mediaId)}/insights?metric=post_impressions,post_impressions_unique,post_clicks&access_token=${encodeURIComponent(connection.pageAccessToken)}`);
       const insight = Object.fromEntries((insightData.data || []).map(item => [item.name, number(item.values?.[0]?.value)]));
       Object.assign(result, { views: insight.post_impressions, reach: insight.post_impressions_unique, clicks: insight.post_clicks });
-    } catch (error) { result.analyticsNote = `Facebook published this post, but reach, views, and clicks need additional Page insights access: ${error.message}`; }
+    } catch (error) { result.analyticsNote = `Facebook reactions/comments are synced. Reach, views, and clicks still need Page insights access: ${error.message}`; }
     return result;
   } catch (error) {
-    return { analyticsNote: `Facebook published this post, but its insights are not available to the current Page permission: ${error.message}` };
+    return { analyticsNote: `Facebook post details are not available to the current Page permission: ${error.message}` };
   }
+}
+
+async function getRecentFacebookPosts(connection, limit = 25) {
+  if (!connection?.pageId || !connection?.pageAccessToken) return [];
+  const version = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
+  const fields = 'id,created_time,message,full_picture,permalink_url,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
+  const url = `https://graph.facebook.com/${version}/${encodeURIComponent(connection.pageId)}/posts?fields=${encodeURIComponent(fields)}&limit=${Math.max(1, Math.min(25, Number(limit) || 25))}&access_token=${encodeURIComponent(connection.pageAccessToken)}`;
+  const data = await json(url);
+  return data.data || [];
 }
 
 async function youtubeMetrics(connection, job) {
@@ -97,7 +107,7 @@ export default async function handler(req, res) {
   try {
     const groups = new Map();
     const add = (key, post, variant) => {
-      const group = groups.get(key) || { id: key, groupId: post.groupId || key, title: post.title || '', text: post.text || '', mediaType: post.mediaType || 'image', mediaUrl: post.mediaUrl || post.imageUrl || variant.mediaUrl || '', thumbnailUrl: post.thumbnailUrl || variant.thumbnailUrl || '', scheduledFor: post.scheduledFor || '', publishedAt: post.publishedAt || '', platforms: [] };
+      const group = groups.get(key) || { id: key, groupId: post.groupId || key, title: post.title || '', text: post.text || '', mediaType: post.mediaType || 'image', mediaUrl: post.mediaUrl || post.imageUrl || variant.mediaUrl || '', thumbnailUrl: post.thumbnailUrl || variant.thumbnailUrl || '', scheduledFor: post.scheduledFor || '', publishedAt: post.publishedAt || variant.publishedAt || '', platforms: [] };
       if (!group.text && post.text) group.text = post.text;
       if (!group.title && post.title) group.title = post.title;
       if (!group.mediaUrl && (post.mediaUrl || post.imageUrl || variant.mediaUrl)) group.mediaUrl = post.mediaUrl || post.imageUrl || variant.mediaUrl;
@@ -137,9 +147,31 @@ export default async function handler(req, res) {
           platform: 'instagram', status: 'published', mediaId: post.id, publishedAt: post.timestamp || linkedJob?.publishedAt || '', permalink: post.permalink || '',
           mediaUrl: linkedJob?.mediaUrl || linkedJob?.imageUrl || preview.mediaUrl || '', thumbnailUrl: preview.thumbnailUrl || '', mediaType: linkedJob?.mediaType || (post.productType === 'REELS' || post.mediaType === 'VIDEO' ? 'video' : post.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : 'image'),
           views: number(post.views), reach: number(post.reach), likes: number(post.likes), comments: number(post.comments), shares: number(post.shares), saves: number(post.saved), ...tracked,
-          analyticsNote: post.insightsError ? 'Instagram did not return every metric for this post.' : '',
+          analyticsNote: post.insightsError ? `Instagram returned the post but not every insight yet: ${post.insightsError}` : '',
         };
         add(linkedJob?.groupId || `instagram:${post.id}`, linkedJob || { id: post.id, text: post.caption || '', mediaType: variant.mediaType, mediaUrl: preview.mediaUrl, thumbnailUrl: preview.thumbnailUrl, publishedAt: post.timestamp }, variant);
+      }
+    }
+
+    if ((platform === 'all' || platform === 'facebook') && user.socialConnections?.facebook?.pageAccessToken && user.socialConnections?.facebook?.pageId) {
+      const connection = user.socialConnections.facebook;
+      try {
+        const facebookPosts = await getRecentFacebookPosts(connection, 25);
+        for (const post of facebookPosts) {
+          const linkedJob = allJobs.find(job => job.platform === 'facebook' && job.mediaId === post.id);
+          const tracked = await attribution(user.id, post.id);
+          const metrics = await facebookMetrics(connection, { mediaId: post.id, publishedAt: post.created_time, mediaUrl: post.full_picture });
+          const variant = {
+            platform: 'facebook', status: 'published', mediaId: post.id, publishedAt: post.created_time || linkedJob?.publishedAt || '', permalink: post.permalink_url || metrics.permalink || '',
+            mediaUrl: post.full_picture || linkedJob?.mediaUrl || linkedJob?.imageUrl || metrics.mediaUrl || '', thumbnailUrl: '', mediaType: linkedJob?.mediaType || 'image',
+            views: number(metrics.views), reach: number(metrics.reach), likes: number(post.reactions?.summary?.total_count ?? metrics.likes), comments: number(post.comments?.summary?.total_count ?? metrics.comments), shares: number(post.shares?.count ?? metrics.shares), saves: null,
+            clicks: Number.isFinite(number(metrics.clicks)) ? number(metrics.clicks) : tracked.clicks, leads: tracked.leads, signups: tracked.signups,
+            analyticsNote: metrics.analyticsNote || '',
+          };
+          add(linkedJob?.groupId || `facebook:${post.id}`, linkedJob || { id: post.id, text: post.message || '', mediaType: variant.mediaType, mediaUrl: variant.mediaUrl, publishedAt: post.created_time }, variant);
+        }
+      } catch (error) {
+        console.warn('Facebook recent-post sync failed:', error.message);
       }
     }
 
@@ -153,7 +185,7 @@ export default async function handler(req, res) {
       clicks: sumKnown(variants, 'clicks'), leads: sumKnown(variants, 'leads'), signups: sumKnown(variants, 'signups'),
     };
     const payload = { platform, syncedAt: new Date().toISOString(), totals, posts };
-    await kv.set(cacheKey, payload, { ex: 120 });
+    await kv.set(cacheKey, payload, { ex: 30 });
     res.status(200).json(payload);
   } catch (error) { res.status(502).json({ error: error.message || 'Social analytics could not be loaded.' }); }
 }
