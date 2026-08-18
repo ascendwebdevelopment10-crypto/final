@@ -1,20 +1,134 @@
 import { currentCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
+import { kv } from '@vercel/kv';
 
-const POSTS = [
-  { title: 'One workspace, less chaos', text: 'Five disconnected tools create five places for work to get lost. Nitro keeps your website, content, social, ads, and outreach in one workspace so the next move is always obvious.\n\nStart free: nitrooutreach.com\n\n#smallbusinessmarketing #marketingworkflow #nitrooutreach', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/01-one-workspace.jpg' },
-  { title: 'Your website should start conversations', text: 'A website should do more than exist. Build the page, see the visitor signal, and keep the follow-up moving from the same place.\n\nBuild yours with Nitro: nitrooutreach.com\n\n#businesswebsite #leadgeneration #smallbusiness', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/02-website.jpg' },
-  { title: 'Turn one idea into a week of content', text: 'One useful idea can become the hook, the post, the Reel, and the campaign. Nitro helps you keep the idea consistent without making every post feel copied.\n\n#contentmarketing #reelsstrategy #smallbusinesscontent', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/03-content.jpg' },
-  { title: 'Schedule it once', text: 'Your future self should not have to remember what needs posting tomorrow. Plan the week once, see it on the calendar, and let the queue handle the timing.\n\n#socialscheduler #contentcalendar #smallbusinessowner', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/04-social.jpg' },
-  { title: 'Follow the signal', text: 'Opened is curiosity. Clicked is intent. Replied is a conversation. Keep those signals together so the next follow-up is based on what actually happened.\n\n#outreach #salesfollowup #leadtracking', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/05-outreach.jpg' },
-  { title: 'Try one real job for free', text: '$0 to start. No card. No forced demo. Use Nitro for one real job today: build a page, make content, schedule posts, or organize outreach.\n\nnitrooutreach.com\n\n#entrepreneurtools #smallbusinessgrowth #nitrooutreach', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/06-start-free.jpg' },
-  { title: 'Marketing should feel connected', text: 'The best marketing system is the one you can actually keep using. One place for the work, one view of what happened, and one clear next action. That is the point of Nitro.\n\nStart free: nitrooutreach.com\n\n#marketingtools #businessgrowth #nitrooutreach', mediaUrl: 'https://nitrooutreach.com/icons/icon-512.png' },
+export const config = { maxDuration: 300 };
+
+const ANGLES = [
+  'contrarian opinion', 'quick practical tip', 'pain-point observation', 'before-versus-after',
+  'mini story', 'feature spotlight', 'myth versus reality', 'simple checklist',
+  'customer point of view', 'founder-style thought', 'problem/solution', 'bold one-line idea',
+];
+const VISUALS = [
+  'editorial magazine cover with oversized type and lots of negative space',
+  'photography-led composition with one strong subject and tiny supporting type',
+  'high-contrast typographic poster with no cards or dashboard UI',
+  'split-screen comparison with asymmetric text placement',
+  'minimal product-ad layout with one focal object and sparse copy',
+  'collage layout with layered paper-like crops and small annotations',
+  'bold geometric composition with large cropped lettering',
+  'clean infographic-style composition with one diagram and little text',
+  'cinematic dark composition with a single luminous focal element',
+  'bright spacious layout with a tiny headline and large visual field',
+  'retro print-ad composition with restrained texture and unusual alignment',
+  'luxury monochrome composition with elegant type and one dramatic image',
+];
+const CTAS = [
+  'Ask a short question', 'Invite the reader to try one feature', 'Use a direct Start free CTA',
+  'End with a useful takeaway and no sales CTA', 'Invite a reply', 'Point to nitrooutreach.com naturally',
 ];
 
 function id(prefix) { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`; }
 function cleanDate(value) {
   const ts = Date.parse(String(value || ''));
   return Number.isFinite(ts) && ts > Date.now() - 60_000 ? new Date(ts).toISOString() : '';
+}
+function pick(arr, used = new Set()) {
+  const options = arr.filter(x => !used.has(x));
+  const value = (options.length ? options : arr)[Math.floor(Math.random() * (options.length ? options.length : arr.length))];
+  used.add(value); return value;
+}
+function businessContext(user) {
+  const o = user.onboarding?.data || {};
+  return {
+    company: String(o.companyName || o.businessName || user.company || 'Nitro Outreach').slice(0, 120),
+    industry: String(o.industry || user.industry || 'small-business marketing software').slice(0, 120),
+    description: String(o.description || o.businessDescription || 'an all-in-one marketing workspace for websites, content, social publishing, outreach, and analytics').slice(0, 500),
+  };
+}
+async function generateCopy(prompt) {
+  if (!process.env.OPENAI_API_KEY) return '';
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini',
+      messages: [
+        { role: 'system', content: 'You write distinctive social content for real small businesses. Avoid generic AI marketing language and repetitive structures.' },
+        { role: 'user', content: prompt },
+      ],
+      max_completion_tokens: 2200,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `OpenAI text HTTP ${response.status}`);
+  return String(data?.choices?.[0]?.message?.content || '').trim();
+}
+async function generateImage(prompt) {
+  if (!process.env.OPENAI_API_KEY) return '';
+  const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1', prompt, size: '1024x1024' }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `OpenAI image HTTP ${response.status}`);
+  return String(data?.data?.[0]?.b64_json || '');
+}
+function fallbackPost(company, index, angle, cta) {
+  const hooks = [
+    `${company} should make the next marketing move easier, not add another tab.`,
+    `Consistency gets easier when the work lives in one place.`,
+    `A good marketing system removes decisions you should not have to make twice.`,
+    `The goal is not more tools. It is fewer dropped follow-ups.`,
+    `One useful idea should be able to travel further than one post.`,
+    `Your calendar should tell you what is happening before you have to remember it.`,
+    `Marketing feels lighter when creation, publishing, and results connect.`,
+  ];
+  return { title: hooks[index].slice(0, 80), text: `${hooks[index]}\n\n${cta === 'Point to nitrooutreach.com naturally' || cta === 'Use a direct Start free CTA' ? 'Start free at nitrooutreach.com\n\n' : ''}#smallbusiness #marketing #nitrooutreach` };
+}
+async function buildWeek(user) {
+  const { company, industry, description } = businessContext(user);
+  const angleUsed = new Set(), visualUsed = new Set(), ctaUsed = new Set();
+  const recipes = Array.from({ length: 7 }, () => ({ angle: pick(ANGLES, angleUsed), visual: pick(VISUALS, visualUsed), cta: pick(CTAS, ctaUsed) }));
+  const recent = (user.workspace?.socialDrafts || []).filter(x => x?.autoWeek).slice(0, 14).map(x => `${x.title || ''} ${x.text || ''}`.slice(0, 240));
+  const prompt = `Create exactly 7 genuinely different social posts for ${company}, a ${industry} business. Business description: ${description}.
+
+Each post must follow its assigned recipe below and must not reuse the same opening pattern, sentence rhythm, structure, CTA, or core idea. Do not produce seven variations of one ad. Avoid generic phrases like game changer, unlock, level up, revolutionize, are you tired of, here's the truth, and in today's fast-paced world.
+
+RECIPES:\n${recipes.map((r,i)=>`${i+1}. Angle: ${r.angle}. CTA: ${r.cta}. Visual direction: ${r.visual}.`).join('\n')}
+
+RECENT POSTS TO AVOID COPYING:\n${recent.length ? recent.join('\n---\n') : 'None'}
+
+Return ONLY JSON array with exactly 7 objects. Each object: {"title":"short calendar title","text":"ready-to-post caption with 0-4 relevant hashtags","imagePrompt":"specific visual prompt"}. The imagePrompt must visibly obey that post's assigned visual direction and should use no more than 8 words of readable text in the image. Make every image composition obviously different from every other one.`;
+  let planned = [];
+  try {
+    const raw = await generateCopy(prompt);
+    const match = raw.match(/\[[\s\S]*\]/);
+    planned = JSON.parse(match ? match[0] : raw);
+  } catch (error) {
+    console.error('social week copy generation failed:', error.message);
+  }
+  planned = Array.isArray(planned) ? planned.slice(0, 7) : [];
+  while (planned.length < 7) {
+    const i = planned.length;
+    planned.push({ ...fallbackPost(company, i, recipes[i].angle, recipes[i].cta), imagePrompt: `${recipes[i].visual}. Professional social post for ${company}. ${recipes[i].angle}. Distinct composition, no dashboard mockup, no repeated card grid.` });
+  }
+  const generated = await Promise.all(planned.map(async (post, i) => {
+    const imagePrompt = `${String(post.imagePrompt || '').slice(0,1200)}\nBrand context: ${company}, ${industry}. Visual recipe: ${recipes[i].visual}. IMPORTANT: do not imitate a previous Nitro template. Change composition, scale, text placement, background treatment, focal subject, and typography from other posts in this batch. Square social graphic, polished and publishable.`;
+    try {
+      const b64 = await generateImage(imagePrompt);
+      if (b64) {
+        const imgId = id('img');
+        await kv.set(`customer:img:${imgId}`, b64, { ex: 60 * 60 * 24 * 120 });
+        return { ...post, mediaUrl: `https://nitrooutreach.com/api/pub-image?id=${encodeURIComponent(imgId)}`, visualSignature: recipes[i].visual };
+      }
+    } catch (error) {
+      console.error('social week image generation failed:', i, error.message);
+    }
+    return { ...post, mediaUrl: `https://nitrooutreach.com/social/aug-2026/0${(i % 6) + 1}-${['one-workspace','website','content','social','outreach','start-free'][i % 6]}.jpg`, visualSignature: recipes[i].visual };
+  }));
+  return generated;
 }
 
 export default async function handler(req, res) {
@@ -32,28 +146,23 @@ export default async function handler(req, res) {
     const requestedBatch = String(req.body?.batchId || '').trim();
     const candidates = user.workspace.socialDrafts.filter(item => item?.autoWeek === true && item?.status === 'scheduled' && Date.parse(item?.scheduledFor || 0) > now);
     let batchId = requestedBatch;
-    if (!batchId && candidates.length) {
-      const latest = [...candidates].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))[0];
-      batchId = latest?.batchId || '';
-    }
+    if (!batchId && candidates.length) batchId = [...candidates].sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0))[0]?.batchId || '';
     if (!batchId) { res.status(200).json({ ok: true, removed: 0, message: 'No generated week to undo.' }); return; }
     const before = user.workspace.socialDrafts.length;
     user.workspace.socialDrafts = user.workspace.socialDrafts.filter(item => !(item?.autoWeek === true && item?.batchId === batchId && item?.status === 'scheduled' && Date.parse(item?.scheduledFor || 0) > now));
     const removed = before - user.workspace.socialDrafts.length;
     if (removed) await saveCustomer(user);
-    res.status(200).json({ ok: true, removed, batchId });
-    return;
+    res.status(200).json({ ok: true, removed, batchId }); return;
   }
 
   const plan = planFor(user.subscription?.plan);
   if (plan.id === 'free') { res.status(403).json({ error: 'Social scheduling starts on the Starter plan.' }); return; }
-
   const schedule = Array.isArray(req.body?.schedule) ? req.body.schedule.map(cleanDate).filter(Boolean).slice(0, 7) : [];
   if (schedule.length !== 7) { res.status(400).json({ error: 'Nitro needs seven valid schedule times.' }); return; }
 
   const connected = [];
   if (user.meta?.token && user.meta?.igUserId) connected.push('instagram');
-  for (const platform of ['facebook', 'linkedin', 'tiktok']) {
+  for (const platform of ['facebook','linkedin','tiktok']) {
     const c = user.socialConnections?.[platform];
     if (!c?.connected) continue;
     if (platform === 'tiktok' && c.publicPublishingApproved !== true) continue;
@@ -64,15 +173,17 @@ export default async function handler(req, res) {
   const now = Date.now();
   user.workspace.socialDrafts = user.workspace.socialDrafts.filter(item => !(item.autoWeek === true && item.status === 'scheduled' && Date.parse(item.scheduledFor || 0) > now));
 
+  const posts = await buildWeek(user);
   const batchId = id('auto_week');
   const drafts = [];
-  POSTS.forEach((post, index) => {
+  posts.forEach((post, index) => {
     const groupId = id(`week_${index + 1}`);
     for (const platform of connected) {
       drafts.push({
         id: id('social'), groupId, batchId, autoWeek: true,
-        title: post.title, text: post.text, platform,
+        title: String(post.title || '').slice(0, 120), text: String(post.text || '').slice(0, 3000), platform,
         mediaType: 'image', mediaUrl: post.mediaUrl, imageUrl: post.mediaUrl,
+        visualSignature: post.visualSignature || '',
         scheduledFor: schedule[index], status: 'scheduled', privacyLevel: 'PUBLIC_TO_EVERYONE',
         createdAt: new Date().toISOString(),
       });
@@ -80,5 +191,5 @@ export default async function handler(req, res) {
   });
   user.workspace.socialDrafts.unshift(...drafts);
   await saveCustomer(user);
-  res.status(201).json({ ok: true, batchId, days: 7, platformCount: connected.length, platforms: connected, jobs: drafts.length });
+  res.status(201).json({ ok: true, batchId, days: 7, platformCount: connected.length, platforms: connected, jobs: drafts.length, generatedFresh: true });
 }
