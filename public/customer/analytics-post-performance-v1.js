@@ -3,10 +3,18 @@
   const NAMES={all:'All posts',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',linkedin:'LinkedIn',youtube:'YouTube'};
   let active='all', loading=false, queued=false;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const known=v=>Number.isFinite(Number(v));
+  const known=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
   const fmt=v=>known(v)?Number(v).toLocaleString():'—';
   const date=v=>{const d=new Date(v||0);return Number.isNaN(d.getTime())?'':d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});};
-  const engagement=p=>['likes','comments','shares','saves'].reduce((n,k)=>n+(known(p[k])?Number(p[k]):0),0);
+  const engagement=p=>{const vals=['likes','comments','shares','saves'].filter(k=>known(p[k])).map(k=>Number(p[k]));return vals.length?vals.reduce((n,v)=>n+v,0):null;};
+  function friendlyNote(v){
+    const note=String(v.analyticsNote||'').trim();
+    if(!note)return '';
+    if(v.platform==='facebook'&&/(pages_read_user_content|Page Public Content Access|current Page permission|post details are not available|Page insights access)/i.test(note)){
+      return 'Some Facebook post metrics are unavailable with the current Meta permissions. Connected publishing still works; unavailable stats are shown as —.';
+    }
+    return note.replace(/https?:\/\/\S+/g,'').replace(/\s{2,}/g,' ').trim();
+  }
   function host(){
     const toolbar=document.querySelector('.section-toolbar');
     if(toolbar && /analytics/i.test(location.hash)) return toolbar.parentElement;
@@ -31,7 +39,7 @@
     return `<div class="app-post-metrics">${items.map(([k,val])=>`<div><small>${k}</small><strong>${fmt(val)}</strong></div>`).join('')}</div>`;
   }
   function platformRow(v){
-    const note=String(v.analyticsNote||'').trim();
+    const note=friendlyNote(v);
     return `<section class="app-post-platform" data-platform="${esc(v.platform)}"><div class="app-post-platform-head"><div><span class="app-platform-badge ${esc(v.platform)}">${esc(NAMES[v.platform]||v.platform)}</span><span class="app-status ${esc(v.status)}">${esc(v.status||'published')}</span></div>${v.permalink?`<a href="${esc(v.permalink)}" target="_blank" rel="noopener">View post ↗</a>`:''}</div>${metrics(v)}${note?`<p class="app-post-note">${esc(note)}</p>`:''}</section>`;
   }
   function card(post){
@@ -44,8 +52,9 @@
     const root=shell();if(!root)return;
     const variants=(data.posts||[]).flatMap(p=>p.platforms||[]).filter(v=>active==='all'||v.platform===active);
     const total=(key)=>{const vals=variants.map(v=>v[key]).filter(known).map(Number);return vals.length?vals.reduce((a,b)=>a+b,0):null;};
-    const eng=variants.reduce((n,v)=>n+engagement(v),0);
-    root.querySelector('.app-post-summary').innerHTML=`<div><small>Published</small><strong>${variants.filter(v=>v.status==='published').length.toLocaleString()}</strong></div><div><small>Views</small><strong>${fmt(total('views'))}</strong></div><div><small>Reach</small><strong>${fmt(total('reach'))}</strong></div><div><small>Engagement</small><strong>${variants.length?eng.toLocaleString():'—'}</strong></div><div><small>Clicks</small><strong>${fmt(total('clicks'))}</strong></div><div><small>Signups</small><strong>${fmt(total('signups'))}</strong></div>`;
+    const engVals=variants.map(engagement).filter(known).map(Number);
+    const eng=engVals.length?engVals.reduce((a,b)=>a+b,0):null;
+    root.querySelector('.app-post-summary').innerHTML=`<div><small>Published</small><strong>${variants.filter(v=>v.status==='published').length.toLocaleString()}</strong></div><div><small>Views</small><strong>${fmt(total('views'))}</strong></div><div><small>Reach</small><strong>${fmt(total('reach'))}</strong></div><div><small>Engagement</small><strong>${fmt(eng)}</strong></div><div><small>Clicks</small><strong>${fmt(total('clicks'))}</strong></div><div><small>Signups</small><strong>${fmt(total('signups'))}</strong></div>`;
     const html=(data.posts||[]).map(card).filter(Boolean).join('');
     root.querySelector('.app-post-list').innerHTML=html||`<div class="app-post-empty"><b>No published posts found for ${esc(NAMES[active])}.</b><span>Publish a post or reconnect the platform, then refresh analytics.</span></div>`;
     const btn=root.querySelector('.app-post-refresh');if(btn)btn.textContent=`Refresh stats${data.syncedAt?` · ${new Date(data.syncedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`:''}`;
