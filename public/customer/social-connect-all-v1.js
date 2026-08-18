@@ -1,0 +1,18 @@
+(()=>{
+  const order=['facebook','tiktok','linkedin','youtube'];
+  const names={facebook:'Facebook',tiktok:'TikTok',linkedin:'LinkedIn',youtube:'YouTube'};
+  const key='nitro-social-connect-all';
+  const safe=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function state(){try{return JSON.parse(sessionStorage.getItem(key)||'null')}catch{return null}}
+  function save(v){if(v)sessionStorage.setItem(key,JSON.stringify(v));else sessionStorage.removeItem(key)}
+  async function customer(){const r=await fetch('/api/customer-data',{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Could not load social connections');return d}
+  function connected(data,p){const c=data?.user?.socialConnections?.[p];return Boolean(c?.connected===true&&c?.connectionStatus!=='broken'&&c?.connectionStatus!=='expired')}
+  function nextMissing(data){return order.find(p=>!connected(data,p))||''}
+  function notice(text,type=''){let el=document.getElementById('social-connect-all-notice');if(!el){el=document.createElement('div');el.id='social-connect-all-notice';document.body.appendChild(el)}el.className='show '+type;el.textContent=text;clearTimeout(el._t);el._t=setTimeout(()=>el.className='',5000)}
+  async function continueWizard(){const s=state();if(!s?.active)return;const q=new URLSearchParams(location.search);const result=q.get('social'),platform=q.get('platform');if(result&&platform){if(result!=='connected'){save(null);notice(`${names[platform]||platform} did not connect. Fix the message shown in Social, then try Connect all again.`,'error');return}}
+    try{const data=await customer();const next=nextMissing(data);if(!next){save(null);notice('All available social accounts are connected.','success');return}save({active:true,next,startedAt:s.startedAt||Date.now()});location.href=`/api/social-connect?platform=${encodeURIComponent(next)}`;}catch(e){save(null);notice(e.message,'error')}
+  }
+  async function start(btn){btn.disabled=true;btn.textContent='Checking accounts…';try{const data=await customer();const next=nextMissing(data);if(!next){notice('All available social accounts are already connected.','success');btn.textContent='All connected';return}save({active:true,next,startedAt:Date.now()});location.href=`/api/social-connect?platform=${encodeURIComponent(next)}`;}catch(e){notice(e.message,'error');btn.disabled=false;btn.textContent='Connect all accounts'}}
+  function inject(){if(location.hash!=='#social')return;const page=document.querySelector('.socials-workspace');if(!page)return;const accounts=page.querySelector('.social-account-grid');if(!accounts||page.querySelector('[data-connect-all-social]'))return;const wrap=document.createElement('section');wrap.className='social-connect-all-card';wrap.innerHTML=`<div><span class="eyebrow">SOCIAL SETUP</span><h3>Connect every channel</h3><p>Approve each provider once. Nitro automatically moves to the next account until setup is complete.</p></div><button type="button" class="btn btn-primary" data-connect-all-social>Connect all accounts</button>`;accounts.before(wrap);wrap.querySelector('button').onclick=e=>start(e.currentTarget)}
+  let t;const schedule=()=>{clearTimeout(t);t=setTimeout(inject,120)};new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});addEventListener('hashchange',schedule);addEventListener('load',()=>{schedule();setTimeout(continueWizard,250)});schedule();setTimeout(continueWizard,350);
+})();
