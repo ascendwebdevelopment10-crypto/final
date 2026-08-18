@@ -39,38 +39,6 @@ async function attribution(userId, mediaId) {
   return { clicks: Number(clicks || 0), leads: Number(leads || 0), signups: Number(signups || 0) };
 }
 
-async function facebookMetrics(connection, job) {
-  if (!connection?.pageAccessToken || !job.mediaId) return { analyticsNote: 'Facebook has not confirmed a reportable post ID yet.' };
-  const version = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
-  const fields = 'id,created_time,message,full_picture,permalink_url,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
-  try {
-    const data = await json(`https://graph.facebook.com/${version}/${encodeURIComponent(job.mediaId)}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(connection.pageAccessToken)}`);
-    const result = {
-      permalink: data.permalink_url || '', publishedAt: data.created_time || job.publishedAt,
-      mediaUrl: data.full_picture || job.mediaUrl || job.imageUrl || '',
-      likes: number(data.reactions?.summary?.total_count),
-      comments: number(data.comments?.summary?.total_count), shares: number(data.shares?.count), saves: null,
-    };
-    try {
-      const insightData = await json(`https://graph.facebook.com/${version}/${encodeURIComponent(job.mediaId)}/insights?metric=post_impressions,post_impressions_unique,post_clicks&access_token=${encodeURIComponent(connection.pageAccessToken)}`);
-      const insight = Object.fromEntries((insightData.data || []).map(item => [item.name, number(item.values?.[0]?.value)]));
-      Object.assign(result, { views: insight.post_impressions, reach: insight.post_impressions_unique, clicks: insight.post_clicks });
-    } catch (error) { result.analyticsNote = `Facebook reactions/comments are synced. Reach, views, and clicks still need Page insights access: ${error.message}`; }
-    return result;
-  } catch (error) {
-    return { analyticsNote: `Facebook post details are not available to the current Page permission: ${error.message}` };
-  }
-}
-
-async function getRecentFacebookPosts(connection, limit = 25) {
-  if (!connection?.pageId || !connection?.pageAccessToken) return [];
-  const version = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
-  const fields = 'id,created_time,message,full_picture,permalink_url,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
-  const url = `https://graph.facebook.com/${version}/${encodeURIComponent(connection.pageId)}/posts?fields=${encodeURIComponent(fields)}&limit=${Math.max(1, Math.min(25, Number(limit) || 25))}&access_token=${encodeURIComponent(connection.pageAccessToken)}`;
-  const data = await json(url);
-  return data.data || [];
-}
-
 async function youtubeMetrics(connection, job) {
   if (!connection?.accessToken || !job.mediaId) return { analyticsNote: 'YouTube has not confirmed a reportable video ID yet.' };
   try {
@@ -89,6 +57,14 @@ function baseVariant(job) {
     views: null, reach: null, likes: null, comments: null, shares: null, saves: null,
     clicks: 0, leads: 0, signups: 0,
   };
+}
+
+function mergeVariant(existing, incoming) {
+  const merged = { ...existing };
+  for (const [key, value] of Object.entries(incoming || {})) {
+    if (value !== null && value !== undefined && value !== '') merged[key] = value;
+  }
+  return merged;
 }
 
 export default async function handler(req, res) {
@@ -112,7 +88,12 @@ export default async function handler(req, res) {
       if (!group.title && post.title) group.title = post.title;
       if (!group.mediaUrl && (post.mediaUrl || post.imageUrl || variant.mediaUrl)) group.mediaUrl = post.mediaUrl || post.imageUrl || variant.mediaUrl;
       if (!group.thumbnailUrl && (post.thumbnailUrl || variant.thumbnailUrl)) group.thumbnailUrl = post.thumbnailUrl || variant.thumbnailUrl;
-      group.platforms.push(variant); groups.set(key, group);
+      if (!group.publishedAt && (post.publishedAt || variant.publishedAt)) group.publishedAt = post.publishedAt || variant.publishedAt;
+
+      const samePlatformIndex = group.platforms.findIndex(item => item.platform === variant.platform && (!item.mediaId || !variant.mediaId || item.mediaId === variant.mediaId));
+      if (samePlatformIndex >= 0) group.platforms[samePlatformIndex] = mergeVariant(group.platforms[samePlatformIndex], variant);
+      else group.platforms.push(variant);
+      groups.set(key, group);
     };
 
     const systemJobs = [];
@@ -125,12 +106,15 @@ export default async function handler(req, res) {
         for (const [jobPlatform, saved] of Object.entries(savedPlatforms)) systemJobs.push({ id: `${post.id}:${jobPlatform}`, groupId: post.id, text: post.caption, title: 'Nitro campaign post', mediaType: 'image', mediaUrl: `https://nitrooutreach.com${post.imagePath}`, scheduledFor: post.scheduledFor, platform: jobPlatform, ...saved });
       }
     }
+
     const allJobs = [...(user.workspace?.socialDrafts || []), ...systemJobs];
     const jobs = allJobs.filter(job => ['published', 'publishing', 'failed'].includes(job.status) && (platform === 'all' || job.platform === platform));
     for (const job of jobs) {
       const variant = baseVariant(job), connection = user.socialConnections?.[job.platform];
       Object.assign(variant, await attribution(user.id, job.mediaId));
-      if (job.platform === 'facebook' && job.status === 'published') Object.assign(variant, await facebookMetrics(connection, job));
+      if (job.platform === 'facebook' && job.status === 'published') {
+        variant.analyticsNote = 'Facebook publishing is connected. Detailed post metrics are unavailable until Meta grants the additional Page analytics permission.';
+      }
       if (job.platform === 'youtube' && job.status === 'published') Object.assign(variant, await youtubeMetrics(connection, job));
       if (job.platform === 'tiktok' && job.status === 'published') variant.analyticsNote = 'TikTok publishing is confirmed. Public performance metrics require the separate video.list approval.';
       if (job.platform === 'linkedin' && job.status === 'published') variant.analyticsNote = 'LinkedIn publishing is confirmed. Member-post analytics require additional LinkedIn approval.';
@@ -150,28 +134,6 @@ export default async function handler(req, res) {
           analyticsNote: post.insightsError ? `Instagram returned the post but not every insight yet: ${post.insightsError}` : '',
         };
         add(linkedJob?.groupId || `instagram:${post.id}`, linkedJob || { id: post.id, text: post.caption || '', mediaType: variant.mediaType, mediaUrl: preview.mediaUrl, thumbnailUrl: preview.thumbnailUrl, publishedAt: post.timestamp }, variant);
-      }
-    }
-
-    if ((platform === 'all' || platform === 'facebook') && user.socialConnections?.facebook?.pageAccessToken && user.socialConnections?.facebook?.pageId) {
-      const connection = user.socialConnections.facebook;
-      try {
-        const facebookPosts = await getRecentFacebookPosts(connection, 25);
-        for (const post of facebookPosts) {
-          const linkedJob = allJobs.find(job => job.platform === 'facebook' && job.mediaId === post.id);
-          const tracked = await attribution(user.id, post.id);
-          const metrics = await facebookMetrics(connection, { mediaId: post.id, publishedAt: post.created_time, mediaUrl: post.full_picture });
-          const variant = {
-            platform: 'facebook', status: 'published', mediaId: post.id, publishedAt: post.created_time || linkedJob?.publishedAt || '', permalink: post.permalink_url || metrics.permalink || '',
-            mediaUrl: post.full_picture || linkedJob?.mediaUrl || linkedJob?.imageUrl || metrics.mediaUrl || '', thumbnailUrl: '', mediaType: linkedJob?.mediaType || 'image',
-            views: number(metrics.views), reach: number(metrics.reach), likes: number(post.reactions?.summary?.total_count ?? metrics.likes), comments: number(post.comments?.summary?.total_count ?? metrics.comments), shares: number(post.shares?.count ?? metrics.shares), saves: null,
-            clicks: Number.isFinite(number(metrics.clicks)) ? number(metrics.clicks) : tracked.clicks, leads: tracked.leads, signups: tracked.signups,
-            analyticsNote: metrics.analyticsNote || '',
-          };
-          add(linkedJob?.groupId || `facebook:${post.id}`, linkedJob || { id: post.id, text: post.message || '', mediaType: variant.mediaType, mediaUrl: variant.mediaUrl, publishedAt: post.created_time }, variant);
-        }
-      } catch (error) {
-        console.warn('Facebook recent-post sync failed:', error.message);
       }
     }
 
