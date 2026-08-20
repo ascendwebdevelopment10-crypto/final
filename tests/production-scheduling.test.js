@@ -75,7 +75,8 @@ test('cross-platform analytics groups one creative into honest per-platform resu
     readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../public/customer/app.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(analytics, /facebookMetrics/);
+  assert.doesNotMatch(analytics, /facebookMetrics/);
+  assert.match(analytics, /Detailed post metrics are unavailable/);
   assert.match(analytics, /youtubeMetrics/);
   assert.match(analytics, /groupId/);
   assert.match(client, /data-social-analytics-platform/);
