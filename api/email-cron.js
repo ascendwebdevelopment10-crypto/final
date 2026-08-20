@@ -2,7 +2,7 @@ import { logEmail, isSuppressed, markEmailed, wasEmailed } from '../lib/store.js
 import { sendEmail } from '../lib/mailer.js';
 import { outreachTokenFor, tokenFor } from '../lib/sign.js';
 import { kv } from '@vercel/kv';
-import { fetchOsmLeadPool, OSM_TAGS } from '../lib/leads.js';
+import { fetchOsmLeadPool, OUTREACH_OSM_TAGS } from '../lib/leads.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
 import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
@@ -17,9 +17,10 @@ const PHYSICAL_ADDRESS = '791 S 140 E, Farmington, UT 84025';
 const CRON_SECRET = process.env.CRON_SECRET;
 const EMAIL_CAP = 10;   // 10/run x 9 runs/day = 90/day, stays under Resend free cap (100/day)
 const DAILY_EMAIL_CAP = 90;
-const POOL_COUNT = 4;
-const POOL_SIZE = 45;
+const POOL_COUNT = 8;
+const POOL_SIZE = 60;
 const DISCOVERY_WAVE_SIZE = 16;
+const MAX_WEBSITES_CHECKED = 96;
 
 const BCC_PREVIEW_EMAIL = 'no-reply@nitrooutreach.app';
 const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
@@ -184,17 +185,17 @@ async function generateEmail(contact) {
   const angle = replyAngle(contact.industry);
 
   const subjects = [
-    'I’ll build the first one for ' + company,
-    company + ' — want me to set this up?',
-    'A free Nitro setup for ' + company,
-    'Can I build this for ' + company + '?'
+    'A simpler marketing setup for ' + company,
+    'One place for ' + company + ' marketing',
+    'Could Nitro help ' + company + '?',
+    company + ' marketing, in one place'
   ];
   const subject = subjects[Math.floor(Math.random() * subjects.length)];
   const opener = 'Hi ' + company + ' team,';
   const bodies = [
-    opener + '\n\nI came across ' + company + ' while looking at independent businesses that could ' + angle + '. I built Nitro to turn one offer into a website, social content, and tracked outreach without juggling separate tools.\n\nI’ll personally build your first page or post around ' + company + ' for free. No card and no forced demo. Reply “build it” or create the free account here: https://nitrooutreach.com',
-    opener + '\n\nNitro gives small businesses one place to build a website, create posts, run outreach, and see what brings people back. I thought it could be a strong fit for ' + company + ' because it is designed to help teams ' + angle + '.\n\nWant me to set up the first real example for you free? Reply “yes,” or start the account with no card here: https://nitrooutreach.com',
-    opener + '\n\nI’m offering a hands-on first setup to a few independent businesses. If you create a free Nitro account, I’ll build ' + company + '’s first website page or social post myself so you can judge the actual result.\n\nThere is no card and no sales call required. If you want one, reply “yes” or start here: https://nitrooutreach.com'
+    opener + '\n\nNitro is an all-in-one marketing workspace for small businesses. It lets you build a website, create and schedule social posts, run tracked outreach, and see visits and engagement in one place.\n\nFor ' + company + ', that can make it easier to ' + angle + ' without paying for or switching between separate tools. You can start free with no card and try it on a real part of your marketing.\n\nnitrooutreach.com',
+    opener + '\n\nNitro brings website building, social content, scheduling, outreach, and analytics into one workspace built for small businesses.\n\nIt could help ' + company + ' ' + angle + ', while keeping the work and the results together instead of spread across different apps. The free account does not require a card.\n\nnitrooutreach.com',
+    opener + '\n\nNitro helps small businesses create a website, make and schedule content, send tracked outreach, and understand which activity brings people back.\n\nFor ' + company + ', that means one simpler system to ' + angle + '. You can see how it works and start free here:\n\nnitrooutreach.com'
   ];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 
@@ -220,7 +221,7 @@ export default async function handler(req, res) {
     const webhook = await ensureOutreachWebhook();
     if (webhook.status !== 'active') errors.push({ type: 'webhook', error: webhook.status });
     const batches = await Promise.allSettled(
-      Array.from({ length: POOL_COUNT }, (_, index) => fetchOsmLeadPool(OSM_TAGS, POOL_SIZE, index))
+      Array.from({ length: POOL_COUNT }, (_, index) => fetchOsmLeadPool(OUTREACH_OSM_TAGS, POOL_SIZE, index))
     );
     const rawLeads = batches.flatMap(b => b.status === 'fulfilled' ? b.value : []);
     const leads = [];
@@ -251,8 +252,9 @@ export default async function handler(req, res) {
 
     const websites = leads.filter(c => !c.email && normalizeWebsite(c.website_url));
     let websitesChecked = 0;
-    for (let offset = 0; offset < websites.length && emailableLeads.length < EMAIL_CAP; offset += DISCOVERY_WAVE_SIZE) {
-      const wave = websites.slice(offset, offset + DISCOVERY_WAVE_SIZE);
+    for (let offset = 0; offset < websites.length && emailableLeads.length < EMAIL_CAP && websitesChecked < MAX_WEBSITES_CHECKED; offset += DISCOVERY_WAVE_SIZE) {
+      const remainingChecks = MAX_WEBSITES_CHECKED - websitesChecked;
+      const wave = websites.slice(offset, offset + Math.min(DISCOVERY_WAVE_SIZE, remainingChecks));
       const found = await Promise.all(wave.map(async contact => ({ contact, email: await discoverEmail(contact.website_url) })));
       websitesChecked += wave.length;
       for (const { contact, email } of found) {
@@ -266,7 +268,9 @@ export default async function handler(req, res) {
       fetched: rawLeads.length,
       uniqueBusinesses: leads.length,
       websitesChecked,
+      maxWebsitesChecked: MAX_WEBSITES_CHECKED,
       eligibleEmails: emailableLeads.length,
+      sourcePoolsRequested: POOL_COUNT,
       sourcePoolsSucceeded: batches.filter(b => b.status === 'fulfilled').length,
     }));
 
@@ -294,7 +298,7 @@ export default async function handler(req, res) {
         // being exposed as a multi-line query string in the email body.
         const textBody = body;
         const emailHtml = escapeHtml(body)
-          .replaceAll('https://nitrooutreach.com', '<a href="' + escapeHtml(siteUrl) + '" style="display:inline-block;margin-top:6px;padding:11px 18px;border-radius:9px;background:#111827;color:#ffffff;font-weight:800;text-decoration:none">Start free</a>')
+          .replaceAll('nitrooutreach.com', '<a href="' + escapeHtml(siteUrl) + '" style="color:#111827;font-weight:700;text-decoration:underline">nitrooutreach.com</a>')
           .replace(/\n/g, '<br>');
         const openPixelUrl = 'https://nitrooutreach.com/api/track-open?id=' + encodeURIComponent(trackingId);
         const footerText = '\n\n--\nTy Smith, Owner\nNitro Outreach\n' + PHYSICAL_ADDRESS + '\nUnsubscribe: ' + unsubscribeUrl;
