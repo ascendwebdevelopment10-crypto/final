@@ -204,10 +204,22 @@ test('owner visitors stay separate and show business location apart from detecte
 
 test('outreach emails hide the long attribution URL behind a short CTA', async () => {
   const source = await read('../api/email-cron.js');
-  assert.match(source, />Start free<\/a>/);
+  assert.match(source, />nitrooutreach\.com<\/a>/);
+  assert.match(source, /You can start free with no card/);
+  assert.doesNotMatch(source, /I[’']m offering a hands-on first setup/);
+  assert.doesNotMatch(source, /I[’']ll personally build your first/);
   assert.match(source, /text: textBody \+ footerText/);
   assert.match(source, /body: textBody/);
   assert.doesNotMatch(source, /const trackedBody = body\.replaceAll/);
+});
+
+test('outreach lead discovery searches enough qualified businesses to fill each run', async () => {
+  const source = await read('../api/email-cron.js');
+  assert.match(source, /OUTREACH_OSM_TAGS/);
+  assert.match(source, /const POOL_COUNT = 8/);
+  assert.match(source, /const POOL_SIZE = 60/);
+  assert.match(source, /const MAX_WEBSITES_CHECKED = 96/);
+  assert.match(source, /websitesChecked < MAX_WEBSITES_CHECKED/);
 });
 
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {
