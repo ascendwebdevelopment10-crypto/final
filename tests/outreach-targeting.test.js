@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
+import { OUTREACH_OSM_TAGS } from '../lib/leads.js';
 
 test('prioritizes owner-operated categories with high reply potential', () => {
   assert.equal(qualifyOutreachContact({ organization_name: 'Peak Detail', industry: 'car_wash' }), 'Owner-operated service business');
@@ -31,4 +32,11 @@ test('keeps business-owned and public inboxes but rejects unrelated vendor addre
   assert.equal(emailMatchesBusinessWebsite('support@bloomnation.com', 'https://beaumontflorist.com'), false);
   assert.equal(emailMatchesBusinessWebsite('accessibility@hidethellama.com', 'https://taronbakery.com'), false);
   assert.equal(emailMatchesBusinessWebsite('abc123@sentry.wixpress.com', 'https://localshop.com'), false);
+});
+
+test('lead discovery only requests categories accepted by outreach targeting', () => {
+  for (const tag of OUTREACH_OSM_TAGS) {
+    const industry = tag.split('=')[1];
+    assert.ok(qualifyOutreachContact({ organization_name: 'Independent Business', industry }), tag);
+  }
 });
