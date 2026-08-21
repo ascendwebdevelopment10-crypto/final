@@ -72,14 +72,14 @@ test('public marketing removes customer Reel generation and matches the implemen
 test('owner publishing queue and all three DM response scripts are visible in the workspace', async () => {
   const client = await read('../public/customer/app.js');
   assert.match(client, /NITRO_CAMPAIGN_QUEUE=\[/);
-  assert.equal((client.match(/'2026-08-[a-z-]+'/g) || []).length, 6);
+  assert.equal((client.match(/'2026-08-[a-z-]+'/g) || []).length, 9);
   assert.match(client, /social-queue-grid/);
   assert.match(client, /Scheduled post preview/);
   for (const intent of ['Interested', 'Unsure', 'Not interested']) assert.match(client, new RegExp(`\\['${intent}'`));
   assert.match(client, /data-copy-dm/);
 });
 
-test('outreach conversion path includes a focused landing page, full funnel tracking, and beta pipeline', async () => {
+test('outreach conversion path includes a focused landing page, full funnel tracking, and warm-lead pipeline', async () => {
   const [app, css, followup, cron] = await Promise.all([
     read('../public/customer/app.js'), read('../public/customer/app.css'),
     read('../api/outreach-followup-cron.js'), read('../vercel.json'),
@@ -95,10 +95,15 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(app, /trackFunnelStage\('signup_viewed'\)/);
   assert.match(app, /trackFunnelStage\('signup_started'\)/);
   assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
-  assert.match(app, /Three-business beta pipeline/);
+  assert.match(app, /Warm lead pipeline/);
   assert.match(css, /\.beta-candidate-grid/);
-  assert.match(followup, /email:confirmed-visits:first/);
-  assert.match(followup, /engaged_followup/);
+  assert.match(followup, /chooseFollowupCandidates/);
+  assert.match(followup, /human-open-followup/);
+  assert.match(followup, /confirmed-visit-followup/);
+  assert.match(followup, /final-followup/);
+  assert.match(followup, />nitrooutreach\.com<\/a>/);
+  assert.match(followup, /791 S 140 E, Farmington, UT 84025/);
+  assert.doesNotMatch(followup, /personally build|hands-on first setup|Reply [“"]build it/i);
   assert.match(cron, /outreach-followup-cron/);
 });
 

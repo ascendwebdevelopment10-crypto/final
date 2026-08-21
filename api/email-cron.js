@@ -5,7 +5,7 @@ import { kv } from '@vercel/kv';
 import { fetchOsmLeadPool, OUTREACH_OSM_TAGS } from '../lib/leads.js';
 import { isLikelyRealEmail } from '../lib/email-validate.js';
 import { ensureOutreachWebhook } from '../lib/outreach-webhook.js';
-import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
+import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle, websiteOpportunity } from '../lib/outreach-targeting.js';
 
 export const config = { maxDuration: 300 };
 
@@ -182,7 +182,7 @@ function normalizeContact(place) {
 async function generateEmail(contact) {
   const company = contact.organization_name || 'your business';
   const service = contact.targetSegment === 'Solo / small agency' ? 'agency' : pickService();
-  const angle = replyAngle(contact.industry);
+  const angle = contact.marketingOpportunity || replyAngle(contact.industry);
 
   const subjects = [
     'A simpler marketing setup for ' + company,
@@ -274,9 +274,13 @@ export default async function handler(req, res) {
       sourcePoolsSucceeded: batches.filter(b => b.status === 'fulfilled').length,
     }));
 
-    const emailContents = await Promise.all(emailableLeads.map(c => generateEmail(c).catch(e => ({ error: e.message }))));
+    const inspectedLeads = await Promise.all(emailableLeads.map(async contact => {
+      const page = await fetchHtml(normalizeWebsite(contact.website_url));
+      return { ...contact, marketingOpportunity: websiteOpportunity(page?.html, contact.industry) };
+    }));
+    const emailContents = await Promise.all(inspectedLeads.map(c => generateEmail(c).catch(e => ({ error: e.message }))));
 
-    const sendResults = await Promise.all(emailableLeads.map(async (contact, i) => {
+    const sendResults = await Promise.all(inspectedLeads.map(async (contact, i) => {
       const content = emailContents[i];
       if (content.error) return { error: content.error };
       let dailyKey = null;

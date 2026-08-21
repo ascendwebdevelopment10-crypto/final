@@ -363,12 +363,25 @@ export default async function handler(req, res) {
     }
 
     if (action === 'outreach') {
-      const [allLog, allReplies, events, engagement, webhook, resendEvents, confirmedCounts, confirmedFirst, confirmedLast, confirmedReasons, confirmedUrls] = await Promise.all([
+      const [allLog, allReplies, events, engagement, webhook, resendEvents, confirmedCounts, confirmedFirst, confirmedLast, confirmedReasons, confirmedUrls, rawOutreachSignups] = await Promise.all([
         getEmailLog(null), getReplies(1000), getEmailEvents(), getEmailEngagement(), ensureOutreachWebhook(), recentResendEvents(),
         kv.hgetall('email:confirmed-visits:count'), kv.hgetall('email:confirmed-visits:first'),
         kv.hgetall('email:confirmed-visits:last'), kv.hgetall('email:confirmed-visits:reason'),
-        kv.hgetall('email:confirmed-visits:url'),
+        kv.hgetall('email:confirmed-visits:url'), kv.hgetall('outreach:signups'),
       ]);
+      const outreachSignups = {};
+      for (const [id, value] of Object.entries(rawOutreachSignups || {})) {
+        if (typeof value === 'object' && value) outreachSignups[id] = value;
+        else { try { outreachSignups[id] = JSON.parse(value); } catch {} }
+      }
+      const signupValues = Object.values(outreachSignups);
+      const paidChecks = await Promise.all(signupValues.map(async signup => {
+        const customerId = signup.customerId || await kv.get(`customer:email:${String(signup.email || '').toLowerCase()}`);
+        if (!customerId) return false;
+        let user = await kv.get(`customer:user:${customerId}`);
+        if (typeof user === 'string') { try { user = JSON.parse(user); } catch { user = null; } }
+        return user?.subscription?.billingMode === 'stripe' && user?.subscription?.status === 'active';
+      }));
       const replies = allReplies.filter(reply => Number(reply.timestamp || 0) >= OUTREACH_TRACKING_START);
       const repliesBySender = new Map();
       for (const reply of replies) {
@@ -428,6 +441,7 @@ export default async function handler(req, res) {
             confirmedPath: confirmedUrls?.[entry.id] || '',
             replied: !!reply,
             reply: reply ? { from: reply.from, subject: reply.subject, body: reply.body, timestamp: reply.timestamp } : null,
+            signup: outreachSignups[entry.id] || null,
           };
         });
       const automatedOpens = automatedOpenIds(log);
@@ -484,6 +498,9 @@ export default async function handler(req, res) {
           visitedSite: confirmedVisits,
           failed,
           todayFailed,
+          signups: signupValues.length,
+          paid: paidChecks.filter(Boolean).length,
+          visitToSignupRate: confirmedVisits ? Math.round((signupValues.length / confirmedVisits) * 1000) / 10 : 0,
         },
       });
       return;

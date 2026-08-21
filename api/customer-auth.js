@@ -11,6 +11,7 @@ import { verifyPassword as verifyAdminPassword, makeSessionCookie as makeAdminSe
 import { notifyBestEffort } from '../lib/ntfy.js';
 import { recordFunnelEvent } from '../lib/funnel.js';
 import { socialAttributionFromRequest } from '../lib/social-links.js';
+import { outreachTokenValid } from '../lib/sign.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function esc(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -44,6 +45,9 @@ export default async function handler(req, res) {
     if (action === 'signup') {
       if (!(await rateLimit('signup:' + ip, 8, 3600))) { res.status(429).json({ error: 'Too many signup attempts. Try again later.' }); return; }
       const email = normalizeEmail(body.email);
+      const outreachId = clean(body.outreachId, 180);
+      const outreachToken = clean(body.outreachToken, 180);
+      const validOutreachAttribution = Boolean(outreachId && outreachToken && outreachTokenValid(outreachId, outreachToken));
       const issue = passwordIssue(body.password);
       if (!validEmail(email)) { res.status(400).json({ error: 'Enter a valid email address' }); return; }
       if (issue) { res.status(400).json({ error: issue }); return; }
@@ -58,12 +62,15 @@ export default async function handler(req, res) {
         subscription: { plan: 'free', interval: 'monthly', status: 'active', billingMode: 'free', cancelAtPeriodEnd: false, startedAt: now },
         usage: { aiUsed: 0, contentCredits: 5, websites: 0, storageBytes: 0 },
         preferences: { productUpdates: true, activityAlerts: true, billingEmails: true, weeklyReport: true },
+        acquisition: validOutreachAttribution ? { source: 'outreach', outreachId, capturedAt: now } : undefined,
       };
       await saveCustomer(user);
       const visitorId = clean(body.visitorId, 100).replace(/[^a-zA-Z0-9_-]/g, '');
       const socialAttribution = socialAttributionFromRequest(req);
       try {
-        await recordFunnelEvent('account_created', visitorId ? `visitor:${visitorId}` : `customer:${user.id}`, { email: user.email, path: '/signup', source: socialAttribution ? `instagram:post:${socialAttribution.mediaId}` : '' });
+        const source = validOutreachAttribution ? `outreach:${outreachId}` : socialAttribution ? `instagram:post:${socialAttribution.mediaId}` : '';
+        await recordFunnelEvent('account_created', visitorId ? `visitor:${visitorId}` : `customer:${user.id}`, { email: user.email, path: '/signup', source });
+        if (validOutreachAttribution) await kv.hset('outreach:signups', { [outreachId]: JSON.stringify({ outreachId, email: user.email, customerId: user.id, at: now }) });
         if (socialAttribution) {
           const conversionKey = `customer:social-signup-dedupe:${socialAttribution.userId}:${socialAttribution.mediaId}:${user.id}`;
           if (await kv.set(conversionKey, '1', { nx: true })) await kv.incr(`customer:social-signups:${socialAttribution.userId}:${socialAttribution.mediaId}`);

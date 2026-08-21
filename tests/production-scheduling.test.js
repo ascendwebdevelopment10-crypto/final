@@ -116,11 +116,13 @@ test('Instagram analytics includes comparisons and post-level lead/signup attrib
   assert.match(auth, /customer:social-signups/);
 });
 
-test('Nitro campaign schedules six daily posts with deployable media', async () => {
-  assert.equal(NITRO_SOCIAL_CAMPAIGN.length, 6);
+test('Nitro campaign schedules the original and current acquisition posts with deployable media', async () => {
+  assert.equal(NITRO_SOCIAL_CAMPAIGN.length, 9);
   assert.deepEqual(
     NITRO_SOCIAL_CAMPAIGN.map(post => post.scheduledFor),
-    [13, 14, 15, 16, 17, 18].map(day => `2026-08-${day}T17:30:00.000Z`),
+    [13, 14, 15, 16, 17, 18].map(day => `2026-08-${day}T17:30:00.000Z`).concat([
+      '2026-08-22T18:30:00.000Z', '2026-08-23T18:30:00.000Z', '2026-08-24T18:30:00.000Z',
+    ]),
   );
   for (const post of NITRO_SOCIAL_CAMPAIGN) {
     assert.match(post.caption, /\S/);

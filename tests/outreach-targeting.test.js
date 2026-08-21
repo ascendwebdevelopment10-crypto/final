@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle } from '../lib/outreach-targeting.js';
+import { emailMatchesBusinessWebsite, isQualifiedOutreachEmail, qualifyOutreachContact, replyAngle, websiteOpportunity } from '../lib/outreach-targeting.js';
 import { OUTREACH_OSM_TAGS } from '../lib/leads.js';
 
 test('prioritizes owner-operated categories with high reply potential', () => {
@@ -11,6 +11,7 @@ test('prioritizes owner-operated categories with high reply potential', () => {
   assert.equal(qualifyOutreachContact({ organization_name: 'Silicon Labs', industry: 'it' }), null);
   assert.equal(qualifyOutreachContact({ organization_name: 'AlphaGraphics Downtown', industry: 'advertising_agency' }), null);
   assert.equal(qualifyOutreachContact({ organization_name: 'State University Florist', industry: 'florist' }), null);
+  assert.equal(qualifyOutreachContact({ organization_name: 'Peak Plumbing', industry: 'plumber' }), 'Owner-operated service business');
 });
 
 test('rejects low-intent departmental inboxes', () => {
@@ -24,6 +25,13 @@ test('uses an industry-specific reason to reply', () => {
   assert.match(replyAngle('hairdresser'), /consistent posts/);
   assert.match(replyAngle('car_wash'), /before-and-after/);
   assert.match(replyAngle('advertising_agency'), /client websites/);
+  assert.match(replyAngle('roofer'), /completed work/);
+});
+
+test('uses observable website gaps for careful personalization', () => {
+  assert.match(websiteOpportunity('<html><body>Call us</body></html>', 'florist'), /mobile/);
+  assert.match(websiteOpportunity('<meta name="viewport" content="width=device-width"><p>Welcome</p>', 'florist'), /clearer next step/);
+  assert.match(websiteOpportunity('<meta name="viewport" content="width=device-width"><a>Book now</a>', 'florist'), /social content/);
 });
 
 test('keeps business-owned and public inboxes but rejects unrelated vendor addresses', () => {
