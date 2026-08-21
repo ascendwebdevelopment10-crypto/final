@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     let cancelled = 0;
     for (const item of drafts) {
       const matches = groupId ? item.groupId === groupId : item.id === id;
-      if (!matches || item.status !== 'scheduled' || Date.parse(item.scheduledFor || 0) <= Date.now()) continue;
+      if (!matches || !['scheduled', 'failed'].includes(item.status) || Date.parse(item.scheduledFor || 0) <= Date.now()) continue;
       item.status = 'cancelled'; item.cancelledAt = new Date().toISOString(); item.updatedAt = item.cancelledAt; cancelled += 1;
     }
     if (!cancelled) { res.status(404).json({ error: 'That scheduled post could not be found or can no longer be cancelled.' }); return; }
@@ -40,16 +40,22 @@ export default async function handler(req, res) {
   let matchedGroup = '';
   for (const item of drafts) {
     const matches = groupId ? item.groupId === groupId : item.id === id;
-    if (!matches || item.status !== 'scheduled') continue;
+    if (!matches || !['scheduled', 'failed'].includes(item.status)) continue;
     if (Date.parse(item.scheduledFor || 0) <= Date.now()) continue;
+    if (item.contentSafetyFailed === true) continue;
     if (title !== null) item.title = title || item.title;
     if (text !== null) item.text = text;
     if (scheduledFor !== null) item.scheduledFor = scheduledFor;
+    if (item.status === 'failed') {
+      item.status = 'scheduled';
+      item.error = null;
+      item.failedAt = null;
+    }
     item.updatedAt = new Date().toISOString();
     matchedGroup = item.groupId || matchedGroup;
     updated += 1;
   }
-  if (!updated) { res.status(404).json({ error: 'That scheduled post could not be found or can no longer be edited.' }); return; }
+  if (!updated) { res.status(404).json({ error: 'This blocked generated post cannot be retried because its image is unsafe. Cancel it and generate a replacement.' }); return; }
   await saveCustomer(user);
   res.status(200).json({ ok: true, updated, groupId: matchedGroup || groupId || null });
 }

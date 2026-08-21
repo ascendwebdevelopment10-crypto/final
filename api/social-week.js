@@ -1,7 +1,7 @@
 import { currentCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
-import { generatedCaptionNeedsReview } from '../lib/social-quality.js';
+import { generatedCaptionNeedsReview, generatedTextHasUnsafeLanguage } from '../lib/social-quality.js';
 
 export const config = { maxDuration: 300 };
 
@@ -44,8 +44,10 @@ function pick(arr, used = new Set()) {
 }
 function businessContext(user) {
   const o = user.onboarding?.data || {};
+  const rawCompany = String(o.companyName || o.businessName || user.company || '').trim().slice(0, 120);
+  const company = !rawCompany || generatedTextHasUnsafeLanguage(rawCompany) ? 'Nitro Outreach' : rawCompany;
   return {
-    company: String(o.companyName || o.businessName || user.company || 'Nitro Outreach').slice(0, 120),
+    company,
     industry: String(o.industry || user.industry || 'small-business marketing software').slice(0, 120),
     description: String(o.description || o.businessDescription || 'an all-in-one marketing workspace for websites, content, social publishing, outreach, and analytics').slice(0, 500),
   };
