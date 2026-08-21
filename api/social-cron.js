@@ -73,11 +73,38 @@ async function runNitroCampaign(now = Date.now()) {
   return { published, errors };
 }
 async function loadCustomer(id) { let u = await kv.get(`customer:user:${id}`); if (typeof u === 'string') { try { u = JSON.parse(u); } catch { u = null; } } return u; }
+function repairBrokenGeneratedDraft(posts, now = Date.now()) {
+  const broken = posts.filter(post => post?.autoWeek === true && /^nigf should make the next marketing move easier/i.test(String(post?.text || post?.title || '')));
+  if (!broken.length) return false;
+  let changed = false;
+  for (const post of broken) {
+    if (post.status === 'published' || post.status === 'cancelled') continue;
+    post.status = 'cancelled'; post.cancelledAt = new Date().toISOString(); post.updatedAt = post.cancelledAt;
+    post.error = 'Removed and replaced after generated-content review.'; changed = true;
+  }
+  if (posts.some(post => post?.repairId === 'unsafe-auto-week-20260821')) return changed;
+  const scheduledFor = broken.map(post => post.scheduledFor).find(value => Date.parse(value || 0) > now);
+  if (!scheduledFor) return changed;
+  const platforms = [...new Set(broken.map(post => String(post.platform || '').toLowerCase()).filter(Boolean))];
+  const groupId = 'repair_unsafe_auto_week_20260821';
+  const createdAt = new Date().toISOString();
+  const title = 'One connected system for the work that grows your business.';
+  const text = 'Nitro brings your website, content, social scheduling, outreach, and analytics into one workspace. That means fewer disconnected tools, a clearer next step, and less marketing work slipping through the cracks.\n\nSee how Nitro can help: nitrooutreach.com\n\n#smallbusiness #marketing #nitrooutreach';
+  for (const platform of platforms) {
+    posts.unshift({
+      id: `social_repair_20260821_${platform}`, groupId, batchId: 'repair_20260821', repairId: 'unsafe-auto-week-20260821', autoWeek: true,
+      title, text, platform, mediaType: 'image', mediaUrl: 'https://nitrooutreach.com/social/aug-2026/10-one-connected-system.png',
+      imageUrl: 'https://nitrooutreach.com/social/aug-2026/10-one-connected-system.png', visualSignature: 'one connected marketing system', freshImage: true,
+      scheduledFor, status: 'scheduled', privacyLevel: 'PUBLIC_TO_EVERYONE', createdAt,
+    });
+  }
+  return changed || platforms.length > 0;
+}
 export async function runSocialPublish() {
   const now = Date.now(); const nitro = await runNitroCampaign(now); let published = nitro.published || 0; const errors = [...(nitro.errors || [])];
   const keys = await kv.keys('customer:user:*');
   for (const key of keys) {
-    const user = await loadCustomer(key.split(':').pop()); if (!user) continue; const posts = user.workspace?.socialDrafts || []; let changed = false;
+    const user = await loadCustomer(key.split(':').pop()); if (!user) continue; const posts = user.workspace?.socialDrafts || []; let changed = repairBrokenGeneratedDraft(posts, now);
     const pendingTikTok = posts.filter(p => p.platform === 'tiktok' && p.status === 'publishing' && p.externalPublishId);
     for (const post of pendingTikTok) { try { const refreshed = await usableConnection('tiktok', user.socialConnections?.tiktok); user.socialConnections.tiktok = refreshed; const result = await tiktokPublishStatus(refreshed, post.externalPublishId); if (result.state === 'published') { post.status = 'published'; post.mediaId = result.id; post.publishedAt = new Date().toISOString(); published += 1; } else if (result.state === 'failed') { post.status = 'failed'; post.error = result.error; post.failedAt = new Date().toISOString(); errors.push({ user: user.id, platform: 'tiktok', error: result.error }); } post.lastStatusCheckAt = new Date().toISOString(); changed = true; } catch (error) { post.lastStatusCheckAt = new Date().toISOString(); post.statusCheckError = error.message; changed = true; } }
     const stale = posts.filter(p => p.status === 'publishing' && !(p.platform === 'tiktok' && p.externalPublishId) && Date.parse(p.publishingStartedAt || 0) <= now - 15 * 60 * 1000);
