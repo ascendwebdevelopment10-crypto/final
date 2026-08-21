@@ -85,6 +85,13 @@ test('outreach conversion path includes a focused landing page, full funnel trac
     read('../api/outreach-followup-cron.js'), read('../vercel.json'),
   ]);
   assert.match(app, /function renderStart\(/);
+  assert.match(app, /Run your marketing\.<br><em>From one place\.<\/em>/);
+  assert.match(app, /Create my free workspace/);
+  assert.match(app, /\$0 free plan/);
+  assert.match(app, /Ready in about a minute/);
+  const startMarkup = app.match(/function renderStart\(\).*?function renderSignup/s)?.[0] || '';
+  assert.doesNotMatch(startMarkup, /\$\{publicNav\(\)\}/);
+  assert.equal((startMarkup.match(/href="\/signup\?source=outreach"/g) || []).length, 2);
   assert.match(app, /trackFunnelStage\('signup_viewed'\)/);
   assert.match(app, /trackFunnelStage\('signup_started'\)/);
   assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
