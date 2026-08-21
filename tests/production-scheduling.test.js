@@ -59,14 +59,39 @@ test('multi-platform scheduler keeps per-platform jobs and honest media requirem
 });
 
 test('social scheduler exposes a visible calendar and full queue controls', async () => {
-  const client = await readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8');
+  const [client, socialV4, socialV8, view] = await Promise.all([
+    readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/social-v4.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/social-v8.css', import.meta.url), 'utf8'),
+    readFile(new URL('../views/customer.html', import.meta.url), 'utf8'),
+  ]);
   assert.match(client, /function socialCalendar/);
-  assert.match(client, /PUBLISHING CALENDAR/);
+  assert.match(client, /Publishing calendar/);
+  assert.match(client, /NEXT 7 DAYS/);
+  assert.match(client, /including weekends/);
+  assert.match(client, /groupSocialQueue/);
   assert.match(client, /data-edit-social/);
   assert.match(client, /data-cancel-social/);
   assert.match(client, /Video \/ Short \(works across all five\)/);
   assert.match(client, /social-calendar-legend/);
   assert.match(client, /calendar-platforms/);
+  assert.doesNotMatch(socialV4, /while\(articles\.length<7\)/);
+  assert.match(socialV4, /social-queue-visible-v8/);
+  assert.match(socialV8, /grid-template-columns:repeat\(7/);
+  assert.match(view, /social-v8\.css/);
+});
+
+test('confirmed-visitor follow-up runs hourly and shares the provider quota with cold outreach', async () => {
+  const [cron, followup, email] = await Promise.all([
+    readFile(new URL('../vercel.json', import.meta.url), 'utf8'),
+    readFile(new URL('../api/outreach-followup-cron.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/email-cron.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(cron, /outreach-followup-cron[^\n]+5 \* \* \* \*/);
+  assert.match(followup, /PROVIDER_DAILY_CAP = 100/);
+  assert.doesNotMatch(followup, /DAILY_CAP = 5/);
+  assert.match(email, /outreach:email:all-daily-reserved/);
+  assert.match(followup, /outreach:email:all-daily-reserved/);
 });
 
 test('cross-platform analytics groups one creative into honest per-platform results', async () => {

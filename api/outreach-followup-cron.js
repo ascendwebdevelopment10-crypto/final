@@ -2,7 +2,6 @@ import { kv } from '@vercel/kv';
 import { sendEmail } from '../lib/mailer.js';
 import { getEmailEngagement, getEmailLog, getReplies, isSuppressed, logEmail } from '../lib/store.js';
 import { outreachTokenFor, tokenFor } from '../lib/sign.js';
-import { automatedOpenIds } from '../lib/outreach-analytics.js';
 import { chooseFollowupCandidates, followupMessage } from '../lib/outreach-followup.js';
 
 export const config = { maxDuration: 120 };
@@ -12,7 +11,7 @@ const FROM_EMAIL = process.env.OUTREACH_FROM_EMAIL || 'ty@nitrooutreach.com';
 const FROM = `Nitro Outreach <${FROM_EMAIL}>`;
 const REPLY_TO = process.env.OUTREACH_REPLY_TO || process.env.REPLY_TO || FROM_EMAIL;
 const ADDRESS = '791 S 140 E, Farmington, UT 84025';
-const DAILY_CAP = 5;
+const PROVIDER_DAILY_CAP = 100;
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -22,12 +21,14 @@ function mountainDate() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
-async function reserveDailySlot() {
-  const key = `outreach:followup:daily:${mountainDate()}`;
+async function reserveProviderSlot() {
+  const date = mountainDate();
+  const key = `outreach:email:all-daily-reserved:${date}`;
+  const baseline = Number(await kv.get(`stats:daily:${date}`)) || 0;
+  await kv.set(key, String(baseline), { nx: true, ex: 172800 });
   const used = Number(await kv.incr(key));
-  if (used === 1) await kv.expire(key, 172800);
-  if (used > DAILY_CAP) { await kv.decr(key); return false; }
-  return true;
+  if (used > PROVIDER_DAILY_CAP) { await kv.decr(key); return null; }
+  return key;
 }
 
 export default async function handler(req, res) {
@@ -51,26 +52,25 @@ export default async function handler(req, res) {
     confirmedVisit: Number(confirmedCounts?.[entry.id] || 0) > 0,
     firstConfirmedAt: Number(firstConfirmed?.[entry.id] || 0) || null,
   }));
-  const automated = automatedOpenIds(log);
-  const candidates = chooseFollowupCandidates(log, automated, now);
+  const candidates = chooseFollowupCandidates(log, new Set(), now);
   const sent = [];
   const errors = [];
 
   for (const candidate of candidates) {
-    if (sent.length >= DAILY_CAP) break;
     const { entry, sequence, intent } = candidate;
     const sentKey = `outreach:followup:sent:${entry.id}:${sequence}`;
     const legacySent = sequence === 2 ? await kv.get(`outreach:followup:sent:${entry.id}`) : null;
     if (legacySent || await kv.get(sentKey) || await isSuppressed(entry.to) || await kv.get(`customer:email:${String(entry.to).toLowerCase()}`)) continue;
     const reserved = await kv.set(sentKey, 'reserved', { nx: true, ex: 45 * 24 * 60 * 60 });
     if (!reserved) continue;
-    if (!await reserveDailySlot()) { await kv.del(sentKey); break; }
+    const providerKey = await reserveProviderSlot();
+    if (!providerKey) { await kv.del(sentKey); break; }
 
     try {
       const { subject, body } = followupMessage(entry, sequence);
       const trackingId = `${Date.now()}-f${sequence}-${Math.random().toString(36).slice(2, 9)}`;
       const unsubscribeUrl = `https://nitrooutreach.com/unsubscribe?e=${encodeURIComponent(entry.to)}&t=${encodeURIComponent(tokenFor(entry.to))}`;
-      const campaign = sequence === 3 ? 'final-followup' : intent === 'confirmed_visit' ? 'confirmed-visit-followup' : 'human-open-followup';
+      const campaign = 'confirmed-visit-followup';
       const siteUrl = `https://nitrooutreach.com/start?utm_source=outreach&utm_medium=email&utm_campaign=${campaign}&oid=${encodeURIComponent(trackingId)}&ot=${encodeURIComponent(outreachTokenFor(trackingId))}`;
       const html = escapeHtml(body).replaceAll('nitrooutreach.com', `<a href="${escapeHtml(siteUrl)}" style="color:#111827;font-weight:700;text-decoration:underline">nitrooutreach.com</a>`).replace(/\n/g, '<br>');
       const footerText = `\n\n--\nTy Smith, Owner\nNitro Outreach\n${ADDRESS}\nUnsubscribe: ${unsubscribeUrl}`;
@@ -81,9 +81,10 @@ export default async function handler(req, res) {
       sent.push(entry.to);
     } catch (error) {
       await kv.del(sentKey);
+      await kv.decr(providerKey).catch(() => {});
       errors.push({ id: entry.id, error: error.message });
     }
   }
 
-  res.status(200).json({ sent: sent.length, dailyCap: DAILY_CAP, errors, timestamp: new Date().toISOString() });
+  res.status(200).json({ sent: sent.length, eligible: candidates.length, providerDailyCap: PROVIDER_DAILY_CAP, errors, timestamp: new Date().toISOString() });
 }

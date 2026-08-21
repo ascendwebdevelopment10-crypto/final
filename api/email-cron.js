@@ -17,6 +17,7 @@ const PHYSICAL_ADDRESS = '791 S 140 E, Farmington, UT 84025';
 const CRON_SECRET = process.env.CRON_SECRET;
 const EMAIL_CAP = 10;   // 10/run x 9 runs/day = 90/day, stays under Resend free cap (100/day)
 const DAILY_EMAIL_CAP = 90;
+const PROVIDER_DAILY_CAP = 100;
 const POOL_COUNT = 8;
 const POOL_SIZE = 60;
 const DISCOVERY_WAVE_SIZE = 16;
@@ -45,6 +46,19 @@ async function reserveDailySlot() {
   const used = Number(await kv.incr(key));
   if (used === 1) await kv.expire(key, 172800);
   if (used > DAILY_EMAIL_CAP) {
+    await kv.decr(key);
+    return null;
+  }
+  return key;
+}
+
+async function reserveProviderSlot() {
+  const date = mountainDate();
+  const key = `outreach:email:all-daily-reserved:${date}`;
+  const baseline = Number(await kv.get(`stats:daily:${date}`)) || 0;
+  await kv.set(key, String(baseline), { nx: true, ex: 172800 });
+  const used = Number(await kv.incr(key));
+  if (used > PROVIDER_DAILY_CAP) {
     await kv.decr(key);
     return null;
   }
@@ -284,6 +298,7 @@ export default async function handler(req, res) {
       const content = emailContents[i];
       if (content.error) return { error: content.error };
       let dailyKey = null;
+      let providerKey = null;
       let reservationKey = null;
       let delivered = false;
       try {
@@ -293,6 +308,8 @@ export default async function handler(req, res) {
         reservationKey = `outreach:email:reservation:${contact.email.toLowerCase()}`;
         dailyKey = await reserveDailySlot();
         if (!dailyKey) { await kv.del(reservationKey); return { limited: true }; }
+        providerKey = await reserveProviderSlot();
+        if (!providerKey) { await kv.decr(dailyKey); await kv.del(reservationKey); return { limited: true }; }
         const { subject, body, service } = content;
         const trackingId = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
         const unsubscribeUrl = 'https://nitrooutreach.com/unsubscribe?e=' + encodeURIComponent(contact.email) + '&t=' + encodeURIComponent(tokenFor(contact.email));
@@ -344,6 +361,7 @@ export default async function handler(req, res) {
         return 'ok';
       } catch (e) {
         if (dailyKey && !delivered) await kv.decr(dailyKey).catch(() => {});
+        if (providerKey && !delivered) await kv.decr(providerKey).catch(() => {});
         if (reservationKey && !delivered) await kv.del(reservationKey).catch(() => {});
         return { error: e.message };
       }

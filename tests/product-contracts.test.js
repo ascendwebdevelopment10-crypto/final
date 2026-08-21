@@ -79,7 +79,7 @@ test('owner publishing queue and all three DM response scripts are visible in th
   assert.match(client, /data-copy-dm/);
 });
 
-test('outreach conversion path includes a focused landing page, full funnel tracking, and warm-lead pipeline', async () => {
+test('outreach conversion path includes a focused landing page, full funnel tracking, and confirmed-visitor follow-up', async () => {
   const [app, css, followup, cron] = await Promise.all([
     read('../public/customer/app.js'), read('../public/customer/app.css'),
     read('../api/outreach-followup-cron.js'), read('../vercel.json'),
@@ -95,12 +95,12 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(app, /trackFunnelStage\('signup_viewed'\)/);
   assert.match(app, /trackFunnelStage\('signup_started'\)/);
   assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
-  assert.match(app, /Warm lead pipeline/);
+  assert.match(app, /Confirmed visitor follow-up/);
+  assert.match(app, /one follow-up after <b>24 hours<\/b>/);
   assert.match(css, /\.beta-candidate-grid/);
   assert.match(followup, /chooseFollowupCandidates/);
-  assert.match(followup, /human-open-followup/);
   assert.match(followup, /confirmed-visit-followup/);
-  assert.match(followup, /final-followup/);
+  assert.doesNotMatch(followup, /DAILY_CAP = 5|human-open-followup|final-followup/);
   assert.match(followup, />nitrooutreach\.com<\/a>/);
   assert.match(followup, /791 S 140 E, Farmington, UT 84025/);
   assert.doesNotMatch(followup, /personally build|hands-on first setup|Reply [“"]build it/i);

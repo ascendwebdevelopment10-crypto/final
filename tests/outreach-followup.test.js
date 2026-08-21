@@ -15,35 +15,32 @@ function lead(id, overrides = {}) {
   };
 }
 
-test('prioritizes confirmed visitors, then likely-human openers', () => {
+test('follows up with every confirmed visitor after 24 hours, oldest first', () => {
   const opened = lead('opened');
-  const visited = lead('visited', { confirmedVisit: true, firstConfirmedAt: now - 6 * HOUR });
-  const candidates = chooseFollowupCandidates([opened, visited], new Set(), now);
+  const recentVisit = lead('recent', { confirmedVisit: true, firstConfirmedAt: now - 23 * HOUR });
+  const dueVisit = lead('due', { confirmedVisit: true, firstConfirmedAt: now - 25 * HOUR });
+  const olderVisit = lead('older', { confirmedVisit: true, firstConfirmedAt: now - 3 * DAY });
+  const candidates = chooseFollowupCandidates([opened, recentVisit, dueVisit, olderVisit], new Set(), now);
   assert.deepEqual(candidates.map(item => [item.entry.id, item.sequence, item.intent]), [
-    ['visited', 2, 'confirmed_visit'], ['opened', 2, 'human_open'],
+    ['older', 2, 'confirmed_visit'], ['due', 2, 'confirmed_visit'],
   ]);
 });
 
-test('does not follow up with automated opens, replies, failures, or unsubscribes', () => {
-  const bot = lead('bot');
-  const entries = [bot, lead('reply', { replied: true }), lead('bounce', { status: 'bounced' }), lead('optout', { unsubscribed: true })];
-  assert.deepEqual(chooseFollowupCandidates(entries, new Set(['bot']), now), []);
+test('does not follow up with opens alone, replies, failures, unsubscribes, or duplicate follow-ups', () => {
+  const confirmed = { confirmedVisit: true, firstConfirmedAt: now - 2 * DAY };
+  const original = lead('done', confirmed);
+  const entries = [lead('open-only'), lead('reply', { ...confirmed, replied: true }), lead('bounce', { ...confirmed, status: 'bounced' }), lead('optout', { ...confirmed, unsubscribed: true }), original, { id: 'followup', to: original.to, followUpOf: original.id, sequence: 2, timestamp: now - DAY }];
+  assert.deepEqual(chooseFollowupCandidates(entries, new Set(), now), []);
 });
 
-test('sends one final note after the first follow-up and then stops', () => {
-  const original = lead('original', { confirmedVisit: true, firstConfirmedAt: now - 5 * DAY });
-  const second = { id: 'second', to: original.to, followUpOf: original.id, sequence: 2, timestamp: now - 3 * DAY };
-  assert.equal(chooseFollowupCandidates([original, second], new Set(), now)[0].sequence, 3);
-  const third = { id: 'third', to: original.to, followUpOf: original.id, sequence: 3, timestamp: now - DAY };
-  assert.deepEqual(chooseFollowupCandidates([original, second, third], new Set(), now), []);
+test('keeps confirmed visits eligible for 30 days so an hourly run can catch every business', () => {
+  assert.equal(chooseFollowupCandidates([lead('day30', { confirmedVisit: true, firstConfirmedAt: now - 30 * DAY })], new Set(), now).length, 1);
+  assert.equal(chooseFollowupCandidates([lead('expired', { confirmedVisit: true, firstConfirmedAt: now - 31 * DAY })], new Set(), now).length, 0);
 });
 
 test('follow-up copy explains Nitro without reviving the removed personal offer', () => {
-  for (const sequence of [2, 3]) {
-    const message = followupMessage(lead('copy'), sequence);
-    assert.match(message.body, /website building, social content and scheduling, tracked outreach, and visitor analytics/);
-    assert.match(message.body, /nitrooutreach\.com/);
-    assert.doesNotMatch(message.body, /personally build|hands-on|I[’']m offering|build it/i);
-  }
-  assert.match(followupMessage(lead('copy'), 3).body, /last follow-up/i);
+  const message = followupMessage(lead('copy'));
+  assert.match(message.body, /website building, social content and scheduling, tracked outreach, and visitor analytics/);
+  assert.match(message.body, /nitrooutreach\.com/);
+  assert.doesNotMatch(message.body, /personally build|hands-on|I[’']m offering|build it|last follow-up/i);
 });

@@ -1,6 +1,7 @@
 import { currentCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
 import { kv } from '@vercel/kv';
+import { generatedCaptionNeedsReview } from '../lib/social-quality.js';
 
 export const config = { maxDuration: 300 };
 
@@ -154,6 +155,13 @@ async function buildWeek(user) {
     const i = planned.length;
     planned.push({ ...fallbackPost(company, i, recipes[i].angle, recipes[i].cta), imagePrompt: `${recipes[i].visual}. Professional social post for ${company}. ${recipes[i].angle}. Distinct composition, no dashboard mockup, no repeated card grid.` });
   }
+  planned = planned.map((post, index) => {
+    if (!generatedCaptionNeedsReview(`${post?.title || ''} ${post?.text || ''}`)) return post;
+    return {
+      ...fallbackPost(company, index, recipes[index].angle, recipes[index].cta),
+      imagePrompt: `${recipes[index].visual}. Professional social post for ${company}. ${recipes[index].angle}. Distinct composition, no dashboard mockup, no repeated card grid.`,
+    };
+  });
 
   // Generate in small groups instead of firing seven image requests at once.
   // This keeps Nitro under provider image-rate limits while still finishing quickly.
