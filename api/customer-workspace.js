@@ -6,6 +6,7 @@ import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
 import { contentCreditBalance, migrateContentCredits, spendContentCredits } from '../lib/content-credits.js';
 import { kv } from '@vercel/kv';
+import { inferOperatorAction, operatorAgent, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 export const config = { maxDuration: 300 };
 
@@ -537,7 +538,11 @@ DESIGN QUALITY
       if (!prompt) { res.status(400).json({ error: 'Ask Nitro a question first.' }); return; }
       if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
       const { company, industry } = ctx(user);
-      const context = `Company: ${company}. Industry: ${industry}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.`;
+      const snapshot = operatorSnapshot(user);
+      const priorities = operatorPriorities(snapshot);
+      const context = `Company: ${company}. Industry: ${industry}. Goals: ${(user.onboarding?.data?.goals || []).join(', ') || 'Not set'}.
+Verified Nitro workspace snapshot: ${JSON.stringify(snapshot)}.
+Current deterministic priorities: ${JSON.stringify(priorities.map(item => ({ title: item.title, detail: item.detail, agent: item.agent })))}.`;
       // Optional short conversation history from the client for coherent multi-turn threads.
       let transcript = '';
       if (Array.isArray(body.history)) {
@@ -545,8 +550,17 @@ DESIGN QUALITY
           .map(m => `${m && m.role === 'assistant' ? 'You' : 'User'}: ${clean(m && m.text, 700)}`)
           .filter(Boolean).join('\n');
       }
-      const answer = await generate(`You are Nitro, a sharp, practical growth assistant for a small business. ${context}\n\nStyle: get straight to the point. Answer in under 180 words. Use light Markdown only where it helps — bold key terms and short - bullet lists. No preamble, no filler, no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 450, FAST_MODEL);
-      const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), createdAt: new Date().toISOString() };
+      const answer = await generate(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
+
+Rules:
+- Treat the verified snapshot as the source of truth. Never invent traffic, revenue, ad spend, reach, customers, replies, integrations, or completed work.
+- Never claim you sent, published, paused, changed, or created anything unless the supplied context explicitly confirms it.
+- If the user asks for an action, explain the exact next step and tell them which Nitro agent or workspace will handle it.
+- Distinguish clearly between recommendations and completed actions.
+
+Style: sound like a calm, decisive operator. Get straight to the point in under 180 words. Use light Markdown only where it helps — bold key facts and short bullet lists. No filler and no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 500, FAST_MODEL);
+      const suggestedAction = inferOperatorAction(prompt);
+      const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), agent: operatorAgent(prompt), suggestedAction, snapshot, createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(200).json({ ok: true, entry, aiUsed: user.usage.aiUsed }); return;
