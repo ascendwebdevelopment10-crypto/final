@@ -8,10 +8,21 @@ function validFutureDate(value) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (!['PATCH','DELETE'].includes(req.method)) { res.status(405).json({ error: 'Method not allowed' }); return; }
-  if (!sameOrigin(req)) { res.status(403).json({ error: 'Invalid request origin' }); return; }
+  if (!['GET','PATCH','DELETE'].includes(req.method)) { res.status(405).json({ error: 'Method not allowed' }); return; }
+  if (req.method !== 'GET' && !sameOrigin(req)) { res.status(403).json({ error: 'Invalid request origin' }); return; }
   const user = await currentCustomer(req);
   if (!user) { res.status(401).json({ error: 'Please sign in first.' }); return; }
+
+  if (req.method === 'GET') {
+    const drafts = Array.isArray(user.workspace?.socialDrafts) ? user.workspace.socialDrafts : [];
+    const editable = drafts.filter(item => ['scheduled', 'failed'].includes(item?.status) && Date.parse(item?.scheduledFor || 0) > Date.now()).map(item => ({
+      id: item.id, groupId: item.groupId, autoWeek: item.autoWeek === true,
+      title: clean(item.title, 180), text: clean(item.text, 5000), status: item.status,
+      scheduledFor: item.scheduledFor, mediaUrl: item.mediaUrl || item.imageUrl || '',
+      error: clean(item.error, 500), contentSafetyFailed: item.contentSafetyFailed === true,
+    }));
+    res.status(200).json({ drafts: editable }); return;
+  }
 
   const groupId = clean(req.body?.groupId, 160);
   const id = clean(req.body?.id, 160);
