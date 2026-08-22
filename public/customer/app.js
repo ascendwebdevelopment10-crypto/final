@@ -37,13 +37,13 @@ const DM_REPLY_SCRIPTS=[
 
 const NAV = [
   ['dashboard','⌂','Dashboard'],['websites','◇','Websites'],['content','✦','Content'],['social','◎','Socials'],
-  ['ads','◈','Ads'],['messages','✉','Messaging'],['assistant','✧','AI Assistant'],['analytics','⌁','Analytics'],['billing','▣','Billing'],['settings','⚙','Settings']
+  ['ads','◈','Ads'],['messages','✉','Messaging'],['assistant','✧','Nitro Operator'],['analytics','⌁','Analytics'],['billing','▣','Billing'],['settings','⚙','Settings']
 ];
 const SECTION_META = {
   dashboard:['Dashboard','Your business at a glance'], websites:['Websites','Build and manage your online presence'],
   content:['Content','Create campaign-ready content'], social:['Socials','Connect and manage every social channel'],
   ads:['Ads','Launch and optimize paid campaigns'], messages:['Messaging','Manage email, SMS, and provider setup'],
-  assistant:['AI Assistant','Work with your context-aware AI'], analytics:['Analytics','See what is moving the business'],
+  assistant:['Nitro Operator','Your business briefing, agents, and next actions'], analytics:['Analytics','See what is moving the business'],
   billing:['Billing','Manage plans and payments'], settings:['Settings','Control your account and workspace'],
   outreach:['Outreach','Monitor automated outreach and engagement'], owner:['Owner','Customers, traffic, leads, and revenue']
 };
@@ -67,7 +67,7 @@ const OWNER_EMAIL='nitrooutreach@outlook.com';
 const state = {
   session:null, loading:true, interval:localStorage.getItem('nitro-billing')==='monthly'?'monthly':'yearly',
   onboardStep:1, onboardData:{goals:[],socials:[]}, settingsTab:'profile', mobileMenu:false,
-  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, hasRendered:false,
+  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, operatorVoice:localStorage.getItem('nitro-operator-voice')==='1', hasRendered:false,
   socialAnalyticsPlatform:'all'
 };
 
@@ -570,7 +570,7 @@ function mdToHtml(src){
   }
   closeList();return out.join('');
 }
-// ---- AI Assistant: ChatGPT-style threaded chat (threads stored locally) ----
+// ---- Nitro Operator: live brief + specialized-agent command thread ----
 function getChats(){try{return JSON.parse(localStorage.getItem('nitro-chats')||'[]')}catch{return[]}}
 function saveChats(c){try{localStorage.setItem('nitro-chats',JSON.stringify(c.slice(0,50)))}catch{}}
 function newChat(){const id='c_'+Date.now();const c=getChats();c.unshift({id,title:'New chat',messages:[],updatedAt:Date.now()});saveChats(c);state.chatId=id;return id;}
@@ -586,23 +586,69 @@ async function sendChat(){
   state.chatBusy=true;render();
   try{
     const r=await api('/api/customer-workspace',{method:'POST',body:JSON.stringify({action:'ask-assistant',prompt:promptText,history})});
-    updateChat(state.chatId,c=>{c.messages.push({role:'assistant',text:(r&&r.entry&&r.entry.answer)||'Sorry, I could not answer that. Try again.'});});
+    const entry=r&&r.entry||{},answer=entry.answer||'Sorry, I could not answer that. Try again.';
+    updateChat(state.chatId,c=>{c.messages.push({role:'assistant',text:answer,agent:entry.agent||'Operator',action:entry.suggestedAction||null});});
+    if(state.operatorVoice&&'speechSynthesis'in window){window.speechSynthesis.cancel();const spoken=new SpeechSynthesisUtterance(String(answer).replace(/[*#_`>-]/g,' ').replace(/\s+/g,' ').trim());spoken.rate=1.02;spoken.pitch=.92;window.speechSynthesis.speak(spoken);}
   }catch(err){
     updateChat(state.chatId,c=>{c.messages.push({role:'assistant',text:'⚠️ '+((err&&err.message)||'Something went wrong. Please try again.')});});
   }finally{state.chatBusy=false;render();}
+}
+function operatorWorkspaceSnapshot(){
+  const w=workspaceData(),drafts=w.socialDrafts||[],campaigns=w.campaigns||[],messages=w.messages||[],content=w.content||[],connections=w.connections||{};
+  return {websites:(w.websites||[]).length,content:content.length,reels:content.filter(item=>item.type==='video').length,socialScheduled:drafts.filter(item=>item.status==='scheduled').length,socialPublished:drafts.filter(item=>item.status==='published').length,connectedSocials:['instagram','facebook','tiktok','linkedin','youtube'].filter(platform=>socialConnection(platform)?.connected).length,campaigns:campaigns.length,activeCampaigns:campaigns.filter(item=>item.status==='active').length,pausedCampaigns:campaigns.filter(item=>item.status==='paused').length,sentMessages:messages.filter(item=>item.status==='sent').length,replies:messages.filter(item=>item.status==='reply').length,scheduledMessages:messages.filter(item=>item.status==='scheduled').length,connectedMessaging:['email','sms'].filter(channel=>connections[channel]?.connected).length};
+}
+function operatorPrioritiesClient(s){
+  const items=[];
+  if(!s.websites)items.push(['high','Launch a conversion destination','There is no website project in this workspace yet.','#websites','Site agent']);
+  if(!s.connectedSocials)items.push(['high','Connect a publishing channel','Content cannot publish automatically until a social account is connected.','#social','Publisher agent']);
+  if(!s.content)items.push(['medium','Create the first campaign asset','The content library is empty.','#content','Content agent']);
+  if(!s.sentMessages&&!s.scheduledMessages)items.push(['medium','Start a tracked conversation','No customer messages are sent or scheduled.','#messages','Outreach agent']);
+  if(s.pausedCampaigns)items.push(['medium','Review paused campaigns',`${s.pausedCampaigns} campaign${s.pausedCampaigns===1?' is':'s are'} paused.`,'#ads','Growth agent']);
+  if(s.replies)items.unshift(['high','Respond while interest is fresh',`${s.replies} inbound repl${s.replies===1?'y is':'ies are'} waiting.`,'#messages','Outreach agent']);
+  if(!items.length)items.push(['low','Review performance and optimize','The core workspace is active. Choose the next experiment from verified results.','#analytics','Growth agent']);
+  return items.slice(0,4);
+}
+function operatorAgents(s){return [
+  ['Growth agent','Analyzes performance and chooses the next growth move',s.activeCampaigns?`${s.activeCampaigns} active campaign${s.activeCampaigns===1?'':'s'}`:'Ready','#analytics','↗'],
+  ['Content agent','Turns offers into posts, carousels, and Reels',`${s.content} asset${s.content===1?'':'s'} created`,'#content','✦'],
+  ['Publisher agent','Coordinates connected channels and schedules',`${s.connectedSocials}/5 channels connected`,'#social','◎'],
+  ['Site agent','Builds conversion-ready websites and landing pages',`${s.websites} site${s.websites===1?'':'s'} ready`,'#websites','◇'],
+  ['Outreach agent','Tracks messages, replies, and follow-up work',`${s.replies} repl${s.replies===1?'y':'ies'}`,'#messages','✉'],
+];}
+function startOperatorMic(){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition){toast('Voice input is not supported in this browser.','error');return;}
+  const mic=document.getElementById('operator-mic'),input=document.getElementById('chat-prompt'),recognition=new Recognition();
+  recognition.lang='en-US';recognition.interimResults=false;recognition.maxAlternatives=1;
+  mic?.classList.add('listening');if(mic)mic.textContent='Listening…';
+  recognition.onresult=event=>{const value=event.results?.[0]?.[0]?.transcript||'';if(input)input.value=value;};
+  recognition.onerror=()=>toast('I could not hear that clearly. Try again.','error');
+  recognition.onend=()=>{mic?.classList.remove('listening');if(mic)mic.textContent='◉ Voice';};
+  recognition.start();
+}
+async function loadOperatorBrief(){
+  const panel=document.getElementById('operator-live-owner');if(!panel)return;
+  try{
+    const [stats,outreach]=await Promise.all([api('/api/owner-data',{method:'POST',body:JSON.stringify({action:'stats'})}),api('/api/owner-data',{method:'POST',body:JSON.stringify({action:'outreach'})})]);
+    const os=outreach.stats||{},values={operatorLiveVisitors:Number(stats.uniqueToday||0),operatorLiveVisits:Number(os.confirmedVisits||0),operatorLiveReplies:Number(os.emailReplies||0),operatorLiveSignups:Number(os.signups||0)};
+    Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.textContent=value.toLocaleString();});
+    const brief=document.getElementById('operator-live-copy');if(brief)brief.textContent=`Today: ${Number(stats.uniqueToday||0)} genuine visitor${Number(stats.uniqueToday||0)===1?'':'s'}. Outreach has produced ${Number(os.confirmedVisits||0)} confirmed visit${Number(os.confirmedVisits||0)===1?'':'s'}, ${Number(os.emailReplies||0)} repl${Number(os.emailReplies||0)===1?'y':'ies'}, and ${Number(os.signups||0)} signup${Number(os.signups||0)===1?'':'s'} in the tracked period.`;
+  }catch{const brief=document.getElementById('operator-live-copy');if(brief)brief.textContent='Live owner metrics could not load. Workspace data below is still current.';}
 }
 function assistantPage(){
   const chats=getChats();
   let chat=chats.find(x=>x.id===state.chatId)||chats[0]||null;
   if(chat)state.chatId=chat.id;else state.chatId=null;
   const msgs=chat?chat.messages:[];
-  const rail=`<aside class="chat-rail"><button class="btn btn-primary chat-new" id="new-chat">+ New chat</button><div class="chat-list">${chats.length?chats.map(c=>`<div class="chat-item ${c.id===state.chatId?'active':''}" data-chat="${c.id}"><span class="chat-ic">${ICONS.assistant}</span><b>${esc(c.title||'New chat')}</b><span class="chat-del" data-del-chat="${c.id}" title="Delete chat">&times;</span></div>`).join(''):`<p class="chat-empty-list">Your chats will appear here.</p>`}</div></aside>`;
+  const snapshot=operatorWorkspaceSnapshot(),priorities=operatorPrioritiesClient(snapshot),agents=operatorAgents(snapshot),isOwner=(state.session.user.email||'').toLowerCase()===OWNER_EMAIL;
+  const rail=`<aside class="chat-rail operator-rail"><button class="btn btn-primary chat-new" id="new-chat">+ New command</button><div class="operator-agent-mini"><small>AGENTS ONLINE</small>${agents.map(agent=>`<a href="${agent[3]}"><i>${agent[5]}</i><span><b>${agent[0]}</b><small>${agent[2]}</small></span></a>`).join('')}</div><div class="chat-history-label">COMMAND HISTORY</div><div class="chat-list">${chats.length?chats.map(c=>`<div class="chat-item ${c.id===state.chatId?'active':''}" data-chat="${c.id}"><span class="chat-ic">${ICONS.assistant}</span><b>${esc(c.title||'New command')}</b><span class="chat-del" data-del-chat="${c.id}" title="Delete command">&times;</span></div>`).join(''):`<p class="chat-empty-list">Your commands will appear here.</p>`}</div></aside>`;
   const thread=msgs.length?msgs.map(m=>m.role==='user'
      ?`<div class="chat-row user"><span class="chat-avatar chat-av-user">${initials(state.session.user)}</span><div class="chat-bubble">${esc(m.text)}</div></div>`
-     :`<div class="chat-row ai"><span class="chat-avatar chat-av-bot">${ICONS.assistant}</span><div class="chat-bubble md-body">${mdToHtml(m.text)}</div></div>`).join('')
-   :`<div class="chat-blank"><div class="empty-icon">${ICONS.assistant}</div><h3>What are you working on?</h3><p>Ask for a website plan, a campaign idea, a content brief, or have any metric explained.</p></div>`;
+     :`<div class="chat-row ai"><span class="chat-avatar chat-av-bot">${ICONS.assistant}</span><div><small class="operator-response-agent">${esc(m.agent||'Operator')}</small><div class="chat-bubble md-body">${mdToHtml(m.text)}</div>${m.action?.route?`<a class="operator-action-link" href="${esc(m.action.route)}">${esc(m.action.label||'Open workspace')} →</a>`:''}</div></div>`).join('')
+   :`<div class="chat-blank operator-chat-blank"><div class="operator-orb"><i></i><i></i><span>${ICONS.assistant}</span></div><h3>What should Nitro handle?</h3><p>Ask for a performance briefing, the best next move, content, outreach, a campaign, or a website.</p><div class="operator-prompts"><button data-operator-prompt="Give me my business briefing and the best next move.">Brief me</button><button data-operator-prompt="What needs my attention right now?">Find problems</button><button data-operator-prompt="Plan the next campaign from my current workspace.">Plan growth</button></div></div>`;
   const typing=state.chatBusy?`<div class="chat-row ai"><span class="chat-avatar chat-av-bot">${ICONS.assistant}</span><div class="chat-bubble typing"><i></i><i></i><i></i></div></div>`:'';
-  return `<div class="chat-layout"><section class="glass-card panel chat-main"><div class="chat-scroll" id="chat-scroll">${thread}${typing}</div><form id="chat-form" class="chat-input"><textarea class="input" id="chat-prompt" rows="1" placeholder="Ask Nitro anything…"></textarea><button class="btn btn-primary" type="submit" ${state.chatBusy?'disabled':''}>Send</button></form></section>${rail}</div>`;
+  const liveOwner=isOwner?`<section class="glass-card operator-live" id="operator-live-owner"><div><span class="operator-live-pill"><i></i> LIVE NITRO DATA</span><h3>Owner business briefing</h3><p id="operator-live-copy">Reading genuine traffic, outreach, replies, and signups…</p></div><div class="operator-live-metrics"><article><small>VISITORS TODAY</small><b id="operatorLiveVisitors">—</b></article><article><small>CONFIRMED VISITS</small><b id="operatorLiveVisits">—</b></article><article><small>REPLIES</small><b id="operatorLiveReplies">—</b></article><article><small>SIGNUPS</small><b id="operatorLiveSignups">—</b></article></div></section>`:'';
+  return `<div class="operator-page"><section class="operator-hero"><div><span class="operator-kicker"><i></i> NITRO OPERATOR ONLINE</span><h2>Your business, under command.</h2><p>One intelligence layer across websites, content, publishing, outreach, campaigns, and verified performance.</p></div><div class="operator-hero-actions"><button class="btn ${state.operatorVoice?'btn-primary':''}" id="operator-voice-toggle">${state.operatorVoice?'◉ Spoken replies on':'○ Spoken replies off'}</button><button class="btn btn-primary" id="operator-mic">◉ Voice</button></div></section>${liveOwner}<div class="operator-overview"><section class="glass-card operator-priorities"><div class="panel-head"><div><small>NEEDS ATTENTION</small><h3>Recommended next actions</h3></div><span>${priorities.length} PRIORIT${priorities.length===1?'Y':'IES'}</span></div><div class="operator-priority-list">${priorities.map((item,index)=>`<a href="${item[3]}"><span class="priority-level ${item[0]}">${String(index+1).padStart(2,'0')}</span><div><b>${esc(item[1])}</b><p>${esc(item[2])}</p><small>${esc(item[4])}</small></div><strong>Open →</strong></a>`).join('')}</div></section><section class="glass-card operator-system"><div class="panel-head"><div><small>WORKSPACE SIGNALS</small><h3>System status</h3></div><span class="operator-status-ok">OPERATIONAL</span></div><div class="operator-signal-grid"><article><b>${snapshot.websites}</b><span>Websites</span></article><article><b>${snapshot.content}</b><span>Assets</span></article><article><b>${snapshot.socialScheduled}</b><span>Scheduled</span></article><article><b>${snapshot.connectedSocials}/5</b><span>Socials</span></article><article><b>${snapshot.activeCampaigns}</b><span>Campaigns</span></article><article><b>${snapshot.replies}</b><span>Replies</span></article></div></section></div><section class="operator-agents"><div class="panel-head"><div><small>SPECIALIZED AGENTS</small><h3>One operator. Five focused systems.</h3></div></div><div class="operator-agent-grid">${agents.map(agent=>`<a class="glass-card" href="${agent[3]}"><span>${agent[5]}</span><div><h4>${agent[0]}</h4><p>${agent[1]}</p><small>${agent[2]}</small></div><strong>→</strong></a>`).join('')}</div></section><div class="chat-layout operator-chat-layout"><section class="glass-card panel chat-main operator-chat"><div class="operator-chat-head"><div><span class="operator-live-pill"><i></i> COMMAND CHANNEL</span><h3>Talk to Nitro</h3></div><small>Uses real workspace context</small></div><div class="chat-scroll" id="chat-scroll">${thread}${typing}</div><form id="chat-form" class="chat-input operator-input"><textarea class="input" id="chat-prompt" rows="1" placeholder="Ask for a briefing or tell Nitro what you want to work on…"></textarea><button class="btn btn-primary" type="submit" ${state.chatBusy?'disabled':''}>Run command</button></form></section>${rail}</div></div>`;
 }
 
 // ---- Messaging: sent email/SMS log + automation setup guide ----
@@ -806,10 +852,14 @@ function bindWorkspace(){
   // AI Assistant (threaded chat)
   document.getElementById('chat-form')?.addEventListener('submit',e=>{e.preventDefault();sendChat();});
   document.getElementById('chat-prompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+  document.getElementById('operator-mic')?.addEventListener('click',startOperatorMic);
+  document.getElementById('operator-voice-toggle')?.addEventListener('click',()=>{state.operatorVoice=!state.operatorVoice;localStorage.setItem('nitro-operator-voice',state.operatorVoice?'1':'0');if(!state.operatorVoice&&'speechSynthesis'in window)window.speechSynthesis.cancel();render();});
+  document.querySelectorAll('[data-operator-prompt]').forEach(button=>button.addEventListener('click',()=>{const input=document.getElementById('chat-prompt');if(input)input.value=button.dataset.operatorPrompt||'';sendChat();}));
   document.getElementById('new-chat')?.addEventListener('click',()=>{newChat();render();});
   document.querySelectorAll('[data-chat]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-del-chat]'))return;state.chatId=el.dataset.chat;render();}));
   document.querySelectorAll('[data-del-chat]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteChat(el.dataset.delChat);render();}));
   const _cs=document.getElementById('chat-scroll');if(_cs)_cs.scrollTop=_cs.scrollHeight;
+  loadOperatorBrief();
   // Messaging
   document.querySelectorAll('[data-msg-tab]').forEach(el=>el.addEventListener('click',()=>{state.msgTab=el.dataset.msgTab;render();}));
   document.querySelectorAll('[data-del-msg]').forEach(el=>el.addEventListener('click',async()=>{try{await api('/api/customer-workspace',{method:'POST',body:JSON.stringify({action:'delete-message',id:el.dataset.delMsg})});await loadSession();render();}catch(err){toast(err.message,'error');}}));
