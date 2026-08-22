@@ -67,7 +67,7 @@ const OWNER_EMAIL='nitrooutreach@outlook.com';
 const state = {
   session:null, loading:true, interval:localStorage.getItem('nitro-billing')==='monthly'?'monthly':'yearly',
   onboardStep:1, onboardData:{goals:[],socials:[]}, settingsTab:'profile', mobileMenu:false,
-  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, operatorVoice:localStorage.getItem('nitro-operator-voice')==='1', hasRendered:false,
+  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, operatorVoice:localStorage.getItem('nitro-operator-voice')==='1', operatorHandsFree:false, operatorListening:false, operatorRecognition:null, hasRendered:false,
   socialAnalyticsPlatform:'all'
 };
 
@@ -584,14 +584,15 @@ async function sendChat(){
   updateChat(state.chatId,c=>{c.messages.push({role:'user',text:promptText});if(!c.title||c.title==='New chat')c.title=promptText.slice(0,42);});
   const history=(getChats().find(x=>x.id===state.chatId)?.messages||[]).map(m=>({role:m.role,text:m.text}));
   state.chatBusy=true;render();
+  let spokenAnswer='';
   try{
     const r=await api('/api/customer-workspace',{method:'POST',body:JSON.stringify({action:'ask-assistant',prompt:promptText,history})});
     const entry=r&&r.entry||{},answer=entry.answer||'Sorry, I could not answer that. Try again.';
     updateChat(state.chatId,c=>{c.messages.push({role:'assistant',text:answer,agent:entry.agent||'Operator',action:entry.suggestedAction||null});});
-    if(state.operatorVoice&&'speechSynthesis'in window){window.speechSynthesis.cancel();const spoken=new SpeechSynthesisUtterance(String(answer).replace(/[*#_`>-]/g,' ').replace(/\s+/g,' ').trim());spoken.rate=1.02;spoken.pitch=.92;window.speechSynthesis.speak(spoken);}
+    spokenAnswer=answer;
   }catch(err){
     updateChat(state.chatId,c=>{c.messages.push({role:'assistant',text:'⚠️ '+((err&&err.message)||'Something went wrong. Please try again.')});});
-  }finally{state.chatBusy=false;render();}
+  }finally{state.chatBusy=false;render();if(spokenAnswer&&(state.operatorVoice||state.operatorHandsFree))speakOperatorReply(spokenAnswer);}
 }
 function operatorWorkspaceSnapshot(){
   const w=workspaceData(),drafts=w.socialDrafts||[],campaigns=w.campaigns||[],messages=w.messages||[],content=w.content||[],connections=w.connections||{};
@@ -615,16 +616,52 @@ function operatorAgents(s){return [
   ['Site agent','Builds conversion-ready websites and landing pages',`${s.websites} site${s.websites===1?'':'s'} ready`,'#websites','◇'],
   ['Outreach agent','Tracks messages, replies, and follow-up work',`${s.replies} repl${s.replies===1?'y':'ies'}`,'#messages','✉'],
 ];}
+function operatorVoiceChoice(){
+  if(!('speechSynthesis'in window))return null;
+  const voices=window.speechSynthesis.getVoices().filter(voice=>/^en[-_]/i.test(voice.lang||''));
+  const preferred=['Samantha','Ava','Zoe','Allison','Susan','Karen','Moira','Daniel','Google US English','Microsoft Aria','Microsoft Jenny'];
+  return voices.sort((a,b)=>{const ai=preferred.findIndex(name=>a.name.includes(name)),bi=preferred.findIndex(name=>b.name.includes(name));return (ai<0?999:ai)-(bi<0?999:bi)||(b.localService===true)-(a.localService===true);})[0]||null;
+}
+function setOperatorVoiceStatus(text,tone=''){
+  const status=document.getElementById('operator-voice-status');if(status){status.textContent=text;status.dataset.tone=tone;}
+  const mic=document.getElementById('operator-mic');if(mic)mic.textContent=state.operatorHandsFree?'End voice conversation':'Start voice conversation';
+}
+function speakOperatorReply(answer){
+  if(!('speechSynthesis'in window)){if(state.operatorHandsFree)setOperatorVoiceStatus('Voice playback is not supported in this browser.','error');return;}
+  window.speechSynthesis.cancel();
+  const text=String(answer).replace(/[*#_`>-]/g,' ').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim();
+  if(!text)return;
+  const spoken=new SpeechSynthesisUtterance(text),voice=operatorVoiceChoice();
+  if(voice)spoken.voice=voice;
+  spoken.lang=voice?.lang||'en-US';spoken.rate=.96;spoken.pitch=1;spoken.volume=1;
+  spoken.onstart=()=>setOperatorVoiceStatus('Nitro is speaking…','speaking');
+  spoken.onerror=()=>{setOperatorVoiceStatus('Voice playback stopped.','error');if(state.operatorHandsFree)setTimeout(startOperatorMic,500);};
+  spoken.onend=()=>{if(state.operatorHandsFree){setOperatorVoiceStatus('Listening…','listening');setTimeout(startOperatorMic,350);}else setOperatorVoiceStatus('Ready when you are.');};
+  window.speechSynthesis.speak(spoken);
+}
+function stopOperatorConversation(){
+  state.operatorHandsFree=false;state.operatorListening=false;
+  try{state.operatorRecognition?.abort();}catch{}
+  state.operatorRecognition=null;
+  if('speechSynthesis'in window)window.speechSynthesis.cancel();
+  render();
+}
 function startOperatorMic(){
+  if(!state.operatorHandsFree||state.operatorListening||state.chatBusy)return;
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!Recognition){toast('Voice input is not supported in this browser.','error');return;}
-  const mic=document.getElementById('operator-mic'),input=document.getElementById('chat-prompt'),recognition=new Recognition();
-  recognition.lang='en-US';recognition.interimResults=false;recognition.maxAlternatives=1;
-  mic?.classList.add('listening');if(mic)mic.textContent='Listening…';
-  recognition.onresult=event=>{const value=event.results?.[0]?.[0]?.transcript||'';if(input)input.value=value;};
-  recognition.onerror=()=>toast('I could not hear that clearly. Try again.','error');
-  recognition.onend=()=>{mic?.classList.remove('listening');if(mic)mic.textContent='◉ Voice';};
-  recognition.start();
+  if(!Recognition){toast('Voice input is not supported in this browser.','error');stopOperatorConversation();return;}
+  const recognition=new Recognition();let finalText='',hadError=false;
+  state.operatorRecognition=recognition;state.operatorListening=true;
+  recognition.lang='en-US';recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;
+  setOperatorVoiceStatus('Listening…','listening');
+  recognition.onresult=event=>{let partial='';for(let i=event.resultIndex;i<event.results.length;i++){const text=event.results[i]?.[0]?.transcript||'';if(event.results[i].isFinal)finalText+=text;else partial+=text;}const input=document.getElementById('chat-prompt');if(input)input.value=(finalText||partial).trim();setOperatorVoiceStatus(partial?'Hearing you…':'Listening…','listening');};
+  recognition.onerror=event=>{hadError=true;if(event.error!=='aborted'&&event.error!=='no-speech')setOperatorVoiceStatus('I could not hear that clearly.','error');};
+  recognition.onend=()=>{state.operatorListening=false;state.operatorRecognition=null;if(!state.operatorHandsFree)return;const input=document.getElementById('chat-prompt'),heard=(finalText||input?.value||'').trim();if(heard&&!hadError){if(input)input.value=heard;setOperatorVoiceStatus('Thinking…','thinking');sendChat();}else setTimeout(startOperatorMic,550);};
+  try{recognition.start();}catch{state.operatorListening=false;state.operatorRecognition=null;setTimeout(startOperatorMic,500);}
+}
+function toggleOperatorConversation(){
+  if(state.operatorHandsFree){stopOperatorConversation();return;}
+  state.operatorHandsFree=true;state.operatorVoice=true;localStorage.setItem('nitro-operator-voice','1');render();setTimeout(startOperatorMic,120);
 }
 async function loadOperatorBrief(){
   const panel=document.getElementById('operator-live-owner');if(!panel)return;
@@ -641,14 +678,14 @@ function assistantPage(){
   if(chat)state.chatId=chat.id;else state.chatId=null;
   const msgs=chat?chat.messages:[];
   const snapshot=operatorWorkspaceSnapshot(),priorities=operatorPrioritiesClient(snapshot),agents=operatorAgents(snapshot),isOwner=(state.session.user.email||'').toLowerCase()===OWNER_EMAIL;
-  const rail=`<aside class="chat-rail operator-rail"><button class="btn btn-primary chat-new" id="new-chat">+ New command</button><div class="operator-agent-mini"><small>AGENTS ONLINE</small>${agents.map(agent=>`<a href="${agent[3]}"><i>${agent[5]}</i><span><b>${agent[0]}</b><small>${agent[2]}</small></span></a>`).join('')}</div><div class="chat-history-label">COMMAND HISTORY</div><div class="chat-list">${chats.length?chats.map(c=>`<div class="chat-item ${c.id===state.chatId?'active':''}" data-chat="${c.id}"><span class="chat-ic">${ICONS.assistant}</span><b>${esc(c.title||'New command')}</b><span class="chat-del" data-del-chat="${c.id}" title="Delete command">&times;</span></div>`).join(''):`<p class="chat-empty-list">Your commands will appear here.</p>`}</div></aside>`;
+  const rail=`<aside class="chat-rail operator-rail"><button class="btn btn-primary chat-new" id="new-chat">+ New command</button><div class="operator-agent-mini"><small>AGENTS ONLINE</small>${agents.map(agent=>`<a href="${agent[3]}"><i>${agent[4]}</i><span><b>${agent[0]}</b><small>${agent[2]}</small></span></a>`).join('')}</div><div class="chat-history-label">COMMAND HISTORY</div><div class="chat-list">${chats.length?chats.map(c=>`<div class="chat-item ${c.id===state.chatId?'active':''}" data-chat="${c.id}"><span class="chat-ic">${ICONS.assistant}</span><b>${esc(c.title||'New command')}</b><span class="chat-del" data-del-chat="${c.id}" title="Delete command">&times;</span></div>`).join(''):`<p class="chat-empty-list">Your commands will appear here.</p>`}</div></aside>`;
   const thread=msgs.length?msgs.map(m=>m.role==='user'
      ?`<div class="chat-row user"><span class="chat-avatar chat-av-user">${initials(state.session.user)}</span><div class="chat-bubble">${esc(m.text)}</div></div>`
      :`<div class="chat-row ai"><span class="chat-avatar chat-av-bot">${ICONS.assistant}</span><div><small class="operator-response-agent">${esc(m.agent||'Operator')}</small><div class="chat-bubble md-body">${mdToHtml(m.text)}</div>${m.action?.route?`<a class="operator-action-link" href="${esc(m.action.route)}">${esc(m.action.label||'Open workspace')} →</a>`:''}</div></div>`).join('')
    :`<div class="chat-blank operator-chat-blank"><div class="operator-orb"><i></i><i></i><span>${ICONS.assistant}</span></div><h3>What should Nitro handle?</h3><p>Ask for a performance briefing, the best next move, content, outreach, a campaign, or a website.</p><div class="operator-prompts"><button data-operator-prompt="Give me my business briefing and the best next move.">Brief me</button><button data-operator-prompt="What needs my attention right now?">Find problems</button><button data-operator-prompt="Plan the next campaign from my current workspace.">Plan growth</button></div></div>`;
   const typing=state.chatBusy?`<div class="chat-row ai"><span class="chat-avatar chat-av-bot">${ICONS.assistant}</span><div class="chat-bubble typing"><i></i><i></i><i></i></div></div>`:'';
   const liveOwner=isOwner?`<section class="glass-card operator-live" id="operator-live-owner"><div><span class="operator-live-pill"><i></i> LIVE NITRO DATA</span><h3>Owner business briefing</h3><p id="operator-live-copy">Reading genuine traffic, outreach, replies, and signups…</p></div><div class="operator-live-metrics"><article><small>VISITORS TODAY</small><b id="operatorLiveVisitors">—</b></article><article><small>CONFIRMED VISITS</small><b id="operatorLiveVisits">—</b></article><article><small>REPLIES</small><b id="operatorLiveReplies">—</b></article><article><small>SIGNUPS</small><b id="operatorLiveSignups">—</b></article></div></section>`:'';
-  return `<div class="operator-page"><section class="operator-hero"><div><span class="operator-kicker"><i></i> NITRO OPERATOR ONLINE</span><h2>Your business, under command.</h2><p>One intelligence layer across websites, content, publishing, outreach, campaigns, and verified performance.</p></div><div class="operator-hero-actions"><button class="btn ${state.operatorVoice?'btn-primary':''}" id="operator-voice-toggle">${state.operatorVoice?'◉ Spoken replies on':'○ Spoken replies off'}</button><button class="btn btn-primary" id="operator-mic">◉ Voice</button></div></section>${liveOwner}<div class="operator-overview"><section class="glass-card operator-priorities"><div class="panel-head"><div><small>NEEDS ATTENTION</small><h3>Recommended next actions</h3></div><span>${priorities.length} PRIORIT${priorities.length===1?'Y':'IES'}</span></div><div class="operator-priority-list">${priorities.map((item,index)=>`<a href="${item[3]}"><span class="priority-level ${item[0]}">${String(index+1).padStart(2,'0')}</span><div><b>${esc(item[1])}</b><p>${esc(item[2])}</p><small>${esc(item[4])}</small></div><strong>Open →</strong></a>`).join('')}</div></section><section class="glass-card operator-system"><div class="panel-head"><div><small>WORKSPACE SIGNALS</small><h3>System status</h3></div><span class="operator-status-ok">OPERATIONAL</span></div><div class="operator-signal-grid"><article><b>${snapshot.websites}</b><span>Websites</span></article><article><b>${snapshot.content}</b><span>Assets</span></article><article><b>${snapshot.socialScheduled}</b><span>Scheduled</span></article><article><b>${snapshot.connectedSocials}/5</b><span>Socials</span></article><article><b>${snapshot.activeCampaigns}</b><span>Campaigns</span></article><article><b>${snapshot.replies}</b><span>Replies</span></article></div></section></div><section class="operator-agents"><div class="panel-head"><div><small>SPECIALIZED AGENTS</small><h3>One operator. Five focused systems.</h3></div></div><div class="operator-agent-grid">${agents.map(agent=>`<a class="glass-card" href="${agent[3]}"><span>${agent[5]}</span><div><h4>${agent[0]}</h4><p>${agent[1]}</p><small>${agent[2]}</small></div><strong>→</strong></a>`).join('')}</div></section><div class="chat-layout operator-chat-layout"><section class="glass-card panel chat-main operator-chat"><div class="operator-chat-head"><div><span class="operator-live-pill"><i></i> COMMAND CHANNEL</span><h3>Talk to Nitro</h3></div><small>Uses real workspace context</small></div><div class="chat-scroll" id="chat-scroll">${thread}${typing}</div><form id="chat-form" class="chat-input operator-input"><textarea class="input" id="chat-prompt" rows="1" placeholder="Ask for a briefing or tell Nitro what you want to work on…"></textarea><button class="btn btn-primary" type="submit" ${state.chatBusy?'disabled':''}>Run command</button></form></section>${rail}</div></div>`;
+  return `<div class="operator-page"><section class="operator-hero"><div><span class="operator-kicker"><i></i> NITRO OPERATOR ONLINE</span><h2>Your business, under command.</h2><p>One intelligence layer across websites, content, publishing, outreach, campaigns, and verified performance.</p></div><div class="operator-hero-actions"><button class="btn ${state.operatorVoice?'btn-primary':''}" id="operator-voice-toggle">${state.operatorVoice?'◉ Natural spoken replies':'○ Spoken replies off'}</button><button class="btn btn-primary ${state.operatorHandsFree?'listening':''}" id="operator-mic">${state.operatorHandsFree?'End voice conversation':'Start voice conversation'}</button><small class="operator-voice-status" id="operator-voice-status" aria-live="polite">${state.operatorHandsFree?(state.chatBusy?'Thinking…':state.operatorListening?'Listening…':'Voice conversation active'):'Talk naturally, hands-free'}</small></div></section>${liveOwner}<div class="operator-overview"><section class="glass-card operator-priorities"><div class="panel-head"><div><small>NEEDS ATTENTION</small><h3>Recommended next actions</h3></div><span>${priorities.length} PRIORIT${priorities.length===1?'Y':'IES'}</span></div><div class="operator-priority-list">${priorities.map((item,index)=>`<a href="${item[3]}"><span class="priority-level ${item[0]}">${String(index+1).padStart(2,'0')}</span><div><b>${esc(item[1])}</b><p>${esc(item[2])}</p><small>${esc(item[4])}</small></div><strong>Open →</strong></a>`).join('')}</div></section><section class="glass-card operator-system"><div class="panel-head"><div><small>WORKSPACE SIGNALS</small><h3>System status</h3></div><span class="operator-status-ok">OPERATIONAL</span></div><div class="operator-signal-grid"><article><b>${snapshot.websites}</b><span>Websites</span></article><article><b>${snapshot.content}</b><span>Assets</span></article><article><b>${snapshot.socialScheduled}</b><span>Scheduled</span></article><article><b>${snapshot.connectedSocials}/5</b><span>Socials</span></article><article><b>${snapshot.activeCampaigns}</b><span>Campaigns</span></article><article><b>${snapshot.replies}</b><span>Replies</span></article></div></section></div><section class="operator-agents"><div class="panel-head"><div><small>SPECIALIZED AGENTS</small><h3>One operator. Five focused systems.</h3></div></div><div class="operator-agent-grid">${agents.map(agent=>`<a class="glass-card" href="${agent[3]}"><span>${agent[4]}</span><div><h4>${agent[0]}</h4><p>${agent[1]}</p><small>${agent[2]}</small></div><strong>→</strong></a>`).join('')}</div></section><div class="chat-layout operator-chat-layout"><section class="glass-card panel chat-main operator-chat"><div class="operator-chat-head"><div><span class="operator-live-pill"><i></i> COMMAND CHANNEL</span><h3>Talk to Nitro</h3></div><small>Uses real workspace context</small></div><div class="chat-scroll" id="chat-scroll">${thread}${typing}</div><form id="chat-form" class="chat-input operator-input"><textarea class="input" id="chat-prompt" rows="1" placeholder="Ask for a briefing or tell Nitro what you want to work on…"></textarea><button class="btn btn-primary" type="submit" ${state.chatBusy?'disabled':''}>Run command</button></form></section>${rail}</div></div>`;
 }
 
 // ---- Messaging: sent email/SMS log + automation setup guide ----
@@ -852,8 +889,8 @@ function bindWorkspace(){
   // AI Assistant (threaded chat)
   document.getElementById('chat-form')?.addEventListener('submit',e=>{e.preventDefault();sendChat();});
   document.getElementById('chat-prompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
-  document.getElementById('operator-mic')?.addEventListener('click',startOperatorMic);
-  document.getElementById('operator-voice-toggle')?.addEventListener('click',()=>{state.operatorVoice=!state.operatorVoice;localStorage.setItem('nitro-operator-voice',state.operatorVoice?'1':'0');if(!state.operatorVoice&&'speechSynthesis'in window)window.speechSynthesis.cancel();render();});
+  document.getElementById('operator-mic')?.addEventListener('click',toggleOperatorConversation);
+  document.getElementById('operator-voice-toggle')?.addEventListener('click',()=>{if(state.operatorHandsFree){stopOperatorConversation();return;}state.operatorVoice=!state.operatorVoice;localStorage.setItem('nitro-operator-voice',state.operatorVoice?'1':'0');if(!state.operatorVoice&&'speechSynthesis'in window)window.speechSynthesis.cancel();render();});
   document.querySelectorAll('[data-operator-prompt]').forEach(button=>button.addEventListener('click',()=>{const input=document.getElementById('chat-prompt');if(input)input.value=button.dataset.operatorPrompt||'';sendChat();}));
   document.getElementById('new-chat')?.addEventListener('click',()=>{newChat();render();});
   document.querySelectorAll('[data-chat]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-del-chat]'))return;state.chatId=el.dataset.chat;render();}));
