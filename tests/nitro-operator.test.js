@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inferOperatorAction, operatorAgent, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 test('builds an honest operator snapshot from customer workspace data', () => {
   const snapshot = operatorSnapshot({
@@ -34,4 +34,15 @@ test('routes operator commands to a specialized agent and workspace', () => {
   assert.equal(inferOperatorAction('Show me traffic and conversion performance').route, '#analytics');
   assert.equal(operatorAgent('Pause the weak ad campaign'), 'Growth agent');
   assert.equal(inferOperatorAction('Tell me what to focus on'), null);
+});
+
+test('returns a useful verified briefing when an AI provider is unavailable', () => {
+  const snapshot = { websites: 1, content: 3, socialScheduled: 2, connectedSocials: 3, activeCampaigns: 1, replies: 0 };
+  const priorities = [{ title: 'Review performance', detail: 'Use verified results to choose the next move.' }];
+  const answer = operatorFallbackResponse('Give me my business briefing', snapshot, priorities, 'Nitro Outreach');
+  assert.match(answer, /Nitro Outreach briefing/);
+  assert.match(answer, /3 content assets/);
+  assert.match(answer, /3\/5 social channels connected/);
+  assert.match(answer, /Best next move:.*Review performance/);
+  assert.doesNotMatch(answer, /undefined/i);
 });
