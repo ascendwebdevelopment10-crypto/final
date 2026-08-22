@@ -6,7 +6,7 @@ import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
 import { contentCreditBalance, migrateContentCredits, spendContentCredits } from '../lib/content-credits.js';
 import { kv } from '@vercel/kv';
-import { inferOperatorAction, operatorAgent, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 export const config = { maxDuration: 300 };
 
@@ -550,7 +550,10 @@ Current deterministic priorities: ${JSON.stringify(priorities.map(item => ({ tit
           .map(m => `${m && m.role === 'assistant' ? 'You' : 'User'}: ${clean(m && m.text, 700)}`)
           .filter(Boolean).join('\n');
       }
-      const answer = await generate(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
+      let answer = '';
+      let answerSource = 'ai';
+      try {
+        answer = await generate(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
 
 Rules:
 - Treat the verified snapshot as the source of truth. Never invent traffic, revenue, ad spend, reach, customers, replies, integrations, or completed work.
@@ -559,10 +562,18 @@ Rules:
 - Distinguish clearly between recommendations and completed actions.
 
 Style: sound like a calm, decisive operator. Get straight to the point in under 180 words. Use light Markdown only where it helps — bold key facts and short bullet lists. No filler and no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 500, FAST_MODEL);
+      } catch (error) {
+        answerSource = 'workspace_fallback';
+        console.error(JSON.stringify({ level: 'error', msg: 'operator_generation_failed', error: clean(error?.message, 500) }));
+      }
+      if (!clean(answer, 10)) {
+        answerSource = 'workspace_fallback';
+        answer = operatorFallbackResponse(prompt, snapshot, priorities, company);
+      }
       const suggestedAction = inferOperatorAction(prompt);
-      const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), agent: operatorAgent(prompt), suggestedAction, snapshot, createdAt: new Date().toISOString() };
+      const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), agent: operatorAgent(prompt), suggestedAction, snapshot, answerSource, createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
-      user.usage.aiUsed += 1;
+      if (answerSource === 'ai') user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(200).json({ ok: true, entry, aiUsed: user.usage.aiUsed }); return;
     }
 
