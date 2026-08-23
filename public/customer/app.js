@@ -67,7 +67,7 @@ const OWNER_EMAIL='nitrooutreach@outlook.com';
 const state = {
   session:null, loading:true, interval:localStorage.getItem('nitro-billing')==='monthly'?'monthly':'yearly',
   onboardStep:1, onboardData:{goals:[],socials:[]}, settingsTab:'profile', mobileMenu:false,
-  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, operatorVoice:localStorage.getItem('nitro-operator-voice')==='1', operatorHandsFree:false, operatorListening:false, operatorRecognition:null, hasRendered:false,
+  msgTab:'email', msgChannel:'email', chatId:null, chatBusy:false, operatorVoice:localStorage.getItem('nitro-operator-voice')==='1', operatorHandsFree:false, operatorListening:false, operatorRecognition:null, operatorAudio:null, operatorAudioUrl:'', hasRendered:false,
   socialAnalyticsPlatform:'all'
 };
 
@@ -626,23 +626,47 @@ function setOperatorVoiceStatus(text,tone=''){
   const status=document.getElementById('operator-voice-status');if(status){status.textContent=text;status.dataset.tone=tone;}
   const mic=document.getElementById('operator-mic');if(mic)mic.textContent=state.operatorHandsFree?'End voice conversation':'Start voice conversation';
 }
-function speakOperatorReply(answer){
+function clearOperatorAudio(){
+  state.operatorAudio=null;
+  if(state.operatorAudioUrl){URL.revokeObjectURL(state.operatorAudioUrl);state.operatorAudioUrl='';}
+}
+function finishOperatorSpeech(){
+  clearOperatorAudio();
+  if(state.operatorHandsFree){setOperatorVoiceStatus('Listening…','listening');setTimeout(startOperatorMic,350);}else setOperatorVoiceStatus('Ready when you are.');
+}
+function speakBrowserVoice(text){
   if(!('speechSynthesis'in window)){if(state.operatorHandsFree)setOperatorVoiceStatus('Voice playback is not supported in this browser.','error');return;}
   window.speechSynthesis.cancel();
-  const text=String(answer).replace(/[*#_`>-]/g,' ').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim();
-  if(!text)return;
   const spoken=new SpeechSynthesisUtterance(text),voice=operatorVoiceChoice();
   if(voice)spoken.voice=voice;
   spoken.lang=voice?.lang||'en-US';spoken.rate=.96;spoken.pitch=1;spoken.volume=1;
   spoken.onstart=()=>setOperatorVoiceStatus('Nitro is speaking…','speaking');
   spoken.onerror=()=>{setOperatorVoiceStatus('Voice playback stopped.','error');if(state.operatorHandsFree)setTimeout(startOperatorMic,500);};
-  spoken.onend=()=>{if(state.operatorHandsFree){setOperatorVoiceStatus('Listening…','listening');setTimeout(startOperatorMic,350);}else setOperatorVoiceStatus('Ready when you are.');};
+  spoken.onend=finishOperatorSpeech;
   window.speechSynthesis.speak(spoken);
+}
+async function speakOperatorReply(answer){
+  const text=String(answer).replace(/[*#_`>-]/g,' ').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim();
+  if(!text)return;
+  try{state.operatorAudio?.pause();}catch{}clearOperatorAudio();
+  if('speechSynthesis'in window)window.speechSynthesis.cancel();
+  try{
+    const response=await fetch('/api/operator-voice',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!response.ok)throw new Error('Natural voice unavailable');
+    const blob=await response.blob();state.operatorAudioUrl=URL.createObjectURL(blob);
+    const audio=new Audio(state.operatorAudioUrl);state.operatorAudio=audio;
+    audio.onplay=()=>setOperatorVoiceStatus('Nitro is speaking…','speaking');
+    audio.onended=finishOperatorSpeech;
+    audio.onerror=()=>{clearOperatorAudio();speakBrowserVoice(text);};
+    await audio.play();
+  }catch{clearOperatorAudio();speakBrowserVoice(text);}
 }
 function stopOperatorConversation(){
   state.operatorHandsFree=false;state.operatorListening=false;
   try{state.operatorRecognition?.abort();}catch{}
   state.operatorRecognition=null;
+  try{state.operatorAudio?.pause();}catch{}
+  clearOperatorAudio();
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   render();
 }
@@ -890,7 +914,7 @@ function bindWorkspace(){
   document.getElementById('chat-form')?.addEventListener('submit',e=>{e.preventDefault();sendChat();});
   document.getElementById('chat-prompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
   document.getElementById('operator-mic')?.addEventListener('click',toggleOperatorConversation);
-  document.getElementById('operator-voice-toggle')?.addEventListener('click',()=>{if(state.operatorHandsFree){stopOperatorConversation();return;}state.operatorVoice=!state.operatorVoice;localStorage.setItem('nitro-operator-voice',state.operatorVoice?'1':'0');if(!state.operatorVoice&&'speechSynthesis'in window)window.speechSynthesis.cancel();render();});
+  document.getElementById('operator-voice-toggle')?.addEventListener('click',()=>{if(state.operatorHandsFree){stopOperatorConversation();return;}state.operatorVoice=!state.operatorVoice;localStorage.setItem('nitro-operator-voice',state.operatorVoice?'1':'0');if(!state.operatorVoice){try{state.operatorAudio?.pause();}catch{}clearOperatorAudio();if('speechSynthesis'in window)window.speechSynthesis.cancel();}render();});
   document.querySelectorAll('[data-operator-prompt]').forEach(button=>button.addEventListener('click',()=>{const input=document.getElementById('chat-prompt');if(input)input.value=button.dataset.operatorPrompt||'';sendChat();}));
   document.getElementById('new-chat')?.addEventListener('click',()=>{newChat();render();});
   document.querySelectorAll('[data-chat]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-del-chat]'))return;state.chatId=el.dataset.chat;render();}));
