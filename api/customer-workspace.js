@@ -36,18 +36,25 @@ function usageError(plan) { return `You've used all ${plan.aiCredits} AI credits
 function textOf(message) { return message.content?.filter(part => part.type === 'text').map(part => part.text).join('\n').trim() || ''; }
 async function generateOpenAI(prompt, maxTokens, system = 'You are Nitro Outreach, a practical small-business growth assistant.') {
   if (!process.env.OPENAI_API_KEY) throw new Error('OpenAI generation is not configured.');
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini',
-      messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
-      max_completion_tokens: Math.max(500, Math.ceil(maxTokens * 1.4)),
-    }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.error?.message || `OpenAI HTTP ${response.status}`);
-  return clean(data?.choices?.[0]?.message?.content, 30000);
+  const primaryModel = process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini';
+  const attempts = [
+    { model: primaryModel, max_completion_tokens: Math.max(500, Math.ceil(maxTokens * 1.4)), ...(/^gpt-5/i.test(primaryModel) ? { reasoning_effort: 'minimal', verbosity: 'low' } : {}) },
+    ...(primaryModel === 'gpt-4.1-mini' ? [] : [{ model: 'gpt-4.1-mini', max_tokens: maxTokens }]),
+  ];
+  let lastError = 'OpenAI returned an empty response.';
+  for (const attempt of attempts) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...attempt, messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }] }),
+    });
+    const data = await response.json().catch(() => ({}));
+    const output = clean(data?.choices?.[0]?.message?.content, 30000);
+    if (response.ok && output) return output;
+    lastError = data?.error?.message || (response.ok ? lastError : `OpenAI HTTP ${response.status}`);
+    console.error(JSON.stringify({ level: 'error', msg: 'openai_text_attempt_failed', model: attempt.model, status: response.status, empty: response.ok && !output }));
+  }
+  throw new Error(lastError);
 }
 async function generate(prompt, maxTokens = 700, model = MODEL) {
   if (process.env.ANTHROPIC_API_KEY) {
@@ -556,6 +563,7 @@ Current deterministic priorities: ${JSON.stringify(priorities.map(item => ({ tit
         answer = await generate(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
 
 Rules:
+- Answer normal conversation and everyday questions naturally too. If the user says hello, greet them. If they ask something general, such as what ice cream to eat, answer directly and conversationally. Do not force every answer back to business.
 - Treat the verified snapshot as the source of truth. Never invent traffic, revenue, ad spend, reach, customers, replies, integrations, or completed work.
 - Never claim you sent, published, paused, changed, or created anything unless the supplied context explicitly confirms it.
 - If the user asks for an action, explain the exact next step and tell them which Nitro agent or workspace will handle it.

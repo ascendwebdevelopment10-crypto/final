@@ -46,3 +46,9 @@ test('returns a useful verified briefing when an AI provider is unavailable', ()
   assert.match(answer, /Best next move:.*Review performance/);
   assert.doesNotMatch(answer, /undefined/i);
 });
+
+test('answers simple conversation naturally when providers are unavailable', () => {
+  assert.match(operatorFallbackResponse('hello'), /^Hey!/);
+  assert.match(operatorFallbackResponse('what ice cream should I eat?'), /cookies and cream/i);
+  assert.doesNotMatch(operatorFallbackResponse('what ice cream should I eat?'), /briefing|workspace/i);
+});
