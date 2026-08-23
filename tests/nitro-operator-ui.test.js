@@ -15,6 +15,9 @@ test('Nitro Operator is wired into navigation, live data, voice, and command act
   assert.match(client, /operator-live-owner/);
   assert.match(client, /SpeechRecognition\|\|window\.webkitSpeechRecognition/);
   assert.match(client, /speechSynthesis/);
+  assert.match(client, /\/api\/operator-voice/);
+  assert.match(client, /new Audio\(state\.operatorAudioUrl\)/);
+  assert.match(client, /speakBrowserVoice/);
   assert.match(client, /operatorVoiceChoice/);
   assert.match(client, /toggleOperatorConversation/);
   assert.match(client, /recognition\.interimResults=true/);
@@ -28,6 +31,7 @@ test('Nitro Operator is wired into navigation, live data, voice, and command act
   assert.match(backend, /Never claim you sent, published, paused, changed, or created anything/);
   assert.match(backend, /operatorFallbackResponse/);
   assert.match(backend, /workspace_fallback/);
+  assert.match(backend, /Answer normal conversation and everyday questions naturally too/);
 });
 
 test('Operator owner metrics use the existing authenticated owner endpoint', async () => {
