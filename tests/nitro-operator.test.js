@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 test('builds an honest operator snapshot from customer workspace data', () => {
   const snapshot = operatorSnapshot({
@@ -51,4 +51,12 @@ test('answers simple conversation naturally when providers are unavailable', () 
   assert.match(operatorFallbackResponse('hello'), /^Hey!/);
   assert.match(operatorFallbackResponse('what ice cream should I eat?'), /cookies and cream/i);
   assert.doesNotMatch(operatorFallbackResponse('what ice cream should I eat?'), /briefing|workspace/i);
+});
+
+test('rejects empty provider placeholders instead of displaying undefined', () => {
+  for (const value of [undefined, null, '', 'undefined', ' null ', '[object Object]', 'NaN']) {
+    assert.equal(cleanOperatorAnswer(value), '');
+  }
+  assert.equal(cleanOperatorAnswer('Your result: undefined'), 'Your result');
+  assert.equal(cleanOperatorAnswer('Here is a real answer.'), 'Here is a real answer.');
 });

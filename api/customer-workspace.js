@@ -6,7 +6,7 @@ import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
 import { contentCreditBalance, migrateContentCredits, spendContentCredits } from '../lib/content-credits.js';
 import { kv } from '@vercel/kv';
-import { inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 export const config = { maxDuration: 300 };
 
@@ -55,6 +55,47 @@ async function generateOpenAI(prompt, maxTokens, system = 'You are Nitro Outreac
     console.error(JSON.stringify({ level: 'error', msg: 'openai_text_attempt_failed', model: attempt.model, status: response.status, empty: response.ok && !output }));
   }
   throw new Error(lastError);
+}
+function openAIResponseText(data) {
+  const direct = cleanOperatorAnswer(data?.output_text, 30000);
+  if (direct) return direct;
+  const parts = Array.isArray(data?.output) ? data.output.flatMap(item => Array.isArray(item?.content) ? item.content : []) : [];
+  return cleanOperatorAnswer(parts.map(part => part?.text || part?.content || '').join('\n'), 30000);
+}
+async function generateOperator(prompt, maxTokens = 500) {
+  if (process.env.OPENAI_API_KEY) {
+    const model = process.env.OPENAI_TEXT_MODEL || 'gpt-5-mini';
+    const supportsMinimalReasoning = /^gpt-5(?:$|-(?:mini|nano|\d{4}))/i.test(model);
+    try {
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          instructions: 'You are Nitro Outreach, a practical, natural, and concise small-business assistant.',
+          input: prompt,
+          max_output_tokens: Math.max(500, maxTokens),
+          ...(supportsMinimalReasoning ? { reasoning: { effort: 'minimal' }, text: { verbosity: 'low' } } : {}),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const output = openAIResponseText(data);
+      if (response.ok && output) return output;
+      throw new Error(data?.error?.message || (response.ok ? 'OpenAI returned an empty response.' : `OpenAI HTTP ${response.status}`));
+    } catch (error) {
+      console.error(JSON.stringify({ level: 'error', msg: 'operator_openai_responses_failed', error: clean(error?.message, 500) }));
+      try { return await generateOpenAI(prompt, maxTokens); }
+      catch (fallbackError) {
+        console.error(JSON.stringify({ level: 'error', msg: 'operator_openai_chat_failed', error: clean(fallbackError?.message, 500) }));
+      }
+    }
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    const result = await anthropic.messages.create({ model: FAST_MODEL, max_tokens: maxTokens, temperature: 0.6, messages: [{ role: 'user', content: prompt }] });
+    const output = cleanOperatorAnswer(textOf(result), 30000);
+    if (output) return output;
+  }
+  throw new Error('No AI provider returned an answer.');
 }
 async function generate(prompt, maxTokens = 700, model = MODEL) {
   if (process.env.ANTHROPIC_API_KEY) {
@@ -560,7 +601,7 @@ Current deterministic priorities: ${JSON.stringify(priorities.map(item => ({ tit
       let answer = '';
       let answerSource = 'ai';
       try {
-        answer = await generate(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
+        answer = await generateOperator(`You are Nitro Operator, the command center for a small business. You coordinate specialized Site, Content, Publisher, Outreach, and Growth agents. ${context}
 
 Rules:
 - Answer normal conversation and everyday questions naturally too. If the user says hello, greet them. If they ask something general, such as what ice cream to eat, answer directly and conversationally. Do not force every answer back to business.
@@ -569,17 +610,18 @@ Rules:
 - If the user asks for an action, explain the exact next step and tell them which Nitro agent or workspace will handle it.
 - Distinguish clearly between recommendations and completed actions.
 
-Style: sound like a calm, decisive operator. Get straight to the point in under 180 words. Use light Markdown only where it helps — bold key facts and short bullet lists. No filler and no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 500, FAST_MODEL);
+Style: sound like a calm, decisive operator. Get straight to the point in under 180 words. Use light Markdown only where it helps — bold key facts and short bullet lists. No filler and no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 500);
       } catch (error) {
         answerSource = 'workspace_fallback';
         console.error(JSON.stringify({ level: 'error', msg: 'operator_generation_failed', error: clean(error?.message, 500) }));
       }
-      if (!clean(answer, 10)) {
+      answer = cleanOperatorAnswer(answer);
+      if (!answer) {
         answerSource = 'workspace_fallback';
         answer = operatorFallbackResponse(prompt, snapshot, priorities, company);
       }
       const suggestedAction = inferOperatorAction(prompt);
-      const entry = { id: id('chat'), prompt, answer: clean(answer, 6000), agent: operatorAgent(prompt), suggestedAction, snapshot, answerSource, createdAt: new Date().toISOString() };
+      const entry = { id: id('chat'), prompt, answer: cleanOperatorAnswer(answer), agent: operatorAgent(prompt), suggestedAction, snapshot, answerSource, createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       if (answerSource === 'ai') user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(200).json({ ok: true, entry, aiUsed: user.usage.aiUsed }); return;
