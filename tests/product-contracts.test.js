@@ -107,6 +107,26 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(cron, /outreach-followup-cron/);
 });
 
+test('conversion sprint shortens signup and adds an interactive product preview plus ranked hot leads', async () => {
+  const [app, css, index, view] = await Promise.all([
+    read('../public/customer/app.js'), read('../public/customer/conversion-sprint-v1.css'),
+    read('../public/index.html'), read('../views/customer.html'),
+  ]);
+  const signup = app.match(/function renderSignup\(\).*?function renderForgot/s)?.[0] || '';
+  assert.match(signup, /Two fields\. No credit card/);
+  assert.doesNotMatch(signup, /First name|Last name/);
+  assert.match(app, /function bindLandingPreview/);
+  assert.match(app, /INTERACTIVE PRODUCT PREVIEW/);
+  assert.match(app, /From first click to the next conversation/);
+  assert.match(app, /REAL INTENT, RANKED/);
+  assert.match(app, /Viewed pricing/);
+  assert.match(app, /Copy follow-up/);
+  assert.match(css, /\.preview-switcher/);
+  assert.match(css, /\.hot-leads-grid/);
+  assert.match(index, /conversion-sprint-v1\.css/);
+  assert.match(view, /conversion-sprint-v1\.css/);
+});
+
 test('responsive contracts cover desktop, tablet, phone, and compact phone layouts', async () => {
   const css = await read('../public/customer/app.css');
   for (const breakpoint of ['1220px', '1080px', '900px', '760px', '430px']) assert.match(css, new RegExp(`max-width:${breakpoint}`));

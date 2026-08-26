@@ -6,7 +6,7 @@ import { notifyBestEffort } from '../lib/ntfy.js';
 import { planFor } from '../lib/customer-plans.js';
 import { contentCreditBalance, migrateContentCredits, spendContentCredits } from '../lib/content-credits.js';
 import { kv } from '@vercel/kv';
-import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorExecutionPlan, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 export const config = { maxDuration: 300 };
 
@@ -580,6 +580,46 @@ DESIGN QUALITY
       await saveCustomer(user); res.status(201).json({ ok: true, content: item, aiUsed: user.usage.aiUsed, contentCredits: contentCreditBalance(user) }); return;
     }
 
+    // ---- OPERATOR ACTION EXECUTION ----
+    if (action === 'execute-operator-action') {
+      const prompt = clean(body.prompt, 1200);
+      const requestedType = clean(body.type, 80);
+      const executable = operatorExecutionPlan(prompt, user);
+      if (!executable || executable.type !== requestedType) { res.status(400).json({ error: 'That command is no longer actionable. Ask Nitro again with a specific action.' }); return; }
+      if (executable.requiresConfirmation && body.confirmed !== true) {
+        res.status(409).json({ error: 'Confirm this action before Nitro runs it.', requiresConfirmation: true, executableAction: executable }); return;
+      }
+      if (executable.type === 'pause-campaign' || executable.type === 'resume-campaign') {
+        const campaign = data.campaigns.find(item => item.id === executable.targetId);
+        if (!campaign) { res.status(404).json({ error: 'That campaign could not be found.' }); return; }
+        campaign.status = executable.type === 'pause-campaign' ? 'paused' : 'active';
+        campaign.updatedAt = new Date().toISOString();
+        await saveCustomer(user);
+        const message = `${campaign.name || 'Campaign'} is now ${campaign.status}.`;
+        res.status(200).json({ ok: true, message, route: '#ads', result: { id: campaign.id, status: campaign.status } }); return;
+      }
+      if (!creditsLeft()) { res.status(403).json({ error: usageError(plan) }); return; }
+      const { company } = ctx(user);
+      if (executable.type === 'create-content-draft') {
+        const generated = await generateOperator(`Create the marketing content requested below for ${company}. Return only polished, ready-to-use copy. Use a direct hook, useful body, and clear call to action. Never invent proof, results, prices, discounts, or guarantees.\n\nRequest: ${prompt}`, 700);
+        const item = { id: id('content'), topic: prompt.slice(0, 160), format: 'Operator draft', text: clean(generated, 5000), source: 'nitro-operator', createdAt: new Date().toISOString() };
+        data.content.unshift(item); data.content = data.content.slice(0, plan.id === 'free' ? 10 : 100);
+        user.usage.aiUsed += 1;
+        await saveCustomer(user);
+        res.status(201).json({ ok: true, message: 'Content draft created and saved in Content Studio.', route: '#content', result: item, aiUsed: user.usage.aiUsed }); return;
+      }
+      if (executable.type === 'create-followup-draft') {
+        const generated = await generateOperator(`Write one concise, respectful follow-up email draft for ${company} based only on this request: ${prompt}. Do not claim the recipient opened, clicked, visited, or replied unless the request explicitly says so. Do not invent proof or urgency. Return only the email body.`, 500);
+        const emailMatch = prompt.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        const item = { id: id('message'), channel: 'email', to: emailMatch?.[0] || 'Choose recipient', subject: `Quick follow-up from ${company}`, body: clean(generated, 5000), status: 'draft', source: 'nitro-operator', createdAt: new Date().toISOString() };
+        data.messages.unshift(item); data.messages = data.messages.slice(0, 250);
+        user.usage.aiUsed += 1;
+        await saveCustomer(user);
+        res.status(201).json({ ok: true, message: 'Follow-up draft created in Messaging. Nothing was sent.', route: '#messages', result: item, aiUsed: user.usage.aiUsed }); return;
+      }
+      res.status(400).json({ error: 'That Operator action is not supported yet.' }); return;
+    }
+
     // ---- ASSISTANT ----
     if (action === 'ask-assistant') {
       const prompt = clean(body.prompt, 1200);
@@ -607,7 +647,7 @@ Rules:
 - Answer normal conversation and everyday questions naturally too. If the user says hello, greet them. If they ask something general, such as what ice cream to eat, answer directly and conversationally. Do not force every answer back to business.
 - Treat the verified snapshot as the source of truth. Never invent traffic, revenue, ad spend, reach, customers, replies, integrations, or completed work.
 - Never claim you sent, published, paused, changed, or created anything unless the supplied context explicitly confirms it.
-- If the user asks for an action, explain the exact next step and tell them which Nitro agent or workspace will handle it.
+- If an executable action is available, explain what Nitro can run and let the interface present the action button. Do not claim it already ran.
 - Distinguish clearly between recommendations and completed actions.
 
 Style: sound like a calm, decisive operator. Get straight to the point in under 180 words. Use light Markdown only where it helps — bold key facts and short bullet lists. No filler and no restating the question.${transcript ? `\n\nConversation so far:\n${transcript}` : ''}\n\nUser: ${prompt}`, 500);
@@ -621,7 +661,8 @@ Style: sound like a calm, decisive operator. Get straight to the point in under 
         answer = operatorFallbackResponse(prompt, snapshot, priorities, company);
       }
       const suggestedAction = inferOperatorAction(prompt);
-      const entry = { id: id('chat'), prompt, answer: cleanOperatorAnswer(answer), agent: operatorAgent(prompt), suggestedAction, snapshot, answerSource, createdAt: new Date().toISOString() };
+      const executableAction = operatorExecutionPlan(prompt, user);
+      const entry = { id: id('chat'), prompt, answer: cleanOperatorAnswer(answer), agent: operatorAgent(prompt), suggestedAction, executableAction, snapshot, answerSource, createdAt: new Date().toISOString() };
       data.assistant.unshift(entry); data.assistant = data.assistant.slice(0, 12);
       if (answerSource === 'ai') user.usage.aiUsed += 1;
       await saveCustomer(user); res.status(200).json({ ok: true, entry, aiUsed: user.usage.aiUsed }); return;

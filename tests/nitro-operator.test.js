@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
+import { cleanOperatorAnswer, inferOperatorAction, operatorAgent, operatorExecutionPlan, operatorFallbackResponse, operatorPriorities, operatorSnapshot } from '../lib/nitro-operator.js';
 
 test('builds an honest operator snapshot from customer workspace data', () => {
   const snapshot = operatorSnapshot({
@@ -59,4 +59,16 @@ test('rejects empty provider placeholders instead of displaying undefined', () =
   }
   assert.equal(cleanOperatorAnswer('Your result: undefined'), 'Your result');
   assert.equal(cleanOperatorAnswer('Here is a real answer.'), 'Here is a real answer.');
+});
+
+test('turns specific Operator commands into executable, risk-labeled workspace actions', () => {
+  assert.equal(operatorExecutionPlan('Draft a follow-up for alex@example.com')?.type, 'create-followup-draft');
+  assert.equal(operatorExecutionPlan('Write three Instagram posts')?.type, 'create-content-draft');
+  assert.equal(operatorExecutionPlan('Write three Instagram posts')?.requiresConfirmation, true);
+  const user = { workspace: { campaigns: [{ id: 'campaign-1', name: 'Fall launch', status: 'active' }] } };
+  assert.deepEqual(operatorExecutionPlan('Pause the campaign', user), {
+    type: 'pause-campaign', label: 'Pause Fall launch', prompt: 'Pause the campaign', targetId: 'campaign-1', route: '#ads', requiresConfirmation: true,
+    detail: 'Changes this campaign’s Nitro status from active to paused.',
+  });
+  assert.equal(operatorExecutionPlan('Tell me what to focus on'), null);
 });

@@ -39,6 +39,10 @@ test('Nitro Operator is wired into navigation, live data, voice, and command act
   assert.match(backend, /api\.openai\.com\/v1\/responses/);
   assert.match(backend, /answer = await generateOperator/);
   assert.match(backend, /answer = cleanOperatorAnswer\(answer\)/);
+  assert.match(backend, /execute-operator-action/);
+  assert.match(backend, /operatorExecutionPlan/);
+  assert.match(client, /data-operator-execute/);
+  assert.match(client, /executeOperatorAction/);
 });
 
 test('Operator owner metrics use the existing authenticated owner endpoint', async () => {
