@@ -97,7 +97,14 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
   assert.match(app, /Confirmed visitor follow-up/);
   assert.match(app, /one follow-up after <b>24 hours<\/b>/);
+  assert.match(app, /data-beta-email/);
+  assert.match(app, /View full email/);
+  assert.match(app, /Copy exact email/);
+  assert.match(app, /sentEmail\.subject/);
+  assert.match(app, /sentEmail\.body/);
+  assert.doesNotMatch(app, /confirmedVisit&&!entry\.replied&&!entry\.unsubscribed\)\.slice\(0,8\)/);
   assert.match(css, /\.beta-candidate-grid/);
+  assert.match(css, /\.beta-email-summary/);
   assert.match(followup, /chooseFollowupCandidates/);
   assert.match(followup, /confirmed-visit-followup/);
   assert.doesNotMatch(followup, /DAILY_CAP = 5|human-open-followup|final-followup/);
