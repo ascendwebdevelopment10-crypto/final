@@ -101,8 +101,10 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(app, /View email/);
   assert.match(app, /Original email/);
   assert.match(app, /Follow-up email/);
-  assert.match(app, /LEAD SCORE/);
-  assert.match(app, /points, not a percentage/);
+  assert.match(app, /Lead score/);
+  assert.match(app, /Lead scores are points/);
+  assert.match(app, /class="beta-score"/);
+  assert.doesNotMatch(app, /hot-leads-panel|hot-lead-card|id="hot-leads"/);
   assert.doesNotMatch(app, /Copy exact email/);
   assert.doesNotMatch(app, /confirmedVisit&&!entry\.replied&&!entry\.unsubscribed\)\.slice\(0,8\)/);
   assert.match(css, /\.beta-followup-table/);
@@ -116,7 +118,7 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   assert.match(cron, /outreach-followup-cron/);
 });
 
-test('conversion sprint shortens signup and adds an interactive product preview plus ranked hot leads', async () => {
+test('conversion sprint shortens signup and adds an interactive product preview plus row-based lead scores', async () => {
   const [app, css, index, view] = await Promise.all([
     read('../public/customer/app.js'), read('../public/customer/conversion-sprint-v1.css'),
     read('../public/index.html'), read('../views/customer.html'),
@@ -127,11 +129,11 @@ test('conversion sprint shortens signup and adds an interactive product preview 
   assert.match(app, /function bindLandingPreview/);
   assert.match(app, /INTERACTIVE PRODUCT PREVIEW/);
   assert.match(app, /From first click to the next conversation/);
-  assert.match(app, /REAL INTENT, RANKED/);
-  assert.match(app, /Viewed pricing/);
-  assert.match(app, /Copy follow-up/);
+  assert.doesNotMatch(app, /REAL INTENT, RANKED/);
+  assert.match(app, /pricing \+45/);
+  assert.match(app, /beta-score/);
   assert.match(css, /\.preview-switcher/);
-  assert.match(css, /\.hot-leads-grid/);
+  assert.doesNotMatch(css, /hot-leads-panel|hot-leads-grid|hot-lead-card/);
   assert.match(index, /conversion-sprint-v1\.css/);
   assert.match(view, /conversion-sprint-v1\.css/);
 });
