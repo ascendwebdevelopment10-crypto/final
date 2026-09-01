@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 import { publishImage, publishReel } from '../lib/meta.js';
 import { notifyBestEffort } from '../lib/ntfy.js';
 import { publishToPlatform, tiktokPublishStatus, usableConnection } from '../lib/social-publishers.js';
-import { generatedCaptionNeedsReview } from '../lib/social-quality.js';
+import { generatedCaptionNeedsReview, generatedTextHasUnsafeLanguage } from '../lib/social-quality.js';
 
 export const config = { maxDuration: 300 };
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -73,14 +73,28 @@ async function runNitroCampaign(now = Date.now()) {
   return { published, errors };
 }
 async function loadCustomer(id) { let u = await kv.get(`customer:user:${id}`); if (typeof u === 'string') { try { u = JSON.parse(u); } catch { u = null; } } return u; }
+function repairUnsafeBusinessContext(user) {
+  let changed = false;
+  const replaceUnsafe = (record, key) => {
+    if (!record || typeof record[key] !== 'string' || !generatedTextHasUnsafeLanguage(record[key])) return;
+    record[key] = 'Nitro Outreach'; changed = true;
+  };
+  replaceUnsafe(user.onboarding?.data, 'companyName');
+  replaceUnsafe(user.onboarding?.data, 'businessName');
+  if (typeof user.company === 'string' && generatedTextHasUnsafeLanguage(user.company)) {
+    user.company = 'Nitro Outreach'; changed = true;
+  }
+  replaceUnsafe(user.company, 'name');
+  return changed;
+}
 function repairBrokenGeneratedDraft(posts, now = Date.now()) {
-  const broken = posts.filter(post => post?.autoWeek === true && /^nigf should make the next marketing move easier/i.test(String(post?.text || post?.title || '')));
+  const broken = posts.filter(post => post?.autoWeek === true && generatedTextHasUnsafeLanguage(`${post?.title || ''} ${post?.text || ''}`));
   if (!broken.length) return false;
   let changed = false;
-  for (const post of broken) {
-    if (post.status === 'published' || post.status === 'cancelled') continue;
-    post.status = 'cancelled'; post.cancelledAt = new Date().toISOString(); post.updatedAt = post.cancelledAt;
-    post.error = 'Removed and replaced after generated-content review.'; changed = true;
+  for (let index = posts.length - 1; index >= 0; index -= 1) {
+    const post = posts[index];
+    if (!broken.includes(post) || post.status === 'published') continue;
+    posts.splice(index, 1); changed = true;
   }
   if (posts.some(post => post?.repairId === 'unsafe-auto-week-20260821')) return changed;
   const scheduledFor = broken.map(post => post.scheduledFor).find(value => Date.parse(value || 0) > now);
@@ -104,7 +118,9 @@ export async function runSocialPublish() {
   const now = Date.now(); const nitro = await runNitroCampaign(now); let published = nitro.published || 0; const errors = [...(nitro.errors || [])];
   const keys = await kv.keys('customer:user:*');
   for (const key of keys) {
-    const user = await loadCustomer(key.split(':').pop()); if (!user) continue; const posts = user.workspace?.socialDrafts || []; let changed = repairBrokenGeneratedDraft(posts, now);
+    const user = await loadCustomer(key.split(':').pop()); if (!user) continue; const posts = user.workspace?.socialDrafts || [];
+    let changed = repairUnsafeBusinessContext(user);
+    changed = repairBrokenGeneratedDraft(posts, now) || changed;
     const pendingTikTok = posts.filter(p => p.platform === 'tiktok' && p.status === 'publishing' && p.externalPublishId);
     for (const post of pendingTikTok) { try { const refreshed = await usableConnection('tiktok', user.socialConnections?.tiktok); user.socialConnections.tiktok = refreshed; const result = await tiktokPublishStatus(refreshed, post.externalPublishId); if (result.state === 'published') { post.status = 'published'; post.mediaId = result.id; post.publishedAt = new Date().toISOString(); published += 1; } else if (result.state === 'failed') { post.status = 'failed'; post.error = result.error; post.failedAt = new Date().toISOString(); errors.push({ user: user.id, platform: 'tiktok', error: result.error }); } post.lastStatusCheckAt = new Date().toISOString(); changed = true; } catch (error) { post.lastStatusCheckAt = new Date().toISOString(); post.statusCheckError = error.message; changed = true; } }
     const stale = posts.filter(p => p.status === 'publishing' && !(p.platform === 'tiktok' && p.externalPublishId) && Date.parse(p.publishingStartedAt || 0) <= now - 15 * 60 * 1000);

@@ -1,4 +1,5 @@
 import { currentCustomer, sameOrigin, saveCustomer } from '../lib/customer-auth.js';
+import { generatedTextHasUnsafeLanguage } from '../lib/social-quality.js';
 
 function clean(value, max = 5000) { return String(value || '').trim().slice(0, max); }
 function validFutureDate(value) {
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const drafts = Array.isArray(user.workspace?.socialDrafts) ? user.workspace.socialDrafts : [];
-    const editable = drafts.filter(item => ['scheduled', 'failed'].includes(item?.status) && Date.parse(item?.scheduledFor || 0) > Date.now()).map(item => ({
+    const editable = drafts.filter(item => ['scheduled', 'failed'].includes(item?.status) && Date.parse(item?.scheduledFor || 0) > Date.now() && item?.contentSafetyFailed !== true && !generatedTextHasUnsafeLanguage(`${item?.title || ''} ${item?.text || ''}`)).map(item => ({
       id: item.id, groupId: item.groupId, autoWeek: item.autoWeek === true,
       title: clean(item.title, 180), text: clean(item.text, 5000), status: item.status,
       scheduledFor: item.scheduledFor, mediaUrl: item.mediaUrl || item.imageUrl || '',

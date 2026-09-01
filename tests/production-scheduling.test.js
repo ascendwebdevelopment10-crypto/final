@@ -95,10 +95,16 @@ test('confirmed-visitor follow-up runs hourly and shares the provider quota with
 });
 
 test('the publisher flags unsafe generated drafts before their scheduled time', async () => {
-  const cron = await readFile(new URL('../api/social-cron.js', import.meta.url), 'utf8');
+  const [cron, client] = await Promise.all([
+    readFile(new URL('../api/social-cron.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/customer/app.js', import.meta.url), 'utf8'),
+  ]);
   assert.match(cron, /unsafeGenerated = posts\.filter/);
   assert.match(cron, /Generated caption needs review before publishing/);
   assert.doesNotMatch(cron, /unsafeGenerated = posts\.filter\([^\n]+Date\.parse\(p\.scheduledFor\) <= now/);
+  assert.match(cron, /repairUnsafeBusinessContext\(user\)/);
+  assert.match(cron, /posts\.splice\(index, 1\)/);
+  assert.match(client, /safeSocialDrafts\(w\.socialDrafts\|\|\[\]\)/);
 });
 
 test('cross-platform analytics groups one creative into honest per-platform results', async () => {
