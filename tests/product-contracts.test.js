@@ -86,12 +86,12 @@ test('outreach conversion path includes a focused landing page, full funnel trac
   ]);
   assert.match(app, /function renderStart\(/);
   assert.match(app, /Run your marketing\.<br><em>From one place\.<\/em>/);
-  assert.match(app, /Create my free workspace/);
-  assert.match(app, /\$0 free plan/);
-  assert.match(app, /Ready in about a minute/);
+  assert.match(app, /Start my 14-day Growth trial/);
+  assert.match(app, /\$50\/month after trial/);
+  assert.match(app, /Secure Stripe checkout/);
   const startMarkup = app.match(/function renderStart\(\).*?function renderSignup/s)?.[0] || '';
   assert.doesNotMatch(startMarkup, /\$\{publicNav\(\)\}/);
-  assert.equal((startMarkup.match(/href="\/signup\?source=outreach"/g) || []).length, 2);
+  assert.equal((startMarkup.match(/source=outreach/g) || []).length, 2);
   assert.match(app, /trackFunnelStage\('signup_viewed'\)/);
   assert.match(app, /trackFunnelStage\('signup_started'\)/);
   assert.match(app, /trackFunnelStage\('signup_submitted'\)/);
@@ -136,6 +136,24 @@ test('conversion sprint shortens signup and adds an interactive product preview 
   assert.doesNotMatch(css, /hot-leads-panel|hot-leads-grid|hot-lead-card/);
   assert.match(index, /conversion-sprint-v1\.css/);
   assert.match(view, /conversion-sprint-v1\.css/);
+});
+
+test('paid intent reaches Stripe before onboarding and is measured through payment', async () => {
+  const [app, auth, checkout, webhook, funnel] = await Promise.all([
+    read('../public/customer/app.js'), read('../api/customer-auth.js'), read('../api/stripe-checkout.js'),
+    read('../api/stripe-webhook.js'), read('../lib/funnel.js'),
+  ]);
+  assert.match(app, /paidPlanId\(qs\('plan'\)\)/);
+  assert.match(app, /plan:selected,interval/);
+  assert.match(app, /Continue to plan review/);
+  assert.match(auth, /selectedPaidPlan \? `\/checkout\?plan=/);
+  assert.match(auth, /checkoutIntent: selectedPaidPlan/);
+  assert.match(auth, /pendingPaidPlan/);
+  assert.match(checkout, /recordFunnelEvent\('checkout_started'/);
+  assert.match(checkout, /successUrl: `\$\{origin\}\/welcome\?upgraded=1`/);
+  assert.match(webhook, /recordFunnelEvent\('trial_started'/);
+  assert.match(webhook, /user\.checkoutIntent = null/);
+  assert.match(funnel, /'checkout_started', 'trial_started', 'paid'/);
 });
 
 test('responsive contracts cover desktop, tablet, phone, and compact phone layouts', async () => {
@@ -248,7 +266,7 @@ test('owner visitors stay separate and show business location apart from detecte
 test('outreach emails hide the long attribution URL behind a short CTA', async () => {
   const source = await read('../api/email-cron.js');
   assert.match(source, />nitrooutreach\.com<\/a>/);
-  assert.match(source, /You can start free with no card/);
+  assert.match(source, /full Growth workflow is free for 14 days, then \$50\/month/);
   assert.doesNotMatch(source, /I[’']m offering a hands-on first setup/);
   assert.doesNotMatch(source, /I[’']ll personally build your first/);
   assert.match(source, /text: textBody \+ footerText/);
@@ -259,10 +277,17 @@ test('outreach emails hide the long attribution URL behind a short CTA', async (
 test('outreach lead discovery searches enough qualified businesses to fill each run', async () => {
   const source = await read('../api/email-cron.js');
   assert.match(source, /OUTREACH_OSM_TAGS/);
-  assert.match(source, /const POOL_COUNT = 8/);
-  assert.match(source, /const POOL_SIZE = 60/);
-  assert.match(source, /const MAX_WEBSITES_CHECKED = 96/);
+  assert.match(source, /const POOL_COUNT = 4/);
+  assert.match(source, /const POOL_SIZE = 45/);
+  assert.match(source, /const MAX_WEBSITES_CHECKED = 48/);
   assert.match(source, /websitesChecked < MAX_WEBSITES_CHECKED/);
+});
+
+test('outreach lead discovery has a bounded public-source retry budget', async () => {
+  const source = await read('../lib/leads.js');
+  assert.match(source, /const OVERPASS_ATTEMPTS = 1/);
+  assert.match(source, /const OVERPASS_TIMEOUT_MS = 12000/);
+  assert.match(source, /attempt < OVERPASS_ATTEMPTS/);
 });
 
 test('Resend webhook accepts a fresh valid signature and rejects tampering', () => {

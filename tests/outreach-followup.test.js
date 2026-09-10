@@ -40,7 +40,9 @@ test('keeps confirmed visits eligible for 30 days so an hourly run can catch eve
 
 test('follow-up copy explains Nitro without reviving the removed personal offer', () => {
   const message = followupMessage(lead('copy'));
-  assert.match(message.body, /website building, social content and scheduling, tracked outreach, and visitor analytics/);
+  assert.match(message.body, /page people land on, the content and outreach that bring them there, genuine visitor intent, and the next follow-up/);
+  assert.match(message.body, /free for 14 days, then \$50\/month/);
+  assert.match(message.body, /Would that solve a real problem/);
   assert.match(message.body, /nitrooutreach\.com/);
   assert.doesNotMatch(message.body, /personally build|hands-on|I[’']m offering|build it|last follow-up/i);
 });

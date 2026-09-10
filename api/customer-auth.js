@@ -12,6 +12,7 @@ import { notifyBestEffort } from '../lib/ntfy.js';
 import { recordFunnelEvent } from '../lib/funnel.js';
 import { socialAttributionFromRequest } from '../lib/social-links.js';
 import { outreachTokenValid } from '../lib/sign.js';
+import { planFor } from '../lib/customer-plans.js';
 
 function clean(value, max = 500) { return String(value || '').trim().slice(0, max); }
 function esc(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -49,6 +50,10 @@ export default async function handler(req, res) {
       const outreachToken = clean(body.outreachToken, 180);
       const validOutreachAttribution = Boolean(outreachId && outreachToken && outreachTokenValid(outreachId, outreachToken));
       const issue = passwordIssue(body.password);
+      const selectedPlanId = clean(body.plan, 40).toLowerCase();
+      const selectedPlan = planFor(selectedPlanId);
+      const selectedInterval = body.interval === 'yearly' ? 'yearly' : 'monthly';
+      const selectedPaidPlan = selectedPlanId === selectedPlan.id && selectedPlan.id !== 'free';
       if (!validEmail(email)) { res.status(400).json({ error: 'Enter a valid email address' }); return; }
       if (issue) { res.status(400).json({ error: issue }); return; }
       if (await getCustomerByEmail(email)) { res.status(409).json({ error: 'An account already exists for this email. Sign in or reset your password.' }); return; }
@@ -60,6 +65,7 @@ export default async function handler(req, res) {
         createdAt: now, updatedAt: now,
         onboarding: { step: 1, completed: false, data: {} },
         subscription: { plan: 'free', interval: 'monthly', status: 'active', billingMode: 'free', cancelAtPeriodEnd: false, startedAt: now },
+        checkoutIntent: selectedPaidPlan ? { plan: selectedPlan.id, interval: selectedInterval, createdAt: now } : null,
         usage: { aiUsed: 0, contentCredits: 5, websites: 0, storageBytes: 0 },
         preferences: { productUpdates: true, activityAlerts: true, billingEmails: true, weeklyReport: true },
         acquisition: validOutreachAttribution ? { source: 'outreach', outreachId, capturedAt: now } : undefined,
@@ -82,7 +88,12 @@ export default async function handler(req, res) {
       try { await sendAccountEmail(req, user, 'verify'); }
       catch (error) { emailSent = false; console.error('Customer verification email failed:', error.message); }
       res.setHeader('Set-Cookie', customerSessionCookie(user.id));
-      res.status(201).json({ ok: true, emailSent, email: user.email, redirect: '/welcome' });
+      res.status(201).json({
+        ok: true,
+        emailSent,
+        email: user.email,
+        redirect: selectedPaidPlan ? `/checkout?plan=${selectedPlan.id}&interval=${selectedInterval}` : '/welcome',
+      });
       return;
     }
 
@@ -108,7 +119,13 @@ export default async function handler(req, res) {
         res.status(401).json({ error: 'Email or password is incorrect' }); return;
       }
       res.setHeader('Set-Cookie', customerSessionCookie(user.id));
-      res.status(200).json({ ok: true, user: publicCustomer(user), redirect: user.onboarding?.completed ? '/app' : '/welcome' });
+      const pendingPlan = planFor(user.checkoutIntent?.plan);
+      const pendingPaidPlan = user.checkoutIntent?.plan === pendingPlan.id && pendingPlan.id !== 'free';
+      const pendingInterval = user.checkoutIntent?.interval === 'yearly' ? 'yearly' : 'monthly';
+      const redirect = pendingPaidPlan
+        ? `/checkout?plan=${pendingPlan.id}&interval=${pendingInterval}`
+        : user.onboarding?.completed ? '/app' : '/welcome';
+      res.status(200).json({ ok: true, user: publicCustomer(user), redirect });
       return;
     }
 
