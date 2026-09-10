@@ -117,10 +117,13 @@ export default async function handler(req, res) {
             stripeSubscriptionId,
             startedAt: new Date().toISOString(),
           };
+          user.checkoutIntent = null;
           applyPlanAllowance(user, plan);
           await saveCustomer(user);
           if (stripeCustomerId) await kv.set(`stripe:customer:${stripeCustomerId}`, customerId);
           if (stripeSubscriptionId) await kv.set(`stripe:subscription:${stripeSubscriptionId}`, customerId);
+          try { await recordFunnelEvent('trial_started', `customer:${user.id}`, { email: user.email, source: 'stripe' }); }
+          catch (error) { console.error('Trial funnel tracking failed:', error.message); }
         }
       }
     } else if (event.type === 'customer.subscription.updated') {

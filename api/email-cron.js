@@ -18,10 +18,10 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const EMAIL_CAP = 10;   // 10/run x 9 runs/day = 90/day, stays under Resend free cap (100/day)
 const DAILY_EMAIL_CAP = 90;
 const PROVIDER_DAILY_CAP = 100;
-const POOL_COUNT = 8;
-const POOL_SIZE = 60;
+const POOL_COUNT = 4;
+const POOL_SIZE = 45;
 const DISCOVERY_WAVE_SIZE = 16;
-const MAX_WEBSITES_CHECKED = 96;
+const MAX_WEBSITES_CHECKED = 48;
 
 const BCC_PREVIEW_EMAIL = 'no-reply@nitrooutreach.app';
 const BCC_PREVIEW_LIMIT = 0;  // BCC preview off to conserve Resend quota
@@ -199,17 +199,17 @@ async function generateEmail(contact) {
   const angle = contact.marketingOpportunity || replyAngle(contact.industry);
 
   const subjects = [
-    'A simpler marketing setup for ' + company,
-    'One place for ' + company + ' marketing',
-    'Could Nitro help ' + company + '?',
-    company + ' marketing, in one place'
+    'A visitor follow-up idea for ' + company,
+    'Turn more ' + company + ' visits into conversations',
+    company + ': website, content, and follow-up in one place',
+    'A simpler customer-acquisition setup for ' + company
   ];
   const subject = subjects[Math.floor(Math.random() * subjects.length)];
   const opener = 'Hi ' + company + ' team,';
   const bodies = [
-    opener + '\n\nNitro is an all-in-one marketing workspace for small businesses. It lets you build a website, create and schedule social posts, run tracked outreach, and see visits and engagement in one place.\n\nFor ' + company + ', that can make it easier to ' + angle + ' without paying for or switching between separate tools. You can start free with no card and try it on a real part of your marketing.\n\nnitrooutreach.com',
-    opener + '\n\nNitro brings website building, social content, scheduling, outreach, and analytics into one workspace built for small businesses.\n\nIt could help ' + company + ' ' + angle + ', while keeping the work and the results together instead of spread across different apps. The free account does not require a card.\n\nnitrooutreach.com',
-    opener + '\n\nNitro helps small businesses create a website, make and schedule content, send tracked outreach, and understand which activity brings people back.\n\nFor ' + company + ', that means one simpler system to ' + angle + '. You can see how it works and start free here:\n\nnitrooutreach.com'
+    opener + '\n\nNitro connects the parts of customer acquisition that usually get split up: the page people land on, the content that brings them there, real visitor intent, and the follow-up that starts the conversation.\n\nFor ' + company + ', that can make it easier to ' + angle + ' without paying for or switching between separate tools. The full Growth workflow is free for 14 days, then $50/month.\n\nnitrooutreach.com\n\nWould that solve a real problem for your business right now?',
+    opener + '\n\nA lot of small businesses can see traffic or send outreach, but they cannot connect a real visitor to the next action. Nitro keeps website building, social scheduling, tracked outreach, and visitor follow-up in one workspace.\n\nFor ' + company + ', the useful part is one clear system to ' + angle + '. You can try the complete Growth plan for 14 days; it is $50/month after the trial.\n\nnitrooutreach.com\n\nWorth a look?',
+    opener + '\n\nNitro helps independent businesses build the destination, publish the campaign, see genuine visitor intent, and keep follow-up connected.\n\nFor ' + company + ', that means a simpler way to ' + angle + ' instead of managing separate website, content, outreach, and analytics tools. Growth is free for 14 days and $50/month after that.\n\nnitrooutreach.com\n\nIf this is not a priority right now, no problem.'
   ];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 

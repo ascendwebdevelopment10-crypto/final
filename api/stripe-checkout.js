@@ -1,6 +1,7 @@
 import { currentCustomer, requestOrigin, sameOrigin } from '../lib/customer-auth.js';
 import { planFor } from '../lib/customer-plans.js';
 import { stripeConfigured, createCheckoutSession } from '../lib/stripe.js';
+import { recordFunnelEvent } from '../lib/funnel.js';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'nitrooutreach@outlook.com').toLowerCase();
 
@@ -38,9 +39,11 @@ export default async function handler(req, res) {
       planName: plan.name,
       interval,
       amountCents: Math.round(amount * 100),
-      successUrl: `${origin}/app?upgraded=1#billing`,
+      successUrl: `${origin}/welcome?upgraded=1`,
       cancelUrl: `${origin}/pricing`,
     });
+    try { await recordFunnelEvent('checkout_started', `customer:${user.id}`, { email: user.email, path: '/checkout/payment', source: 'stripe' }); }
+    catch (error) { console.error('Checkout funnel tracking failed:', error.message); }
     res.status(200).json({ url });
   } catch (e) {
     console.error('Stripe checkout error:', e.message);
